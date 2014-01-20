@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+/* Fox Script
+ * Handles all fox commandline commands.
+ * @Author Scott Smereka
+ */
+
+
 //**************************************************
 //******************** Load Dependencies
 //**************************************************
@@ -27,6 +33,20 @@ var _ = require('lodash');
  */
 var colors = require('colors');
 
+/***
+ * Path
+ * @description Handles tranforming file paths.
+ * @website http://nodejs.org/api/path.html
+ */
+var path = require('path');
+
+/***
+ * FS
+ * @description 
+ * @website 
+ */
+var fs = require('fs');
+
 
 //**************************************************
 //******************** Configurations
@@ -51,8 +71,16 @@ colors.setTheme({
 //******************** Variables
 //**************************************************
 
-var app = {
-  path: process.cwd()
+var config = {
+
+  // The current path of the caller
+  currentPath: process.cwd(),
+
+  // Absolute path to this script.
+  scriptPath: process.cwd(),
+
+  // Absolute path to the backend application
+  serverPath: getServerPathSync()
 }
 
 //**************************************************
@@ -63,19 +91,26 @@ var app = {
 if(argv._[0] == undefined || (argv._[0] && _.contains(['help', 'h'], argv._[0]))) {
   printHelp();
   exit();
-}
+} 
 
 // Start - Start the server
-if(argv._[0] && _.contains(['start', 's'], argv._[0])) {
-  process.cwd()
-  app.path
-  //NODE_ENV="local" 
+else if(argv._[0] && _.contains(['start', 's'], argv._[0])) {
+  require(config.serverPath).start(config, function(err, success) {
+    if(err) {
+      console.log(err.error);
+    } else {
+      console.log(success.success);
+    }
+  });
+} 
+
+// Argument is not valid
+else {
+  console.log("Command has invalid arguments.".error);
   exit();
 }
 
-// Argument is not valid
-console.log("Command has invalid arguments.".error);
-exit();
+
 
 //**************************************************
 //******************** Private Methods
@@ -100,6 +135,26 @@ function printColumns(left, right) {
   
   var n = 25 - left.length;
   console.log("  " + left + Array(n+1).join(" ") + right);
+}
+
+/**
+ * Finds the absolute path to the server application's
+ * directory synchronously and returns that value.
+ */
+function getServerPathSync() {
+  var currentPath = process.cwd(),
+      gpDir = path.resolve(currentPath + "/server/app"),
+      pDir = path.resolve(currentPath + "/app");
+
+  if(fs.existsSync(currentPath + "/index.js")) {
+    return currentPath;
+  } else if (fs.existsSync(pDir + "/index.js")) {
+    return pDir;
+  } else if(fs.existsSync(gpDir + "/index.js")) {
+    return gpDir;
+  } else {
+    return undefined;
+  }
 }
 
 /**
