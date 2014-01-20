@@ -52,49 +52,49 @@ var fs = require('fs');
 //******************** Configurations
 //**************************************************
 
-/**
- * Set the Fox color theme with any of these 
- * possible colors: yellow, cyan, white, magenta, 
- * green, red, grey, blue, rainbow, zebra, random.
- */
-colors.setTheme({
-  success: 'green',
-  ok: 'green',
-  warn: 'yellow',
-  error: 'red',
-  debug: 'magenta',
-  info: 'cyan',
-});
+
 
 
 //**************************************************
-//******************** Variables
+//******************** Setup
 //**************************************************
 
-var config = {
+var config = getDefaultConfigSync();
 
-  // The current path of the caller
-  currentPath: process.cwd(),
+config["currentPath"] = process.cwd();
+config["currentPath"] = process.cwd();
+config["serverPath"] = getServerPathSync();
 
-  // Absolute path to this script.
-  scriptPath: process.cwd(),
-
-  // Absolute path to the backend application
-  serverPath: getServerPathSync()
-}
+setLoggingTheme();
 
 //**************************************************
 //******************** Argument Parsing
 //**************************************************
+var isArgvHandled = false;
 
 // Help - Print fox usage.
-if(argv._[0] == undefined || (argv._[0] && _.contains(['help', 'h'], argv._[0]))) {
+if( ! argv._[0] || (_.contains(['help', 'h'], argv._[0]))) {
   printHelp();
   exit();
 } 
 
+// Verbose Debug Mode - enable or disable debug mode.
+if(argv.v || argv.verbose || argv.debug) {
+  config["debug"] = true
+}
+
+// Environment Mode - set the current operating enviorment mode.
+if(argv.l || argv.local) {
+  config["environment"] = "local";
+} else if(argv.d || argv.dev || argv.development) {
+  config["environment"] = "development";
+} else if(argv.p || argv.prod || argv.production) {
+  config["environment"] = "production";
+}
+
 // Start - Start the server
-else if(argv._[0] && _.contains(['start', 's'], argv._[0])) {
+if(argv._[0] && _.contains(['start'], argv._[0])) {
+  isArgvHandled = true;
   require(config.serverPath).start(config, function(err, success) {
     if(err) {
       console.log(err.error);
@@ -104,8 +104,26 @@ else if(argv._[0] && _.contains(['start', 's'], argv._[0])) {
   });
 } 
 
+// Stop - Stop the server
+if(argv._[0] && _.contains(['stop'], argv._[0])) {
+  isArgvHandled = true;
+  require(config.serverPath).stop(config, function(err, success) {
+    if(err) {
+      console.log(err.error);
+    } else {
+      console.log(success.success);
+    }
+  });
+} 
+
+// Restart - Restart the server
+if(argv._[0] && _.contains(['restart'], argv._[0])) {
+  isArgvHandled = true;
+  // TODO: restart or start the server
+} 
+
 // Argument is not valid
-else {
+if ( ! isArgvHandled) {
   console.log("Command has invalid arguments.".error);
   exit();
 }
@@ -123,6 +141,13 @@ function printHelp() {
   console.log("Usage:  fox <command>\n".info);
   printColumns("Commands:".info);
   printColumns("start".info, "Start the server.".info );
+  printColumns("stop".info, "Stop the server.".info );
+  printColumns("restart".info, "Restart the server.".info );
+  printColumns("Options:".info)
+  printColumns("-v".info, "Enable verbose or debug mode.".info );
+  printColumns("-l".info, "Start in local environment mode.".info );
+  printColumns("-d".info, "Start in development environment mode.".info );
+  printColumns("-p".info, "Start in production environment mode.".info );
   process.exit(1);
 }
 
@@ -154,6 +179,24 @@ function getServerPathSync() {
     return gpDir;
   } else {
     return undefined;
+  }
+}
+
+function getDefaultConfigSync() {
+  var configPath = __dirname + '/config/default_server_config.js';
+
+  if(fs.existsSync(configPath)) {
+    return require(configPath);
+  } else {
+    return {}
+  }
+}
+
+function setLoggingTheme() {
+  var configPath = __dirname + '/config/default_log_config.js';
+
+  if(fs.existsSync(configPath)) {
+    colors.setTheme(require(configPath).theme);
   }
 }
 
