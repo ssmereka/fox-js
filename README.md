@@ -5,21 +5,21 @@ Exactly what you need to get started building a scalable web application using j
 
 ## Getting Started
 
-1. Clone the fox-js repo
+1. Install fox-js
 
-    git clone https://github.com/ssmereka/fox-js.git
+    sudo npm -g install fox
 
-2. Give your project a name, install fox, and start the server.
+2. Create a new project
 
-    sudo chmod +x fox && ./fox "My Project Name"
+    fox new "My Project Name"
 
-3. Start coding!  No need to restart the server, changes will be live after saving a file.
+3. Start the server and start coding!  No need to restart the server, changes will be live after saving a file.
 
-If you need to stop, start, or restart the server simply:
+    fox start
 
-    fox stop "My Project Name"
-    fox start "My Project Name"
-    fox restart "My Project Name"
+If you need to stop or restart the server simply navigate to the projects root directory and enter:
 
+    fox stop
+    fox restart
 
 ## Configuration

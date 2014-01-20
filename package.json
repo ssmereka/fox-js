@@ -1,0 +1,31 @@
+{
+	"name": "fox-js",
+	"author": "Scott Smereka",
+	"version": "0.0.1",
+	"description": "",
+	"homepage": "",
+	"keywords": [
+		"API",
+		"REST",
+		"MVC"
+	],
+	"main": "",
+	"bin": "",
+	"repository": {
+		"type": "git",
+		"url": "http://github.com/ssmereka/fox-js"
+	},
+	"licenses": [{
+		"type": "MIT",
+		"url": ""
+	}],
+	"engines": {
+		"node": ">= 0.10.0"
+	},
+	"dependencies": {
+		"colors": "x.x.x",
+		"express": "x.x.x",
+		"optimist": "x.x.x",
+		"lodash": "x.x.x"
+	}
+}
