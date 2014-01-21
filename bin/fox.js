@@ -49,27 +49,35 @@ var fs = require('fs');
 
 
 //**************************************************
-//******************** Configurations
+//******************** Setup Fox
 //**************************************************
 
+var fox = {};
 
+// Load the fox logger.
+fox.log = tryRequire('fox_log.js');
+
+// Load the default backend server configuration object.
+fox["config"] = tryRequire('/config/default_server_config.js');
+
+// If the object could not be loaded, then insert a empty object.
+if( ! fox["config"]) {
+  fox.log.warn("The default server configuration file could not be loaded.");
+  fox["config"] = {}
+}
+
+// Get the absolute path to this script's directory.
+fox.config["foxBinPath"] = process.cwd();
+
+// Find the path to the backend server's directory.
+fox.config["serverPath"] = getServerPathSync();
 
 
 //**************************************************
-//******************** Setup
+//******************** Console Argument Parsing
 //**************************************************
 
-var config = getDefaultConfigSync();
-
-config["currentPath"] = process.cwd();
-config["currentPath"] = process.cwd();
-config["serverPath"] = getServerPathSync();
-
-setLoggingTheme();
-
-//**************************************************
-//******************** Argument Parsing
-//**************************************************
+// Flag indicating if the user input has been handled.
 var isArgvHandled = false;
 
 // Help - Print fox usage.
@@ -78,28 +86,28 @@ if( ! argv._[0] || (_.contains(['help', 'h'], argv._[0]))) {
   exit();
 } 
 
-// Verbose Debug Mode - enable or disable debug mode.
+// Verbose (Debug Mode) - enable or disable debug mode.
 if(argv.v || argv.verbose || argv.debug) {
-  config["debug"] = true
+  fox.config["debug"] = true
 }
 
 // Environment Mode - set the current operating enviorment mode.
 if(argv.l || argv.local) {
-  config["environment"] = "local";
+  fox.config["environment"] = "local";
 } else if(argv.d || argv.dev || argv.development) {
-  config["environment"] = "development";
+  fox.config["environment"] = "development";
 } else if(argv.p || argv.prod || argv.production) {
-  config["environment"] = "production";
+  fox.config["environment"] = "production";
 }
 
 // Start - Start the server
 if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
-  require(config.serverPath).start(config, function(err, success) {
+  require(fox.config.serverPath).start(fox.config, function(err, success) {
     if(err) {
-      console.log(err.error);
+      fox.log.error(err.error);
     } else {
-      console.log(success.success);
+      fox.log.info(success.success);
     }
   });
 } 
@@ -107,11 +115,11 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
 // Stop - Stop the server
 if(argv._[0] && _.contains(['stop'], argv._[0])) {
   isArgvHandled = true;
-  require(config.serverPath).stop(config, function(err, success) {
+  require(fox.config.serverPath).stop(fox.config, function(err, success) {
     if(err) {
-      console.log(err.error);
+      fox.log.error(err.error);
     } else {
-      console.log(success.success);
+      fox.log.success(success.success);
     }
   });
 } 
@@ -124,10 +132,9 @@ if(argv._[0] && _.contains(['restart'], argv._[0])) {
 
 // Argument is not valid
 if ( ! isArgvHandled) {
-  console.log("Command has invalid arguments.".error);
+  fox.log.error("Command has invalid arguments.".error);
   exit();
 }
-
 
 
 //**************************************************
@@ -135,31 +142,33 @@ if ( ! isArgvHandled) {
 //**************************************************
 
 /**
- * 
+ * Print the fox script's usage.
  */
 function printHelp() {
-  console.log("Usage:  fox <command>\n".info);
-  printColumns("Commands:".info);
-  printColumns("start".info, "Start the server.".info );
-  printColumns("stop".info, "Stop the server.".info );
-  printColumns("restart".info, "Restart the server.".info );
-  printColumns("Options:".info)
-  printColumns("-v".info, "Enable verbose or debug mode.".info );
-  printColumns("-l".info, "Start in local environment mode.".info );
-  printColumns("-d".info, "Start in development environment mode.".info );
-  printColumns("-p".info, "Start in production environment mode.".info );
-  process.exit(1);
+  fox.log.info("Usage:  fox <command>\n");
+  fox.log.info("Commands:");
+  printColumns("start", "Start the server.");
+  printColumns("stop", "Stop the server.");
+  printColumns("restart", "Restart the server.\n");
+
+  printColumns("Options:")
+  printColumns("-v", "Enable verbose or debug mode.");
+  printColumns("-l", "Start in local environment mode.");
+  printColumns("-d", "Start in development environment mode.");
+  printColumns("-p", "Start in production environment mode.\n");
+  exit();
 }
 
 /**
- *
+ * Print two strings in two different columns in a format much
+ * like a word on the left and the definition on the right.
  */
 function printColumns(left, right) {
   left = (!left) ? "" : left;
   right = (!right) ? "" : right;
   
   var n = 25 - left.length;
-  console.log("  " + left + Array(n+1).join(" ") + right);
+  fox.log.info("  " + left + Array(n+1).join(" ") + right);
 }
 
 /**
@@ -167,7 +176,7 @@ function printColumns(left, right) {
  * directory synchronously and returns that value.
  */
 function getServerPathSync() {
-  var currentPath = process.cwd(),
+  var currentPath = fox.config.foxBinPath,
       gpDir = path.resolve(currentPath + "/server/app"),
       pDir = path.resolve(currentPath + "/app");
 
@@ -182,26 +191,27 @@ function getServerPathSync() {
   }
 }
 
-function getDefaultConfigSync() {
-  var configPath = __dirname + '/config/default_server_config.js';
+/**
+ * Attempts to require a file by name synchronously.  This
+ * method will do a small, but smart search for the file 
+ * and require it.  If the file is not found, then undefined 
+ * is returned.
+ */
+function tryRequire(file) {
+  var currentDirectory = "./" + file;
+  var binDirectory = path.resolve(__dirname + "/" + file);
 
-  if(fs.existsSync(configPath)) {
-    return require(configPath);
+  if(fs.existsSync(currentDirectory)) {
+    return require(currentDirectory);
+  } else if(fs.existsSync(binDirectory)) {
+    return require(binDirectory);
   } else {
-    return {}
-  }
-}
-
-function setLoggingTheme() {
-  var configPath = __dirname + '/config/default_log_config.js';
-
-  if(fs.existsSync(configPath)) {
-    colors.setTheme(require(configPath).theme);
+    return undefined;
   }
 }
 
 /**
- *
+ * Exit the script.
  */
 function exit() {
   process.exit(1);
