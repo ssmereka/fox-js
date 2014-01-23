@@ -48,6 +48,15 @@ var path = require('path');
 var fs = require('fs');
 
 
+var forever = require('forever-monitor');
+
+var cluster = require('cluster');
+
+/* 
+ * Flag to indicate if the server is currently running or not.
+ */
+var isServerRunning = false;
+
 //**************************************************
 //******************** Setup Fox
 //**************************************************
@@ -103,31 +112,30 @@ if(argv.l || argv.local) {
 // Start - Start the server
 if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
-  require(fox.config.serverPath).start(fox.config, function(err, success) {
-    if(err) {
-      fox.log.error(err.error);
-    } else {
-      fox.log.info(success.success);
-    }
+  startServer(function(err) { 
+    //exit(); 
   });
 } 
 
 // Stop - Stop the server
 if(argv._[0] && _.contains(['stop'], argv._[0])) {
   isArgvHandled = true;
-  require(fox.config.serverPath).stop(fox.config, function(err, success) {
-    if(err) {
-      fox.log.error(err.error);
-    } else {
-      fox.log.success(success.success);
-    }
+  stopServer(function(err) { 
+    exit(); 
   });
 } 
 
 // Restart - Restart the server
 if(argv._[0] && _.contains(['restart'], argv._[0])) {
   isArgvHandled = true;
-  // TODO: restart or start the server
+  stopServer(function(err) {
+    if(err) { 
+      exit(); 
+    }
+    startServer(function(err) {
+     //exit(); 
+   });
+  });
 } 
 
 // Argument is not valid
@@ -140,6 +148,72 @@ if ( ! isArgvHandled) {
 //**************************************************
 //******************** Private Methods
 //**************************************************
+
+/**
+ * Start the server with the fox configuration object.
+ * If the server encounters an error or success, log 
+ * it, and send the result to the callback function.
+ */
+function startServer(next) {
+
+  var app = require(fox.config.serverPath);
+  var isCluster = (fox.config["cluster"] && fox.config.cluster.enabled);
+  if(isCluster && cluster.isMaster) {
+    var cpuCount = require('os').cpus().length;
+    var workerMax = (fox.config.cluster["workerMax"]) ? fox.config.cluster["workerMax"] : cpuCount;
+    
+    // Determine the number of workers to create based 
+    // on the number of CPUs and the max number of workers.
+    var workerCount = (fox.config.cluster["workerPerCpu"] && cpuCount <= workerMax) ? cpuCount : workerMax;
+
+    // Create the workers.
+    for(; workerCount > 0; workerCount--) {
+      cluster.fork();
+    }
+
+    // Respawn workers when they die.
+    cluster.on('exit', function(worker) {
+      fox.log.warn("Master - Worker " + worker.id + " is dead.  Creating a new worker.");
+      cluster.fork();
+    });
+  } else {
+    // Start the application.
+    app.start(fox.config, function(err, success) {
+      var tag = (isCluster) ? "Worker " + cluster.worker.id + " - " : "";
+
+      // Check if the server encountered an error while starting.
+      if(err) {
+        fox.log.error(tag + err);
+      } else {
+        fox.log.info(tag + success);
+      }
+
+      if(next) {
+        next(err);
+      }
+    });
+  }
+}
+
+/**
+ * Stop the server.  If the server encounters an error
+ * trying to stop, log it, and send the results to the 
+ * callback function.
+ */
+function stopServer(next) {
+  require(fox.config.serverPath).stop(fox.config, function(err, success) {
+    // Check if the server encountered an error while stopping.
+    if(err) {
+      fox.log.error(err);
+    } else {
+      fox.log.info(success);
+    }
+
+    if(next) {
+      next(err);
+    }
+  });
+}
 
 /**
  * Print the fox script's usage.

@@ -6,7 +6,8 @@ var load = require("../libs/loading");    // Require a library to help setup & c
 
 module.exports = {
   start: function(config, next) {
-    NODE_ENV="local"
+    //console.log(config);
+    //next(undefined, "Loaded successfully");
     load.app(function(err, app, config, db) { // Create and configure our application, configuration, and database objects.
       if(err) { 
         return console.log(err.red);          // If there was an error, we can't start the server so quite and show the error message.
@@ -20,12 +21,21 @@ module.exports = {
 
       load.routes(function(err, success) {    // Dynamically require all of our routes in the correct order.
         load.server();                        // Start the server.
+        
+
+        // Notify the start script that the server has started successfully.
+        if(next) {
+          return next(undefined, "Loaded successfully");
+        }
+
       });
     });
   },
 
   stop: function(config, next) {
-    console.log("Stop Server....");
+
+    // Notify the start script that the server has stopped succesfully.
+    return next(undefined, "Server stopped successfully.");
   }
 
 };
