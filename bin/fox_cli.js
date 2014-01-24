@@ -54,6 +54,8 @@ var fs = require('fs');
  */
 var cluster = require('cluster');
 
+var forever = require('forever-monitor');
+
 //**************************************************
 //******************** Setup Fox
 //**************************************************
@@ -107,11 +109,6 @@ if(argv.l || argv.local) {
   fox.config["environment"] = "production";
 }
 
-if(argv._[0] && _.contains(['forever'], argv._[0])) {
-  isArgvHandled = true;
-  startForeverServer();
-} 
-
 // Start - Start the server
 if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
@@ -152,30 +149,10 @@ if ( ! isArgvHandled) {
 //******************** Private Methods
 //**************************************************
 
+var forever = require("forever-monitor");
+
 function startForeverServer() {
-  /*var forever = require("forever");
-
-  var child = new forever.Monitor(__filename, {
-    max: 3,
-    silent: false,
-    options: ['start']
-    //logFile: '/var/log/fox/forever.log',
-    //outFile: '/var/log/fox/forever-stdout.log',
-    //errFile: '/var/log/fox/forever-stderr.log'
-  });
-
-  child.on('exit', function() {
-    console.log("File exited.");
-  });
-
-  forever.startDaemon(child);
-  child.start(); */
-
-  var sys = require('sys');
-  var exec = require('child_process').exec;
-  exec('NODE_ENV="local" forever start ./bin/fox.js start', function(err, stdout, stderr) {
-    sys.puts(stdout);
-  });
+  var child = new (forever.Monitor(""))
 }
 
 /**

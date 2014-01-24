@@ -5,8 +5,9 @@ var config = {
   environment: 'local',
 
   daemon: {
-    enabled: true
-  }
+    enabled: true,
+    type: "forever"
+  },
 
   // Cluster - When enabled, multiple instances of your server 
   // will be created to handle the workload of a single port.
