@@ -42,20 +42,18 @@ var path = require('path');
 
 /***
  * FS
- * @description 
- * @website 
+ * @description access the file system
+ * @website http://nodejs.org/api/fs.html
  */
 var fs = require('fs');
 
-
-var forever = require('forever-monitor');
-
+/***
+ * Cluster
+ * @description create and control multiple instances of a server.
+ * @website http://nodejs.org/api/cluster.html
+ */
 var cluster = require('cluster');
 
-/* 
- * Flag to indicate if the server is currently running or not.
- */
-var isServerRunning = false;
 
 //**************************************************
 //******************** Setup Fox
@@ -74,6 +72,8 @@ if( ! fox["config"]) {
   fox.log.warn("The default server configuration file could not be loaded.");
   fox["config"] = {}
 }
+
+if()
 
 // Get the absolute path to this script's directory.
 fox.config["foxBinPath"] = process.cwd();
