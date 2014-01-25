@@ -85,7 +85,8 @@ fox.config["serverPath"] = getServerPathSync();
 //**************************************************
 
 // Flag indicating if the user input has been handled.
-var isArgvHandled = false;
+var isArgvHandled = false,
+    isDaemon = false;
 
 // Help - Print fox usage.
 if( ! argv._[0] || (_.contains(['help', 'h'], argv._[0]))) {
@@ -107,14 +108,15 @@ if(argv.l || argv.local) {
   fox.config["environment"] = "production";
 }
 
-if(argv._[0] && _.contains(['forever'], argv._[0])) {
-  isArgvHandled = true;
-  startForeverServer();
-} 
-
 // Start - Start the server
 if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
+
+  if(isDaemonEnabled()) {
+    return startServerAsDaemon();
+  }
+
+  console.log("Start Server");
   startServer(function(err) { 
     //exit(); 
   });
@@ -152,30 +154,30 @@ if ( ! isArgvHandled) {
 //******************** Private Methods
 //**************************************************
 
-function startForeverServer() {
-  /*var forever = require("forever");
+function startServerAsDaemon() {
+  if(fox.config.daemon.type) {
+    var type = fox.config.daemon.type.toUpperCase();
+    if(type == "PM2") {
+      return startServerUsingPm2();
+    }
+  }
 
-  var child = new forever.Monitor(__filename, {
-    max: 3,
-    silent: false,
-    options: ['start']
-    //logFile: '/var/log/fox/forever.log',
-    //outFile: '/var/log/fox/forever-stdout.log',
-    //errFile: '/var/log/fox/forever-stderr.log'
-  });
+  // Default to using forever.
+  startServerUsingForever();
+}
 
-  child.on('exit', function() {
-    console.log("File exited.");
-  });
-
-  forever.startDaemon(child);
-  child.start(); */
-
+function startServerUsingForever() {
+  console.log("Start server using forever");
+  // TODO: Launch forever using javascript rather than CLI.
   var sys = require('sys');
   var exec = require('child_process').exec;
-  exec('NODE_ENV="local" forever start ./bin/fox.js start', function(err, stdout, stderr) {
+  exec('NODE_ENV="'+fox.config["environment"]+'" forever --minUptime 1000 --spinSleepTime 1000 start ./bin/fox.js start -s', function(err, stdout, stderr) {
     sys.puts(stdout);
   });
+}
+
+function startServerUsingPm2() {
+
 }
 
 /**
@@ -184,7 +186,6 @@ function startForeverServer() {
  * it, and send the result to the callback function.
  */
 function startServer(next) {
-
   var app = require(fox.config.serverPath);
   var isCluster = (fox.config["cluster"] && fox.config.cluster.enabled);
   if(isCluster && cluster.isMaster) {
@@ -311,6 +312,31 @@ function tryRequire(file) {
   } else {
     return undefined;
   }
+}
+
+/**
+ * Combine two object's attributes giving priority
+ * to the first object's (obj1) attribute values.
+ */
+function mergeObjects(obj1, obj2) {
+  for(var key in obj2) {
+    if(obj1[key] === undefined)
+      obj1[key] = obj2[key];
+  }
+  return obj1;
+}
+
+function isDaemonEnabled() {
+  // Check for a command line argument.
+  if(argv.s !== undefined) {
+    return ! argv.s;
+  }
+
+  if(argv.m !== undefined) {
+    return argv.m;
+  }
+
+  return (fox && fox.config && fox.config.daemon && fox.config.daemon.enabled);
 }
 
 /**
