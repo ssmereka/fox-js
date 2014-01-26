@@ -111,11 +111,19 @@ if(argv._[0] && _.contains(['stop'], argv._[0])) {
   stopServer(fox.config);
 } 
 
-// Restart - Restart the server gracefully with 0 downtime.
+// Restart - Restart the server gracefully.
 if(argv._[0] && _.contains(['restart'], argv._[0])) {
   isArgvHandled = true;
   if(isDaemonEnabled()) {
     restartServer(fox.config);
+  }
+} 
+
+// Reload - Reload the server with 0 downtime.
+if(argv._[0] && _.contains(['reload'], argv._[0])) {
+  isArgvHandled = true;
+  if(isDaemonEnabled()) {
+    restartServerZeroDowntime(fox.config);
   }
 } 
 
@@ -179,7 +187,19 @@ function restartServer(config, next) {
   console.log("Restarting Server...");
   var sys = require('sys');
   var exec = require('child_process').exec;
-  exec('NODE_ENV="'+config.environment+'" pm2 reload all', function(err, stdout, stderr) {
+  exec('NODE_ENV="'+config.environment+'" pm2 gracefulReload '+config.name, function(err, stdout, stderr) {
+    sys.puts(stdout);
+    if(next) { 
+      next(undefined, true); 
+    }
+  });
+}
+
+function restartServerZeroDowntime(config, next) {
+  console.log("Restarting Server...");
+  var sys = require('sys');
+  var exec = require('child_process').exec;
+  exec('NODE_ENV="'+config.environment+'" pm2 reload '+config.name, function(err, stdout, stderr) {
     sys.puts(stdout);
     if(next) { 
       next(undefined, true); 
