@@ -4,7 +4,25 @@
 
 var load = require("../libs/loading");    // Require a library to help setup & configure the server.
 
-module.exports = {
+process.on('message', function(msg) {
+  if (msg == 'shutdown') {
+    // Your process is going to be reloaded
+    // Close all database/socket.io/* connections
+    console.log('Closing all connections...');
+    setTimeout(function() {
+      console.log('Finished closing connections');
+      server.stop({}, function(err, msg) {
+        // You can exit to faster the process or it will be
+        // automatically killed after 4000ms.
+        // You can override the timeout by modifying PM2_GRACEFUL_TIMEOUT
+        process.exit(0);
+      });
+    }, 1500);
+  }
+});
+
+
+var server = {
   start: function(config, next) {
     //console.log(config);
     //next(undefined, "Loaded successfully");
@@ -39,3 +57,7 @@ module.exports = {
   }
 
 };
+
+server.start({}, undefined);
+
+module.exports = server;

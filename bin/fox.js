@@ -26,14 +26,6 @@ var argv = require('optimist').argv;
 var _ = require('lodash');
 
 /***
- * Colors
- * @description Print console messages in color.
- * @repo https://github.com/Marak/colors.js
- * @License MIT
- */
-var colors = require('colors');
-
-/***
  * Path
  * @description Handles tranforming file paths.
  * @website http://nodejs.org/api/path.html
@@ -47,12 +39,6 @@ var path = require('path');
  */
 var fs = require('fs');
 
-/***
- * Cluster
- * @description create and control multiple instances of a server.
- * @website http://nodejs.org/api/cluster.html
- */
-var cluster = require('cluster');
 
 //**************************************************
 //******************** Setup Fox
@@ -63,7 +49,7 @@ var fox = {};
 // Load the fox logger.
 fox.log = tryRequire('fox_log.js');
 
-// Load the default backend server configuration object.
+// Load the default backend server configuration.
 fox["config"] = tryRequire('/config/default_server_config.js');
 
 // If the object could not be loaded, then insert a empty object.
@@ -72,13 +58,13 @@ if( ! fox["config"]) {
   fox["config"] = {}
 }
 
-
 // Get the absolute path to this script's directory.
 fox.config["foxBinPath"] = process.cwd();
 
 // Find the path to the backend server's directory.
 fox.config["serverPath"] = getServerPathSync();
 
+fox.config["cluster"]["workers"] = getNumberOfWorkers(fox.config);
 
 //**************************************************
 //******************** Console Argument Parsing
@@ -113,39 +99,29 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
 
   if(isDaemonEnabled()) {
-    return startServerAsDaemon();
+    startServerAsDaemon(fox.config);
+  } else {
+    startServer(fox.config);
   }
-
-  console.log("Start Server");
-  startServer(function(err) { 
-    //exit(); 
-  });
 } 
 
 // Stop - Stop the server
 if(argv._[0] && _.contains(['stop'], argv._[0])) {
   isArgvHandled = true;
-  stopServer(function(err) { 
-    exit(); 
-  });
+  stopServer(fox.config);
 } 
 
-// Restart - Restart the server
+// Restart - Restart the server gracefully with 0 downtime.
 if(argv._[0] && _.contains(['restart'], argv._[0])) {
   isArgvHandled = true;
-  stopServer(function(err) {
-    if(err) { 
-      exit(); 
-    }
-    startServer(function(err) {
-     //exit(); 
-   });
-  });
+  if(isDaemonEnabled()) {
+    restartServer(fox.config);
+  }
 } 
 
 // Argument is not valid
 if ( ! isArgvHandled) {
-  fox.log.error("Command has invalid arguments.".error);
+  fox.log.error("Command has invalid arguments.");
   exit();
 }
 
@@ -154,75 +130,61 @@ if ( ! isArgvHandled) {
 //******************** Private Methods
 //**************************************************
 
-function startServerAsDaemon() {
-  if(fox.config.daemon.type) {
-    var type = fox.config.daemon.type.toUpperCase();
-    if(type == "PM2") {
-      return startServerUsingPm2();
-    }
-  }
-
-  // Default to using forever.
-  startServerUsingForever();
-}
-
-function startServerUsingForever() {
-  console.log("Start server using forever");
-  // TODO: Launch forever using javascript rather than CLI.
+/**
+ * Start the server normally using the "node" command.  
+ */
+function startServer(config, next) {
   var sys = require('sys');
   var exec = require('child_process').exec;
-  exec('NODE_ENV="'+fox.config["environment"]+'" forever --minUptime 1000 --spinSleepTime 1000 start ./bin/fox.js start -s', function(err, stdout, stderr) {
+  exec('NODE_ENV="'+config.environment+'" node '+config.serverPath, function(err, stdout, stderr) {
     sys.puts(stdout);
+    if(next) { 
+      next(undefined, true); 
+    }
   });
 }
 
-function startServerUsingPm2() {
-
+/**
+ * Start the server using pm2 to daemonize the process.  Also 
+ * perform any clustering needed.
+ */
+function startServerAsDaemon(config, next) {
+  var sys = require('sys');
+  var exec = require('child_process').exec;
+  exec('NODE_ENV="'+config.environment+'" pm2 start '+config.serverPath+" -i "+config.cluster.workers+" --name "+config.name, function(err, stdout, stderr) {
+    sys.puts(stdout);
+    if(next) { 
+      next(undefined, true); 
+    }
+  });
 }
 
-/**
- * Start the server with the fox configuration object.
- * If the server encounters an error or success, log 
- * it, and send the result to the callback function.
- */
-function startServer(next) {
-  var app = require(fox.config.serverPath);
-  var isCluster = (fox.config["cluster"] && fox.config.cluster.enabled);
-  if(isCluster && cluster.isMaster) {
+function getNumberOfWorkers(config) {
+  var isCluster = (config["cluster"] && config.cluster.enabled);
+  if(isCluster) {
     var cpuCount = require('os').cpus().length;
-    var workerMax = (fox.config.cluster["workerMax"]) ? fox.config.cluster["workerMax"] : cpuCount;
+    var workerMax = (config.cluster["workerMax"]) ? config.cluster.workerMax : cpuCount;
     
     // Determine the number of workers to create based 
     // on the number of CPUs and the max number of workers.
-    var workerCount = (fox.config.cluster["workerPerCpu"] && cpuCount <= workerMax) ? cpuCount : workerMax;
+    var workerCount = (config.cluster["workerPerCpu"] && cpuCount <= workerMax) ? cpuCount : workerMax;
 
-    // Create the workers.
-    for(; workerCount > 0; workerCount--) {
-      cluster.fork();
-    }
-
-    // Respawn workers when they die.
-    cluster.on('exit', function(worker) {
-      fox.log.warn("Master - Worker " + worker.id + " is dead.  Creating a new worker.");
-      cluster.fork();
-    });
+    return (workerCount == cpuCount) ? "max" : workerCount;
   } else {
-    // Start the application.
-    app.start(fox.config, function(err, success) {
-      var tag = (isCluster) ? "Worker " + cluster.worker.id + " - " : "";
-
-      // Check if the server encountered an error while starting.
-      if(err) {
-        fox.log.error(tag + err);
-      } else {
-        fox.log.info(tag + success);
-      }
-
-      if(next) {
-        next(err);
-      }
-    });
+    return 1;
   }
+}
+
+function restartServer(config, next) {
+  console.log("Restarting Server...");
+  var sys = require('sys');
+  var exec = require('child_process').exec;
+  exec('NODE_ENV="'+config.environment+'" pm2 reload all', function(err, stdout, stderr) {
+    sys.puts(stdout);
+    if(next) { 
+      next(undefined, true); 
+    }
+  });
 }
 
 /**
@@ -230,17 +192,14 @@ function startServer(next) {
  * trying to stop, log it, and send the results to the 
  * callback function.
  */
-function stopServer(next) {
-  require(fox.config.serverPath).stop(fox.config, function(err, success) {
-    // Check if the server encountered an error while stopping.
-    if(err) {
-      fox.log.error(err);
-    } else {
-      fox.log.info(success);
-    }
-
-    if(next) {
-      next(err);
+function stopServer(config, next) {
+  console.log("Restarting Server...");
+  var sys = require('sys');
+  var exec = require('child_process').exec;
+  exec('pm2 stop all', function(err, stdout, stderr) {
+    sys.puts(stdout);
+    if(next) { 
+      next(undefined, true); 
     }
   });
 }
@@ -336,7 +295,13 @@ function isDaemonEnabled() {
     return argv.m;
   }
 
-  return (fox && fox.config && fox.config.daemon && fox.config.daemon.enabled);
+  if(fox && fox.config && fox.config.daemon !== undefined) {
+    return fox.config.daemon;
+  } else {
+
+    // Default daemon to enabled.
+    return true;
+  }
 }
 
 /**

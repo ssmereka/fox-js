@@ -53,19 +53,22 @@ var localConfig = {
 
 // Development Mode
 var developmentConfig = {
-  host: app["domain"],
-  port: '3000',
-  protocol: 'https',
+  //host: app["domain"],
+  host: 'localhost',
+  port: '3001',
+  protocol: 'http',
   debug: true,
 
   mongodb: {
     enabled: true,
-    useAuthentication: true,
-    username: 'admin',
-    password: 'ASCO231IYBeEede17dbYsELWtK5UKjNfvN34',
-    host: 'ds033607.mongolab.com',
-    port: '33607',
-    database: app["name"] + '_development'
+    useAuthentication: false,
+    //username: 'admin',
+    //password: 'ASCO231IYBeEede17dbYsELWtK5UKjNfvN34',
+    host: 'localhost',
+    //host: 'ds033607.mongolab.com',
+    //port: '33607',
+    port: "27017",
+    database: app["name"] + "_local"//'_development'
   }
 }
 
