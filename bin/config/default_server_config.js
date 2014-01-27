@@ -32,26 +32,9 @@ var config = {
     workerMax: 2
   },
 
-  host: 'localhost',
-
-  // Port - The port to have the server listen on.
-  port: '3000',
-  protocol: 'https',
-
   // Debug - when enabled additional logs, information, and/or
   // application options will be available.
   debug: true,
-
-  title: 'Fox App',
-
-
-  mongodb: {
-    enabled: true,
-    useAuthentication: false,
-    host: 'localhost',
-    port: '27017',
-    database: 'fox_local'
-  }
 };
 
 module.exports = config;

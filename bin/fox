@@ -39,6 +39,9 @@ var path = require('path');
  */
 var fs = require('fs');
 
+var sys = require('sys');
+
+var exec = require('child_process').exec;
 
 //**************************************************
 //******************** Setup Fox
@@ -127,6 +130,12 @@ if(argv._[0] && _.contains(['reload'], argv._[0])) {
   }
 } 
 
+// Clear - Stop and remove all server history.
+if(argv._[0] && _.contains(['clear'], argv._[0])) {
+  isArgvHandled = true;
+  clearServer(fox.config);
+} 
+
 // Argument is not valid
 if ( ! isArgvHandled) {
   fox.log.error("Command has invalid arguments.");
@@ -142,8 +151,6 @@ if ( ! isArgvHandled) {
  * Start the server normally using the "node" command.  
  */
 function startServer(config, next) {
-  var sys = require('sys');
-  var exec = require('child_process').exec;
   exec('NODE_ENV="'+config.environment+'" node '+config.serverPath, function(err, stdout, stderr) {
     sys.puts(stdout);
     if(next) { 
@@ -154,11 +161,9 @@ function startServer(config, next) {
 
 /**
  * Start the server using pm2 to daemonize the process.  Also 
- * perform any clustering needed.
+ * perform any clustering that is needed.
  */
 function startServerAsDaemon(config, next) {
-  var sys = require('sys');
-  var exec = require('child_process').exec;
   exec('NODE_ENV="'+config.environment+'" pm2 start '+config.serverPath+" -i "+config.cluster.workers+" --name "+config.name, function(err, stdout, stderr) {
     sys.puts(stdout);
     if(next) { 
@@ -167,26 +172,11 @@ function startServerAsDaemon(config, next) {
   });
 }
 
-function getNumberOfWorkers(config) {
-  var isCluster = (config["cluster"] && config.cluster.enabled);
-  if(isCluster) {
-    var cpuCount = require('os').cpus().length;
-    var workerMax = (config.cluster["workerMax"]) ? config.cluster.workerMax : cpuCount;
-    
-    // Determine the number of workers to create based 
-    // on the number of CPUs and the max number of workers.
-    var workerCount = (config.cluster["workerPerCpu"] && cpuCount <= workerMax) ? cpuCount : workerMax;
-
-    return (workerCount == cpuCount) ? "max" : workerCount;
-  } else {
-    return 1;
-  }
-}
-
+/**
+ * Gracefully restart the server in deamon mode.
+ */
 function restartServer(config, next) {
   console.log("Restarting Server...");
-  var sys = require('sys');
-  var exec = require('child_process').exec;
   exec('NODE_ENV="'+config.environment+'" pm2 gracefulReload '+config.name, function(err, stdout, stderr) {
     sys.puts(stdout);
     if(next) { 
@@ -195,10 +185,14 @@ function restartServer(config, next) {
   });
 }
 
+/**
+ * Reload the server with zero down time.
+ * This will preserve the existing connections and reload 
+ * each worker one by one.
+ * Note:  This will not do a gracefull shutdown.
+ */
 function restartServerZeroDowntime(config, next) {
-  console.log("Restarting Server...");
-  var sys = require('sys');
-  var exec = require('child_process').exec;
+  console.log("Reloading Server...");
   exec('NODE_ENV="'+config.environment+'" pm2 reload '+config.name, function(err, stdout, stderr) {
     sys.puts(stdout);
     if(next) { 
@@ -213,10 +207,7 @@ function restartServerZeroDowntime(config, next) {
  * callback function.
  */
 function stopServer(config, next) {
-  console.log("Restarting Server...");
-  var sys = require('sys');
-  var exec = require('child_process').exec;
-  exec('pm2 stop all', function(err, stdout, stderr) {
+  exec('pm2 stop '+config.name, function(err, stdout, stderr) {
     sys.puts(stdout);
     if(next) { 
       next(undefined, true); 
@@ -224,17 +215,46 @@ function stopServer(config, next) {
   });
 }
 
+function clearServerLogs(config, next) {
+  exec('pm2 flush', function(err, stdout, stderr) {
+    sys.puts(stdout);
+    if(next) { 
+      next(undefined, true); 
+    }
+  });
+}
+
+function deleteServersFromPm2(config, next) {
+  exec('pm2 delete '+config.name, function(err, stdout, stderr) {
+    sys.puts(stdout);
+    if(next) { 
+      next(undefined, true); 
+    }
+  });
+}
+
+function clearServer(config, next) {
+  stopServer(config, function(err) {
+    clearServerLogs(config, function(err) {
+      deleteServersFromPm2(config, next);
+    });
+  });
+}
+
+
 /**
  * Print the fox script's usage.
  */
 function printHelp() {
-  fox.log.info("Usage:  fox <command>\n");
+  fox.log.info("Usage:  fox <command> <options>\n");
   fox.log.info("Commands:");
   printColumns("start", "Start the server.");
   printColumns("stop", "Stop the server.");
-  printColumns("restart", "Restart the server.\n");
+  printColumns("restart", "Restart the server.");
+  printColumns("reload", "Restart the server with zero downtime.");
+  printColumns("clear", "Stop the server and clear all logs and history.\n");
 
-  printColumns("Options:")
+  fox.log.info("Options:")
   printColumns("-v", "Enable verbose or debug mode.");
   printColumns("-l", "Start in local environment mode.");
   printColumns("-d", "Start in development environment mode.");
@@ -294,33 +314,35 @@ function tryRequire(file) {
 }
 
 /**
- * Combine two object's attributes giving priority
- * to the first object's (obj1) attribute values.
+ * Check if the server should run in daemon mode or not.
  */
-function mergeObjects(obj1, obj2) {
-  for(var key in obj2) {
-    if(obj1[key] === undefined)
-      obj1[key] = obj2[key];
-  }
-  return obj1;
-}
-
 function isDaemonEnabled() {
-  // Check for a command line argument.
-  if(argv.s !== undefined) {
-    return ! argv.s;
-  }
-
-  if(argv.m !== undefined) {
-    return argv.m;
-  }
-
   if(fox && fox.config && fox.config.daemon !== undefined) {
     return fox.config.daemon;
   } else {
 
     // Default daemon to enabled.
     return true;
+  }
+}
+
+/**
+ * Get the number of workers to create based on the 
+ * configuration options.
+ */
+function getNumberOfWorkers(config) {
+  var isCluster = (config["cluster"] && config.cluster.enabled);
+  if(isCluster) {
+    var cpuCount = require('os').cpus().length;
+    var workerMax = (config.cluster["workerMax"]) ? config.cluster.workerMax : cpuCount;
+    
+    // Determine the number of workers to create based 
+    // on the number of CPUs and the max number of workers.
+    var workerCount = (config.cluster["workerPerCpu"] && cpuCount <= workerMax) ? cpuCount : workerMax;
+
+    return (workerCount == cpuCount) ? "max" : workerCount;
+  } else {
+    return 1;
   }
 }
 
