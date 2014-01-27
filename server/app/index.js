@@ -23,8 +23,7 @@ var server = {
       load.routes(function(err, success) {    // Dynamically require all of our routes in the correct order.
         load.server();                        // Start the server.
         
-
-        // Notify the start script that the server has started successfully.
+        // Notify the caller that the server has started successfully.
         if(next) {
           return next(undefined, "Loaded successfully");
         }

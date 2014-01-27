@@ -61,7 +61,7 @@ var database = function(next) {
     log.i("Connecting to database...");
   }
 
-  // If we our use a Mongo DB
+  // If we using MongoDB
   if(config.mongodb.enabled) {                                         // If we are configuring a Mongo database.
     
     // Setup a Mongo Session Store, this will define the database
@@ -135,9 +135,9 @@ var requireStaticFolders = function() {
  * as the tempalte engine.
  */
 var configureViews = function() {
-  log.d("Set Jade as view engine.", debug);
-  log.d("Set view path as: ", debug);
-  log.d("\tFolder: " + config.paths.clientAppFolder, debug);
+  //log.d("Set Jade as view engine.", debug);
+  //log.d("Set view path as: ", debug);
+  //log.d("\tFolder: " + config.paths.clientAppFolder, debug);
 
   // Set up the root directory for our views.
   //app.set('views', config.paths.clientAppFolder); 
@@ -158,7 +158,7 @@ var configureFavIcon = function() {
     log.d("\tFile: " + config.paths.favIcon, debug);
     app.use(express.favicon(config.paths.favIcon));
   } else {
-    log.d("\tDefault express favicon.");
+    log.d("\tDefault express favicon.", debug);
     express.favicon();
   }
 }
@@ -277,7 +277,8 @@ var requireTypesInFolder = function(types, folder, next) {
   
   log.d("Selecting files to require in: ", debug);
   log.d("\tDirectory: " + folder, debug);
-   // Walk through all the files in the directory.
+  
+  // Walk through all the files in the directory.
   walkAsync(folder, function(file, next) {
     fs.readFile(file, 'utf8', function(err, data) {
 
@@ -377,7 +378,12 @@ var lib = {
 
     // Setup express.
     app.use(express.cookieParser());  // Setup express: enable cookies.
-    app.use(express.bodyParser());    // Setup express: enable body parsing.
+    
+    // For connect 3.0, body parser call changed.
+    // app.use(express.bodyParser());    // Setup express: enable body parsing.
+    app.use(express.json());
+    app.use(express.urlencoded());
+    
     //app.use(expressValidator);        // Setup express validator.
 
     // Configure and connect to the database.
@@ -444,7 +450,7 @@ var lib = {
     configureFavIcon();
 
     // Setup our view engine and directory.
-    configureViews();
+    //configureViews();
 
     // Require all the files of the speficed type, in the correct order.
     requireTypesInFolder(config.routes, config.paths.serverAppFolder, function(err, success) {

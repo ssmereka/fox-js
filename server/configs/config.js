@@ -124,7 +124,7 @@ var allConfig = {
   express: {                                                   // Express object holds configuration settings for all things express.
     sessionKey: 'CCCQ9V6Tg6RVFfFK5BjBm3JjCFy4FI0TJOD21dk'      // The session key is used to keep the express sessions secure, keep this private.
   },
-  debugSystem: true,                                          // Show additional system level debug information.
+  debugSystem: false,                                          // Show additional system level debug information.
   dirname: serverDirectory + "/app/",                          // Server application directory.
   installKey: SERVER_INSTALL_KEY,                              // Server install key, a private key used to activate the installation of the server. (Keep it secret, keep it safe)
   paths: {                                                     // The paths object contains information about where different files and folders are located on the disk.
