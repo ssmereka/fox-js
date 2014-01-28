@@ -269,29 +269,24 @@ function clearServer(config, next) {
   });
 }
 
+/**
+ * Create a new server.
+ */
 function createNewServer(name) {
-  if(fox.config.serverPath) {
-    fox.log.error("Server already exists at this location: " + fox.config.serverPath);
+  var newServerPath = path.normalize(fox.config.userPath + "/" + name);
+
+  if(fox.config.serverPath || fs.existsSync(newServerPath)) {
+    fox.log.error("Server already exists at this location.");
+    exit();
   }
 
-  var newServerPath = fox.config.userPath;
-  console.log("Source: " + fox.config.foxServerPath);
-  console.log("destination: " + newServerPath);
-  console.log("Name: " + name);
-  
-  //if( ! fs.existsSync(path.resolve(newServerPath + "/server")) ) {
-    //fs.mkdirSync(newServerPath + "/server");
-  //}
-  wrench.copyDirSyncRecursive(fox.config.foxServerPath, newServerPath, {forceDelete: true, preserveFiles: true, inflateSymlinks: false, excludeHiddenUnix: true});
-  /*ncp(fox.config.foxServerPath, newServerPath, function(err) {
-    if(err) {
-      fox.log.error(err);
-      exit();
-    }
-
-    console.log("Success");
-    exit();
-  }); */
+  fox.log.info("Creating server " + name);
+  wrench.copyDirSyncRecursive(fox.config.foxServerPath, newServerPath, {
+    forceDelete: true, 
+    preserveFiles: true, 
+    inflateSymlinks: false, 
+    excludeHiddenUnix: true
+  });
 }
 
 
