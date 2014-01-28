@@ -1,14 +1,15 @@
 // ~> Model
-var mongoose    = require('mongoose'),                                              // Include object modeling for MongoDB
-    Schema      = mongoose.Schema,                                                  // Mongoose schema object for MongoDB documents.
-    ObjectId    = Schema.ObjectId,                                                  // Object ID used in mongoose schemas
-    bcrypt      = require('bcrypt'),                                                // Include bcrypt for password hashing.
-    saltRounds  = 10,                                                               // Number of rounds used to caclulate a salt for bcrypt password hashing.
+
+var bcrypt      = require('bcrypt'),                                                // Include bcrypt for password hashing.
     validator   = require('validator'),
     check       = validator.check,
     sanitize    = require('sanitize-it');
 
 module.exports = function(app, db, config) {
+
+  var Schema      = db.Schema,              // Mongoose schema object for MongoDB documents.
+      ObjectId    = Schema.ObjectId,        // Object ID used in mongoose schemas
+      saltRounds  = 10;                     // Number of rounds used for hashing.
 
   // Load our hashing library.
   var hash = require(config.paths.serverLibFolder + 'hash')(config),
@@ -293,5 +294,5 @@ module.exports = function(app, db, config) {
   /********************************************************/
   /****************** Export User Schemas *****************/
 
-  mongoose.model('User', User);                                                     // Set the user schema.
+  db.model('User', User);                                                     // Set the user schema.
 };

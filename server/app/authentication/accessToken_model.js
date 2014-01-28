@@ -1,18 +1,18 @@
 // ~> Model
 // ~A Scott Smereka
 
-var mongoose    = require('mongoose'),                        // Include object modeling for MongoDB
-    Schema      = mongoose.Schema,                            // Mongoose schema object for MongoDB documents.
-    ObjectId    = Schema.ObjectId,                            // Object ID used in mongoose schemas
-    saltRounds  = 10,                                         // Number of rounds used for hashing.
-    tokenLife   = 10,                                         // Number of days a token is valid for.
-    sanitize    = require('sanitize-it');                     // Module to sanitize user input.
+var sanitize    = require('sanitize-it');                     // Module to sanitize user input.
 
 module.exports = function(app, db, config) {
 
   /* ************************************************** *
    * ******************** Load Libraries
    * ************************************************** */
+
+  var Schema      = db.Schema,              // Mongoose schema object for MongoDB documents.
+      ObjectId    = Schema.ObjectId,        // Object ID used in mongoose schemas
+      saltRounds  = 10,                     // Number of rounds used for hashing.
+      tokenLife   = 10;                     // Number of days a token is valid for.
 
   var date  = require(config.paths.serverLibFolder + 'date')(config),   // Working with dates in javascript.
       hash  = require(config.paths.serverLibFolder + 'hash')(config),   // Hashing and token generation.
@@ -277,6 +277,6 @@ module.exports = function(app, db, config) {
    * ******************** Export Schema(s)
    * ************************************************** */
 
-  mongoose.model('AccessToken', AccessToken);
+  db.model('AccessToken', AccessToken);
 
 };

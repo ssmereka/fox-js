@@ -136,6 +136,12 @@ if(argv._[0] && _.contains(['clear'], argv._[0])) {
   clearServer(fox.config);
 } 
 
+// Clear - Stop and remove all server history.
+if(argv._[0] && _.contains(['new'], argv._[0])) {
+  isArgvHandled = true;
+  createNewServer(argv._[1]);
+} 
+
 // Argument is not valid
 if ( ! isArgvHandled) {
   fox.log.error("Command has invalid arguments.");
@@ -215,6 +221,9 @@ function stopServer(config, next) {
   });
 }
 
+/**
+ * Clear all logs.
+ */
 function clearServerLogs(config, next) {
   exec('pm2 flush', function(err, stdout, stderr) {
     sys.puts(stdout);
@@ -224,6 +233,9 @@ function clearServerLogs(config, next) {
   });
 }
 
+/**
+ * Delete all servers from pm2.
+ */
 function deleteServersFromPm2(config, next) {
   exec('pm2 delete '+config.name, function(err, stdout, stderr) {
     sys.puts(stdout);
@@ -233,11 +245,26 @@ function deleteServersFromPm2(config, next) {
   });
 }
 
+/**
+ * Clear and remove all current tracking of the server.
+ */
 function clearServer(config, next) {
   stopServer(config, function(err) {
     clearServerLogs(config, function(err) {
       deleteServersFromPm2(config, next);
     });
+  });
+}
+
+function createNewServer(name) {
+  var newServerPath = process.cwd();
+  console.log("source: " + fox.config["serverPath"]);
+  console.log("destination: " + newServerPath);
+  console.log("Process: " + process.cwd);
+  console.log("Name: " + name);
+  fs.mkdirSync(newServerPath);
+  ncp(fox.config["serverPath"], fox.config["foxBinPath"], function(err) {
+    
   });
 }
 

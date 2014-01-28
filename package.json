@@ -1,31 +1,39 @@
 {
-	"name": "fox-js",
-	"author": "Scott Smereka",
-	"version": "0.0.1",
-	"description": "",
-	"homepage": "",
-	"keywords": [
-		"API",
-		"REST",
-		"MVC"
-	],
-	"main": "",
-	"bin": "",
-	"repository": {
-		"type": "git",
-		"url": "http://github.com/ssmereka/fox-js"
-	},
-	"licenses": [{
-		"type": "MIT",
-		"url": ""
-	}],
-	"engines": {
-		"node": ">= 0.10.0"
-	},
-	"dependencies": {
-		"colors": "x.x.x",
-		"express": "x.x.x",
-		"optimist": "x.x.x",
-		"lodash": "x.x.x"
-	}
+  "name": "fox-js",
+  "author": "Scott Smereka",
+  "version": "0.0.1",
+  "description": "",
+  "homepage": "",
+  "keywords": [
+    "API",
+    "REST",
+    "MVC"
+  ],
+  "main": "",
+  "bin": "",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/ssmereka/fox-js"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": ""
+    }
+  ],
+  "engines": {
+    "node": ">= 0.10.0"
+  },
+  "dependencies": {
+    "colors": "x.x.x",
+    "express": "x.x.x",
+    "optimist": "x.x.x",
+    "lodash": "x.x.x",
+    "winston": "x.x.x",
+    "express-validator": "~1.0.1",
+    "mongoose": "~3.8.5",
+    "connect-mongo": "~0.4.0",
+    "sanitize-it": "0.0.7",
+    "bcrypt": "~0.7.7"
+  }
 }

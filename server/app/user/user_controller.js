@@ -1,4 +1,5 @@
 // ~> Controller
+// ~A Scott Smereka
 
 module.exports = function(app, db, config) {
   

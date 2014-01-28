@@ -13,19 +13,102 @@ var app, config, configModule, debug, db, log, express,
  * ******************** Private Methods
  * ************************************************** */
 
+/* Merge Objects
+ * Combine two object's attributes giving priority
+ * to the first object's (obj1) attribute values.
+ */
+var mergeObjects = function (obj1, obj2) {
+  for(var key in obj2) {
+    if(obj1[key] === undefined)
+      obj1[key] = obj2[key];
+  }
+  return obj1;
+}
+
+/**
+ * Merge two objects attributes into a single object.
+ * This will do a deep merge, meaning that if both objects 
+ * contain an attribute that is also an object, then they 
+ * will be merged as well.  This will give all priorty to
+ * the first object, meaning if both objects have the same 
+ * attribute, the first object's value will be preserved
+ * while the second-object's value is not.
+ */
+var deepMergeObjects = function(obj1, obj2) {
+  var result = {};
+
+  // Loop through all the attributes in the first object.
+  for(var key in obj1) {
+    
+    // If an attribute is also an object
+    if(obj1.hasOwnProperty(key) && obj1[key] !== null && typeof obj1[key] === 'object') {     
+      
+      // And obj2's attribute with the same key is also an object.
+      if(obj2.hasOwnProperty(key) && obj2[key] !== null && typeof obj2[key] === 'object') {
+        
+        // recurse and merge those objects as well.
+        result[key] = deepMergeObjects(obj1[key], obj2[key]);
+      } else {
+
+        // Otherwise store the object in the result.
+        result[key] = obj1[key];
+      }
+    } else {
+
+      // If the attribute is not an object, store it in the results.
+      result[key] = obj1[key];
+    }
+  }
+
+  // Loop through and add all the attributes in object 2 that
+  // are not already in object 1.
+  for(i in obj2) {
+
+    // If the attribute is already in the result, skip it.
+    if(i in result) {
+      continue;
+    }
+
+    // Add the new attribute to the result object.
+    result[i] = obj2[i];
+  }
+
+  return result;
+}
+
+
+
 /**
  * Load and initalize modules, libraries, and global variables
  * that are used in this loading module.  This includes loading
  * the configuration object.
  */
-var modules = function() {
-  // Load the config object. The config file holds all our applicaiton's settings.
-  configModule = require('../configs/config');
-  config       = configModule.config();
+var modules = function(_config) {
   
+  // Load the config module.  This holds a default configuration object
+  // and functions used to help configure the server.
+  configModule = require('./config.js');
+
+  // Make sure we loaded the config module before we use it.
+  if( ! configModule) {
+    console.log("Could not load the config module.");
+    return false;
+  }
+
+  // The config object holds information about how the server should
+  // work and function. If a config parameter is valid, then combine 
+  // the default config object with the config parameter.  The merge 
+  // will give the config parameter priority.
+  if(_config !== undefined && _config != null && typeof _config === 'object') {
+    config = deepMergeObjects(_config, configModule.config());
+    //config = mergeObjects(_config, configModule.config())
+  } else {
+    config = configModule.config();
+  }
+
   // Make sure we loaded a config object before we try to use it.
   if(config === undefined) {
-    console.log("Could not load config module.");
+    console.log("Could not load a valid config object.");
     return false;
   }
 
@@ -34,7 +117,7 @@ var modules = function() {
   express          = require(config.paths.nodeModulesFolder + "express");           // Express will handle our sessions and routes at a low level.
   expressValidator = require(config.paths.nodeModulesFolder + "express-validator"); // Express validator will assist express.
   fs               = require('fs');                                                 // Initialize the file system module.
-  log              = require(config.paths.serverLibFolder + "log")(config);         // Load the logging lib.
+  log              = require(config.paths.serverLibFolder + "log.js")(config);      // Load the logging lib.
     
   // Load Mongo DB related modules, if we are using Mongo DB.
   if(config.mongodb.enabled) {
@@ -72,19 +155,27 @@ var database = function(next) {
     }, function() {                                                    // This function is called after a successful connection is setup by mongo-connect.
       mongoose.connect(config.mongodb.uri);                            // Finally, connect to the MongoDB Database.
       
+
+
+      mongoose.connection.on('close', function() {
+        log.e("Database connection closed.");
+        console.log("DB closed");
+      });
+
+      mongoose.connection.on('disconnected', function() {
+        log.e("Database disconnected.");
+        console.log("DB Disconnected");
+      });
+
+      mongoose.connection.on('error', function(err) {
+        log.e("Database encountered an error: \n", err);
+      });
+
       mongoose.connection.on('open', function() {                      // Once the connection is opened.
         log.s("Connected to the database.");
         if(next !== undefined) {
           next(undefined, mongoose);                                   // Return our connection object (in this case it is just mongoose).
         }
-      });
-
-      mongoose.connection.on('close', function() {
-        log.e("Database connection closed.");
-      });
-
-      mongoose.connection.on('error', function(err) {
-        log.e("Database encountered an error: \n", err);
       });
 
     });
@@ -275,7 +366,7 @@ var requireTypesInFolder = function(types, folder, next) {
     files[i] = [];
   }
   
-  log.d("Selecting files to require in: ", debug);
+  log.d("Selecting folders to load from: ", debug);
   log.d("\tDirectory: " + folder, debug);
   
   // Walk through all the files in the directory.
@@ -297,7 +388,7 @@ var requireTypesInFolder = function(types, folder, next) {
     }
 
     // If successful, require all the files in the correct order.
-    log.d("Require Routes: ", debug);
+    log.d("File Paths to Require: ", debug);
     for(var key in files) {
       files[key].forEach(function(file) {
         requireFile(file);
@@ -347,134 +438,194 @@ function requireFile(path) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+/**
+ * Create our application, configuration, and database objects.
+ * Also handle initial configurations for our application and express.
+ * Finally connect to the database.
+ */
+var app = function appFunction(_config, next) {
+  // Load and initalize some of our external modules, libraries, and global variables.
+  // This includes loading our configuration object.
+  if( ! modules(_config)) {
+    return next(new Error("An error occured while loading modules."));
+  }
+
+  // Create and return an application object created by express.
+  // We use module.exports as opposed to exports so that we can use
+  // the "app" object as a function.  (Reference: http://goo.gl/6yzmKc)
+  app = module.exports = express(); 
+
+  // Handle configuration and setup for different server enviorment modes. (Such as local, development, and production).
+  var success = configModule.configureEnviorment(express, app);
+  if(! success) {
+    return next(new Error("Could not load config environment"));
+  }
+
+  // Setup express.
+  app.use(express.cookieParser());  // Setup express: enable cookies.
+
+  // For connect 3.0, body parser call changed.
+  // app.use(express.bodyParser());    // Setup express: enable body parsing.
+  app.use(express.json());
+  app.use(express.urlencoded());
+
+  //app.use(expressValidator);        // Setup express validator.
+
+  // Configure and connect to the database.
+  database(function(err, _db) {
+    if(err) {
+      return next(err);
+    } else if(! _db) {
+      return next(new Error('Could not load or connect to database.'));
+    }
+
+    // Set our modules global database variable.
+    db = _db;
+
+    // Load the database modules.
+    requireTypesInFolder(["model"], config.paths.serverAppFolder, function(err, success) {
+      if(err) {
+        return next(err);
+      } else if( ! success) {
+        return next(new Error("Could not load models."));
+      }
+      
+      // Load and initalize libraries that require some time to laod.
+      loadlibs(function(err, success) {
+        if(err || ! success) {
+          return next(err || new Erro("An error occured while trying to preload some libraries."));
+        }
+        
+        next(err, app, config, db);   // Return the app, config, and database objects.
+      });
+    });
+  });
+};
+
+
+/**
+ * Configure and setup Passport for authentication.
+ */
+var passport = function passport(next) {
+  //var passport = require(config.paths.nodeModulesFolder + 'passport');
+  var passport = require(config.paths.serverNodeModulesFolder + 'passport');
+
+  //app.use(require(config.paths.nodeModulesFolder + 'connect-flash')());  // Enables flash messages while authenticating with passport.
+  app.use(require(config.paths.serverNodeModulesFolder + 'connect-flash')());  // Enables flash messages while authenticating with passport.
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  log.d("Passport configured successfully.", debug);
+  if(next) {
+    next(undefined, passport);
+  }
+};
+
+
+/**
+ * Finds and requires all of the routes in the specified order.
+ * The different types of routes are specified by a unique identifier
+ * followed by the type.  The order is specified by the config.routes
+ * array and should be configured in the server.js file.
+ */
+var routes = function routes(next) {
+  var files = {}, 
+      routesModelIndex;
+
+  // Require all static folders as public static routes.
+  requireStaticFolders();
+
+  // Intialize the router.
+  app.use(app.router);                                                 // Handle all routes
+  
+  // Set the favicon, if available.
+  configureFavIcon();
+
+  // Setup our view engine and directory.
+  //configureViews();
+
+  // Require all the files of the speficed type, in the correct order.
+  requireTypesInFolder(config.routes, config.paths.serverAppFolder, function(err, success) {
+    next(err, success);
+  });
+};
+
+
+var start = function start(config, next) {
+  // Create our config object, application, and connect to the database.
+  app(config, function(err, app, config, db) { 
+    if(err) { 
+      // Error occurred and server cannot start, display error.
+      return (next) ? next(err) : console.log(err);
+    }
+
+    // Load and configure passport for authentication.
+    passport();                                
+
+    // Dynamically require all of our routes in the correct order.
+    routes(function(err, success) {    
+      // Start the server. 
+      server();                        
+      
+      // Notify the caller that the server has started successfully.
+      if(next) {
+        return next();
+      }
+    });
+  });
+};
+
+/**
+ * Start the server on the specifed port.
+ * Let the user know under what conditions the server started on.
+ */
+var server = function server() {
+  // You can set the port using "export PORT=1234" or it will default to your configuration file.
+  var port = (config.port);                                              
+  
+  // Start our server listening on previously declared port.
+  app.listen(port);
+  
+  if(config.mongodb.enabled) {
+    console.log("[ OK ] Listening on port ".green + port.cyan + " in ".green + app.settings.env.cyan + " mode with database ".green + config.mongodb.database.cyan + ".".green);
+  } else {
+    console.log("[ OK ] Listening on port ".green + port.cyan + " in ".green + app.settings.env.cyan + " mode.".green);
+  }
+};
+
+
+var stop = function stop(next) {
+  db.disconnect(function(err) {
+    if(err) {
+      log.e(err, debug);
+    }
+    if(next) {
+      next(err);
+    }
+  });
+}
+
 /* ************************************************** *
  * ******************** Public Exported Methods
  * ************************************************** */
 
 var lib = {
-
-  /**
-   * Create our application, configuration, and database objects.
-   * Also handle initial configurations for our application and express.
-   * Finally connect to the database.
-   */
-  app: function appFunction(next) {
-    // Load and initalize some of our external modules, libraries, and global variables.
-    // This includes loading our configuration object.
-    if( ! modules()) {
-      return next(new Error("An error occured while loading modules."));
-    }
-
-    // Create and return an application object created by express.
-    // We use module.exports as opposed to exports so that we can use
-    // the "app" object as a function.  (Reference: http://goo.gl/6yzmKc)
-    app = module.exports = express(); 
-
-    // Handle configuration and setup for different server enviorment modes. (Such as local, development, and production).
-    var success = configModule.configureEnviorment(express, app);
-    if(! success) {
-      return next(new Error("Could not load config environment"));
-    }
-
-    // Setup express.
-    app.use(express.cookieParser());  // Setup express: enable cookies.
-    
-    // For connect 3.0, body parser call changed.
-    // app.use(express.bodyParser());    // Setup express: enable body parsing.
-    app.use(express.json());
-    app.use(express.urlencoded());
-    
-    //app.use(expressValidator);        // Setup express validator.
-
-    // Configure and connect to the database.
-    database(function(err, _db) {
-      if(err) {
-        return next(err);
-      } else if(! _db) {
-        return next(new Error('Could not load or connect to database.'));
-      }
-
-      // Set our modules global database variable.
-      db = _db;
-
-      // Load the database modules.
-      requireTypesInFolder(["model"], config.paths.serverAppFolder, function(err, success) {
-        if(err) {
-          return next(err);
-        } else if( ! success) {
-          return next(new Error("Could not load models."));
-        }
-        
-        // Load and initalize libraries that require some time to laod.
-        loadlibs(function(err, success) {
-          if(err || ! success) {
-            return next(err || new Erro("An error occured while trying to preload some libraries."));
-          }
-          
-          next(err, app, config, db);   // Return the app, config, and database objects.
-        });
-      });
-    });
-  },
-
-  /**
-   * Configure and setup Passport for authentication.
-   */
-  passport: function passport() {
-    var passport = require(config.paths.nodeModulesFolder + 'passport');
-
-    app.use(require(config.paths.nodeModulesFolder + 'connect-flash')());  // Enables flash messages while authenticating with passport.
-    app.use(passport.initialize());
-    app.use(passport.session());
-
-    log.d("Passport configured successfully.", debug);
-  },
-
-  /**
-   * Finds and requires all of the routes in the specified order.
-   * The different types of routes are specified by a unique identifier
-   * followed by the type.  The order is specified by the config.routes
-   * array and should be configured in the server.js file.
-   */
-  routes: function routes(next) {
-    var files = {}, 
-        routesModelIndex;
-
-    // Require all static folders as public static routes.
-    requireStaticFolders();
-
-    // Intialize the router.
-    app.use(app.router);                                                 // Handle all routes
-    
-    // Set the favicon, if available.
-    configureFavIcon();
-
-    // Setup our view engine and directory.
-    //configureViews();
-
-    // Require all the files of the speficed type, in the correct order.
-    requireTypesInFolder(config.routes, config.paths.serverAppFolder, function(err, success) {
-      next(err, success);
-    });
-  },
-
-  /**
-   * Start the server on the specifed port.
-   * Let the user know under what conditions the server started on.
-   */
-  server: function server() {
-    // You can set the port using "export PORT=1234" or it will default to your configuration file.
-    var port = (config.port);                                              
-    
-    // Start our server listening on previously declared port.
-    app.listen(port);
-    
-    if(config.mongodb.enabled) {
-      console.log("[ OK ] Listening on port ".green + port.cyan + " in ".green + app.settings.env.cyan + " mode with database ".green + config.mongodb.database.cyan + ".".green);
-    } else {
-      console.log("[ OK ] Listening on port ".green + port.cyan + " in ".green + app.settings.env.cyan + " mode.".green);
-    }
-  }
+  app: app,
+  passport: passport,
+  routes: routes,
+  server: server,
+  start: start,
+  stop: stop
   
 };
 

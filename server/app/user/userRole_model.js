@@ -1,10 +1,9 @@
 // ~> Model
 
-var mongoose    = require('mongoose'),                     // Include object modeling for MongoDB
-    Schema      = mongoose.Schema,                         // Mongoose schema object for MongoDB documents.
-    ObjectId    = Schema.ObjectId;                         // Object ID used in mongoose schemas
-
 module.exports = function(app, db, config) {
+
+  var Schema      = db.Schema,              // Mongoose schema object for MongoDB documents.
+      ObjectId    = Schema.ObjectId;        // Object ID used in mongoose schemas
 
   /* User Role Schema
    * Defines a role with specific permissions for the application.
@@ -25,5 +24,5 @@ module.exports = function(app, db, config) {
     return next();
   });
 
-  mongoose.model('UserRole', UserRole);                    // Set the user role schema.
+  db.model('UserRole', UserRole);           // Set the user role schema.
 };

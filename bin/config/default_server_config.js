@@ -29,7 +29,7 @@ var config = {
     workerPerCpu: true,
 
     // Worker Max - Maximum number of workers to create.
-    workerMax: 2
+    workerMax: 1
   },
 
   // Debug - when enabled additional logs, information, and/or
