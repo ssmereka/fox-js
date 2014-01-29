@@ -1,5 +1,5 @@
 {
-  "name": "fox-js",
+  "name": "fox",
   "author": "Scott Smereka",
   "version": "0.0.1",
   "description": "",
@@ -24,6 +24,9 @@
   "engines": {
     "node": ">= 0.10.0"
   },
+  
+  "private": true,
+
   "dependencies": {
     "colors": "x.x.x",
     "express": "x.x.x",

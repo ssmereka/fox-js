@@ -29,7 +29,7 @@ var config = {
     serverConfigFolder: serverDirectory + "/configs/",
 
     // Server node_modules folder, where all the dependencies are stored.
-    serverNodeModulesFolder: path.resolve(__dirname, "../app/node_modules/") + "/"
+    serverNodeModulesFolder: path.resolve(__dirname, "../node_modules") + "/"
   },
 
   // Routes determines the order in which models and controllers are required.

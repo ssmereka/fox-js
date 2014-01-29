@@ -1,13 +1,14 @@
 {
-  "name": "Quickie-JS",
+  "name": "fox-boilerplate",
   "description": "Template for a quick maintainable website using very powerful JavaScript frameworks.",
   "author": "Scott Smereka",
   "version": "0.0.1",
   "repository": {
     "type" : "git",
-    "url"  : "https://github.com/ssmereka/quickie-js.git"
+    "url"  : ""
   },
   "dependencies": {
+    "fox":                  "git+https://github.com/ssmereka/fox-js.git",
     "bcrypt":               "0.7.7",
     "connect-flash":        "0.1.x",    
     "connect-mongo" :       "0.3.x",

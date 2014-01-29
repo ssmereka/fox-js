@@ -280,13 +280,15 @@ function createNewServer(name) {
     exit();
   }
 
-  fox.log.info("Creating server " + name);
+  fox.log.info("Creating server " + name + "...");
   wrench.copyDirSyncRecursive(fox.config.foxServerPath, newServerPath, {
     forceDelete: true, 
     preserveFiles: true, 
     inflateSymlinks: false, 
     excludeHiddenUnix: true
   });
+  fox.log.info("Configuring server...")
+  fox.log.success("Server " + name + " created successfully.");
 }
 
 
