@@ -6,8 +6,7 @@
  */
 
 var path = require("path");
-var app = require(path.normalize("../../libs/loading"));    
-var msgs = require(path.normalize("../../libs/messaging"));
+var app = require("fox");    
 
 var server = {
   start: function(config, next) {
@@ -35,7 +34,7 @@ var server = {
 };
 
 // Handle messages sent to the server, such as start, stop, restart, etc.
-msgs.handle(server);
+app.handleMessages(server);
 
 // Start the server using the configuration file.
 server.start(require(path.resolve(__dirname, "../configs/config.js")));

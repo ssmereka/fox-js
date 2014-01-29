@@ -2,7 +2,8 @@
 /**
  * Module dependencies.
  */
-var loading = require("./loading.js");
+var loading = require("./loading.js"),
+	messaging = require("./messaging.js");
 
 
 
@@ -21,6 +22,10 @@ Fox.prototype.start = function(config, next) {
 
 Fox.prototype.stop = function(config, next) {
 	return loading.stop(config, next);
+};
+
+Fox.prototype.handleMessages = function(server, next) {
+	return messaging.handle(server, next);
 };
 
 /**
