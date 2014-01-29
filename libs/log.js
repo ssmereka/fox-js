@@ -154,7 +154,8 @@ var init = function(_config) {
 
   if(_config !== undefined) {
     config = _config;
-    colors = require(_config.paths.nodeModulesFolder + "colors"),
+    //colors = require(_config.paths.nodeModulesFolder + "colors"),
+    colors = require("colors"),
     isInit = true;
     return lib;
   } else {

@@ -153,8 +153,11 @@ var init = function(config) {
   if(isInit) {
     return lib;
   } else {
-    log      = require(config.paths.serverLibFolder + "log")(config);
-    sanitize = require(config.paths.nodeModulesFolder + "sanitize-it");
+    //log      = require(config.paths.serverLibFolder + "log")(config);
+    //sanitize = require(config.paths.nodeModulesFolder + "sanitize-it");
+
+    log      = require("./log")(config);
+    sanitize = require("sanitize-it");
     isInit   = true;
     return lib;
   }

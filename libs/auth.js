@@ -402,9 +402,12 @@ var init = function(_config, _db, next) {
     config   = _config;
     debug    = config.systemDebug;
     db       = _db;
-    sanitize = require(config.paths.nodeModulesFolder + "sanitize-it");
-    sender   = require(config.paths.serverLibFolder + "send")(config);
-    log      = require(config.paths.serverLibFolder + "log")(config);
+    //sanitize = require(config.paths.nodeModulesFolder + "sanitize-it");
+    //sender   = require(config.paths.serverLibFolder + "send")(config);
+    //log      = require(config.paths.serverLibFolder + "log")(config);
+    sanitize = require("sanitize-it");
+    sender   = require("./send")(config);
+    log      = require("./log")(config);
 
     // Load all our roles and role objects.
     initRoles(function(err, _allRoles) {

@@ -150,10 +150,12 @@ init = function(_config) {
   }
   
   if(_config !== undefined) {
-    sanitize = require(_config.paths.nodeModulesFolder + 'sanitize-it');  // Include bcrypt for password hashing.
+    //sanitize = require(_config.paths.nodeModulesFolder + 'sanitize-it');  // Include bcrypt for password hashing.
+    sanitize = require('sanitize-it');  // Include bcrypt for password hashing.
     config = _config;
     debug  = config.debugSystem;
-    log    = require(config.paths.serverLibFolder + "log")(config);
+    //log    = require(config.paths.serverLibFolder + "log")(config);
+    log    = require("./log")(config);
     isInit = true;
     return lib;
   } else {

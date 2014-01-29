@@ -114,15 +114,21 @@ var modules = function(_config) {
 
   // Load external modules and libs.
   debug            = config.debugSystem;                                            // Initialize our local debug variable
-  express          = require(config.paths.nodeModulesFolder + "express");           // Express will handle our sessions and routes at a low level.
-  expressValidator = require(config.paths.nodeModulesFolder + "express-validator"); // Express validator will assist express.
+  //express          = require(config.paths.nodeModulesFolder + "express");           // Express will handle our sessions and routes at a low level.
+  //expressValidator = require(config.paths.nodeModulesFolder + "express-validator"); // Express validator will assist express.
+  express          = require("express");           // Express will handle our sessions and routes at a low level.
+  expressValidator = require("express-validator"); // Express validator will assist express.
   fs               = require('fs');                                                 // Initialize the file system module.
-  log              = require(config.paths.serverLibFolder + "log.js")(config);      // Load the logging lib.
+  //log              = require(config.paths.serverLibFolder + "log.js")(config);      // Load the logging lib.
+  log              = require("./log.js")(config);      // Load the logging lib.
     
   // Load Mongo DB related modules, if we are using Mongo DB.
   if(config.mongodb.enabled) {
-    mongoose = require(config.paths.nodeModulesFolder + 'mongoose'),
-    MongoStore = require(config.paths.nodeModulesFolder + 'connect-mongo')(express);
+    //mongoose = require(config.paths.nodeModulesFolder + 'mongoose'),
+    //MongoStore = require(config.paths.nodeModulesFolder + 'connect-mongo')(express);
+
+    mongoose = require('mongoose'),
+    MongoStore = require('connect-mongo')(express);
   }
 
   // If in debug mode, notify the user it was turned on.
@@ -518,10 +524,10 @@ var app = function appFunction(_config, next) {
  */
 var passport = function passport(next) {
   //var passport = require(config.paths.nodeModulesFolder + 'passport');
-  var passport = require(config.paths.serverNodeModulesFolder + 'passport');
+  var passport = require('passport');
 
   //app.use(require(config.paths.nodeModulesFolder + 'connect-flash')());  // Enables flash messages while authenticating with passport.
-  app.use(require(config.paths.serverNodeModulesFolder + 'connect-flash')());  // Enables flash messages while authenticating with passport.
+  app.use(require('connect-flash')());  // Enables flash messages while authenticating with passport.
   app.use(passport.initialize());
   app.use(passport.session());
 

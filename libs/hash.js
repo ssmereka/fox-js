@@ -109,10 +109,14 @@ var lib = {
 
 var init = function(config) {
   // Initialize items that do not require parameters.
-  log = require(config.paths.serverLibFolder + "log")();
+  //log = require(config.paths.serverLibFolder + "log")();
+  log = require("./log")();
 
   if(config !== undefined) {
-    bcrypt = require(config.paths.nodeModulesFolder + 'bcrypt');  // Include bcrypt for password hashing.
+    //bcrypt = require(config.paths.nodeModulesFolder + 'bcrypt');  // Include bcrypt for password hashing.
+    //crypto = require('crypto');
+
+    bcrypt = require('bcrypt');  // Include bcrypt for password hashing.
     crypto = require('crypto');
     return lib;
   } else {
