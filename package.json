@@ -9,8 +9,13 @@
     "REST",
     "MVC"
   ],
-  "main": "",
-  "bin": "",
+  "main": "./libs",
+  "bin": {
+    "fox": "./bin/fox"
+  },
+  "directories": {
+    "lib":"lib"
+  },
   "repository": {
     "type": "git",
     "url": "http://github.com/ssmereka/fox-js"
