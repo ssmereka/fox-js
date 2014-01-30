@@ -40,21 +40,18 @@ var deepMergeObjects = function(obj1, obj2) {
   // Loop through all the attributes in the first object.
   for(var key in obj1) {
     
-    // If an attribute is also an object
-    if(obj1.hasOwnProperty(key) && obj1[key] !== null && typeof obj1[key] === 'object') {     
+    // If an attribute is also an object and also not an array.
+    if(obj1.hasOwnProperty(key) && obj1[key] !== null && typeof obj1[key] === 'object' && ! obj1[key] instanceof Array) {     
       
       // And obj2's attribute with the same key is also an object.
       if(obj2.hasOwnProperty(key) && obj2[key] !== null && typeof obj2[key] === 'object') {
-        
         // recurse and merge those objects as well.
         result[key] = deepMergeObjects(obj1[key], obj2[key]);
       } else {
-
         // Otherwise store the object in the result.
         result[key] = obj1[key];
       }
     } else {
-
       // If the attribute is not an object, store it in the results.
       result[key] = obj1[key];
     }
@@ -100,8 +97,7 @@ var modules = function(_config) {
   // the default config object with the config parameter.  The merge 
   // will give the config parameter priority.
   if(_config !== undefined && _config != null && typeof _config === 'object') {
-    config = deepMergeObjects(_config, configModule.config());
-    //config = mergeObjects(_config, configModule.config())
+    config = mergeObjects(_config, configModule.config())
   } else {
     config = configModule.config();
   }
@@ -212,6 +208,10 @@ var database = function(next) {
  * will serve all files in those folders.
  */
 var requireStaticFolders = function() {
+  if(! config.paths.staticFolders) {
+    log.d("Configuring Static Routes: none", debug)
+    return;
+  }
 
   // If there are static folders in the config file, 
   // then we will configure them as static.
@@ -366,7 +366,7 @@ var isFileInvalid = function(file) {
  */
 var requireTypesInFolder = function(types, folder, next) {
   var files = {};
-
+  
   // Initialize the files object.
   for(var i = 0; i < types.length; i++) {
     files[i] = [];
@@ -378,7 +378,6 @@ var requireTypesInFolder = function(types, folder, next) {
   // Walk through all the files in the directory.
   walkAsync(folder, function(file, next) {
     fs.readFile(file, 'utf8', function(err, data) {
-
       // Check if the file contains a route tag.
       for(var i = 0; i < types.length; i++) {
         // If it contains a route tag, then add it to the list of files to require.
@@ -411,7 +410,7 @@ var requireTypesInFolder = function(types, folder, next) {
 var loadlibs = function(next) {
   
   // Preload auth lib.
-  require(config.paths.serverLibFolder + "auth")(config, db, function(err, auth) {
+  require("./auth")(config, db, function(err, auth) {
     if(err || ! auth) {
       next(err || new Error("Failed to load auth library"));
     } else {

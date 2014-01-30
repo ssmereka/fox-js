@@ -2,9 +2,13 @@
 
 module.exports = function(app, db, config) {
   
-  var sender   = require(config.paths.serverLibFolder + "send")(config),
-      auth     = require(config.paths.serverLibFolder + "auth")(),
-      UserRole = db.model('UserRole');                               // Pull in the user role schema.
+  var fox   = require("fox");
+      auth  = fox.authentication(),
+      sender = fox.send(config);
+
+  //var sender   = require(config.paths.serverLibFolder + "send")(config),
+    //  auth     = require(config.paths.serverLibFolder + "auth")(),
+  var UserRole = db.model('UserRole');                               // Pull in the user role schema.
 
   /********************************************************/
   /************************ Routes ************************/

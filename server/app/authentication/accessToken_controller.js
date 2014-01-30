@@ -7,10 +7,17 @@ module.exports = function(app, db, config) {
    * ******************** Load Libraries and Models
    * ************************************************** */
 
-  var sender      = require(config.paths.serverLibFolder + "send")(config),
+  var fox    = require("fox"),
+      sender = fox.send(config),
+      auth   = fox.authentication(),
+      model  = fox.model();
+
+
+  /*var fox         = require("fox");
+      sender      = require("send")(config),
       auth        = require(config.paths.serverLibFolder + "auth")(),
-      model       = require(config.paths.serverLibFolder + "model")(),
-      AccessToken = db.model('AccessToken'),
+      model       = require(config.paths.serverLibFolder + "model")(), */
+  var AccessToken = db.model('AccessToken'),
       User        = db.model('User');
 
 

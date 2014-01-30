@@ -7,8 +7,11 @@ module.exports = function(app, db, config) {
   var ObjectId = db.Types.ObjectId,
       User     = db.model('User'),
       UserRole = db.model('UserRole'),
-      sender   = require(config.paths.serverLibFolder + "send")(),
-      log      = require(config.paths.serverLibFolder + "log")();
+      fox = require("fox"),
+      sender = fox.send(),
+      log = fox.logging();
+      //sender   = require(config.paths.serverLibFolder + "send")(),
+      //log      = require(config.paths.serverLibFolder + "log")();
 
   /********************************************************/
   /************************ Routes ************************/

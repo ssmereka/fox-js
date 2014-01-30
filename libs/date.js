@@ -61,7 +61,7 @@ var init = function(config) {
   if(isInit) {
     return lib;
   } else {
-    log      = require(config.paths.serverLibFolder + "log")(config);
+    log      = require("./log")(config);
     isInit   = true;
     return lib;
   }

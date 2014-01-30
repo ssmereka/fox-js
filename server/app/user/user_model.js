@@ -12,8 +12,12 @@ module.exports = function(app, db, config) {
       saltRounds  = 10;                     // Number of rounds used for hashing.
 
   // Load our hashing library.
-  var hash = require(config.paths.serverLibFolder + 'hash')(config),
-      log  = require(config.paths.serverLibFolder + "log")();
+  var fox   = require("fox");
+      hash  = fox.hash(config),
+      log   = fox.logging();
+
+  //var hash = require(config.paths.serverLibFolder + 'hash')(config),
+    //  log  = require(config.paths.serverLibFolder + "log")();
 
   /* User Schema
    * Defines a user in the MongoDB table.

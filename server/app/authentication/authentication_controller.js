@@ -19,7 +19,9 @@ module.exports = function(app, db, config) {
    * ******************** Load libraries and Models
    * ************************************************** */
 
-  var sender   = require(config.paths.serverLibFolder + "send")(config),
+  //var sender   = require(config.paths.serverLibFolder + "send")(config),
+  var fox = require("fox"),
+      sender = fox.send(config),
       User     = db.model('User'),
       UserRole = db.model('UserRole');   
 

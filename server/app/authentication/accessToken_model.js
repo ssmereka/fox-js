@@ -14,10 +14,14 @@ module.exports = function(app, db, config) {
       saltRounds  = 10,                     // Number of rounds used for hashing.
       tokenLife   = 10;                     // Number of days a token is valid for.
 
-  var date  = require(config.paths.serverLibFolder + 'date')(config),   // Working with dates in javascript.
-      hash  = require(config.paths.serverLibFolder + 'hash')(config),   // Hashing and token generation.
-      log   = require(config.paths.serverLibFolder + "log")(),          // Logging to console.
-      model = require(config.paths.serverLibFolder + "model")(config);  // Helper methods for schema models.
+  var fox   = require("fox");
+      date  = fox.date(config),
+      hash  = fox.hash(config),
+      log   = fox.logging(),
+      model = fox.model(config);
+      //hash  = require(config.paths.serverLibFolder + 'hash')(config),   // Hashing and token generation.
+      //log   = require(config.paths.serverLibFolder + "log")(),          // Logging to console.
+      //model = require(config.paths.serverLibFolder + "model")(config);  // Helper methods for schema models.
 
 
   /* ************************************************** *
