@@ -155,6 +155,19 @@ if(argv._[0] && _.contains(['new'], argv._[0])) {
   createNewServer(argv._[1]);
 } 
 
+// Kill - Kill an application running on a given port.
+if(argv._[0] && _.contains(['kill'], argv._[0])) {
+  isArgvHandled = true;
+  if( ! argv._[1]) {
+    fox.log.info("You must include a port number.\nexample: kill 3000");
+    exit();
+  }
+  exec("sudo kill `sudo lsof -t -i:" + argv._[1] + "`", function(err, stdout, stderr) {
+    sys.puts(stdout);
+    exit();
+  });
+}
+
 // Argument is not valid
 if ( ! isArgvHandled) {
   fox.log.error("Command has invalid arguments.");

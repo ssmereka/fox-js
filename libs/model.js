@@ -1,4 +1,4 @@
-var isInit = false, log, sanitize;
+var isInit = false, log, sanitize, fox;
 
 
 /* Merge Objects
@@ -155,8 +155,8 @@ var init = function(config) {
   } else {
     //log      = require(config.paths.serverLibFolder + "log")(config);
     //sanitize = require(config.paths.nodeModulesFolder + "sanitize-it");
-
-    log      = require("./log")(config);
+    fox      = require("./");
+    log      = fox.log;
     sanitize = require("sanitize-it");
     isInit   = true;
     return lib;

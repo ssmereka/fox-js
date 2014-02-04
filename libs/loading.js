@@ -6,7 +6,7 @@
  * ************************************************** */
 
 var app, config, configModule, debug, db, log, express,
-    expressValidator, fs, mongoose, MongoStore;
+    expressValidator, fs, mongoose, MongoStore, fox;
 
 
 /* ************************************************** *
@@ -108,6 +108,7 @@ var modules = function(_config) {
     return false;
   }
 
+  fox              = require("./");
   // Load external modules and libs.
   debug            = config.debugSystem;                                            // Initialize our local debug variable
   //express          = require(config.paths.nodeModulesFolder + "express");           // Express will handle our sessions and routes at a low level.
@@ -116,7 +117,7 @@ var modules = function(_config) {
   expressValidator = require("express-validator"); // Express validator will assist express.
   fs               = require('fs');                                                 // Initialize the file system module.
   //log              = require(config.paths.serverLibFolder + "log.js")(config);      // Load the logging lib.
-  log              = require("./log.js")(config);      // Load the logging lib.
+  log              = fox.log;      // Load the logging lib.
     
   // Load Mongo DB related modules, if we are using Mongo DB.
   if(config.mongodb.enabled) {
@@ -408,12 +409,14 @@ var requireTypesInFolder = function(types, folder, next) {
  * Load libraries that require extra time to initalize.
  */
 var loadlibs = function(next) {
-  
-  // Preload auth lib.
-  require("./auth")(config, db, function(err, auth) {
-    if(err || ! auth) {
-      next(err || new Error("Failed to load auth library"));
+  var fox = require("./");
+  fox.authentication.refreshCachedRoles(db, function(err, roles) {
+  //require("./Authentication")(config, db, function(err, auth) {
+    if(err) {
+      next(err);
     } else {
+      console.log("Loaded roles");
+      console.log(roles);
       next(undefined, true);
     }
   });

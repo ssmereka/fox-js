@@ -9,7 +9,7 @@ module.exports = function(app, db, config) {
 
   var fox    = require("fox"),
       sender = fox.send(config),
-      auth   = fox.authentication(),
+      auth   = fox.authentication,
       model  = fox.model();
 
 
@@ -26,8 +26,8 @@ module.exports = function(app, db, config) {
    * ************************************************** */
   
   // Load user roles used for authentication.
-  var adminRole = auth.getRoleByName("admin"),
-      selfRole  = auth.getRoleByName("self");
+  var adminRole = auth.queryRoleByName("admin"),
+      selfRole  = auth.queryRoleByName("self");
 
 
   app.get('/accessToken.:format', requestToken);

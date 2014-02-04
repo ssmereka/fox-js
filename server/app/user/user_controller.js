@@ -7,7 +7,7 @@ module.exports = function(app, db, config) {
   
   var fox    = require('fox'),
       sender = fox.send(config),
-      auth   = fox.authentication(),
+      auth   = fox.authentication,
       model  = fox.model(),
       //sender = require(config.paths.serverLibFolder + "send")(config),
       //auth   = require(config.paths.serverLibFolder + "auth")(),
@@ -20,8 +20,8 @@ module.exports = function(app, db, config) {
    * ************************************************** */
   
   // Load user roles used for authentication.
-  var adminRole = auth.getRoleByName("admin"),
-      selfRole  = auth.getRoleByName("self");
+  var adminRole = auth.queryRoleByName("admin"),
+      selfRole  = auth.queryRoleByName("self");
 
   // All users with admin role or higher have access to the following
   // methods.  Users also have permission to access their own data in the

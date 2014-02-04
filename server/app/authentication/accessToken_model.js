@@ -16,8 +16,8 @@ module.exports = function(app, db, config) {
 
   var fox   = require("fox");
       date  = fox.date(config),
-      hash  = fox.hash(config),
-      log   = fox.logging(),
+      hash  = fox.hash,
+      log   = fox.log,
       model = fox.model(config);
       //hash  = require(config.paths.serverLibFolder + 'hash')(config),   // Hashing and token generation.
       //log   = require(config.paths.serverLibFolder + "log")(),          // Logging to console.

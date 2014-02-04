@@ -1,7 +1,7 @@
 // ~> Library
 // ~A Scott Smereka
 
-var isInit = false, log;
+var isInit = false, log, fox;
 
 /* Get Date Difference
  * Returns the difference between two dates.
@@ -61,7 +61,8 @@ var init = function(config) {
   if(isInit) {
     return lib;
   } else {
-    log      = require("./log")(config);
+    fox      = require("./");
+    log      = fox.log;
     isInit   = true;
     return lib;
   }

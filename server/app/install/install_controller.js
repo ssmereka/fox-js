@@ -9,7 +9,7 @@ module.exports = function(app, db, config) {
       UserRole = db.model('UserRole'),
       fox = require("fox"),
       sender = fox.send(),
-      log = fox.logging();
+      log = fox.log;
       //sender   = require(config.paths.serverLibFolder + "send")(),
       //log      = require(config.paths.serverLibFolder + "log")();
 

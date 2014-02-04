@@ -10,11 +10,6 @@ var app = require("fox");
 
 var server = {
   start: function(config, next) {
-
-    console.log("THE CONFIG: ");
-    console.log(config);
-    console.log(config.routes);
-    //return;
     // The config routes array determines the order in which
     // your routes will be executed.  Note that models are
     // always loaded first and automatically for you.

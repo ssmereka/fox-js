@@ -5,7 +5,7 @@
  * ******************** External Modules
  * ************************************************** */
 
-var config, debug, isInit = false, log, sanitize;
+var config, debug, isInit = false, log, sanitize, fox;
 
 
 /* ************************************************** *
@@ -150,12 +150,14 @@ init = function(_config) {
   }
   
   if(_config !== undefined) {
+    
+    fox = require("./");
     //sanitize = require(_config.paths.nodeModulesFolder + 'sanitize-it');  // Include bcrypt for password hashing.
     sanitize = require('sanitize-it');  // Include bcrypt for password hashing.
     config = _config;
     debug  = config.debugSystem;
     //log    = require(config.paths.serverLibFolder + "log")(config);
-    log    = require("./log")(config);
+    log    = fox.log;
     isInit = true;
     return lib;
   } else {
