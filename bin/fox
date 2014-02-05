@@ -288,9 +288,27 @@ function clearServer(config, next) {
 function createNewServer(name) {
   var newServerPath = path.normalize(fox.config.userPath + "/" + name);
 
-  if(fox.config.serverPath || fs.existsSync(newServerPath)) {
-    fox.log.error("Server already exists at this location.");
+  // Check if the new server location is taken
+  if(fs.existsSync(newServerPath)) {
+    fox.log.error("Server already exists at " + newServerPath);
     exit();
+  }
+
+  // Check for a collision of server resources.
+  if(fox.config.serverPath && fox.config.serverPath.indexOf(fox.config.userPath) !== -1) {
+
+    // Check for index file at current directory
+    if(fs.existsSync(path.resolve(newServerPath, "../index.js"))) {
+      fox.log.error("Server already exists at " + path.resolve(newServerPath, "../index.js"));
+      exit();
+    }
+
+    var serverSplitPath = fox.config.serverPath.replace(fox.config.userPath, "").split(path.sep);
+
+    if(serverSplitPath[1] === "name" || serverSplitPath[1] === "app") {
+      fox.log.error("Server already exists at " + fox.config.serverPath);
+      exit();
+    }
   }
 
   fox.log.info("Creating server " + name + "...");
@@ -311,6 +329,7 @@ function createNewServer(name) {
 function printHelp() {
   fox.log.info("Usage:  fox <command> <options>\n");
   fox.log.info("Commands:");
+  printColumns("new <name>", "Create a new server with a specified name.");
   printColumns("start", "Start the server.");
   printColumns("stop", "Stop the server.");
   printColumns("restart", "Restart the server.");
