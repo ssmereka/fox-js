@@ -10,7 +10,8 @@
  * ******************** Library Variables
  * ************************************************** */
 
-var debug,
+var fox,
+    debug,
 
     /***
      * Colors Module
@@ -27,8 +28,8 @@ var debug,
  * Log
  * Initalize a new logging library object.
  */
-var Log = function() {
-  
+var Log = function(_fox) {
+  fox = _fox;
   // Set default debug settings.
   debug = false;
   

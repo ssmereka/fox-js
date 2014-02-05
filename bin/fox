@@ -311,15 +311,22 @@ function createNewServer(name) {
     }
   }
 
-  fox.log.info("Creating server " + name + "...");
+  fox.log.info("Creating " + name + "...");
   wrench.copyDirSyncRecursive(fox.config.foxServerPath, newServerPath, {
     forceDelete: true, 
     preserveFiles: true, 
     inflateSymlinks: false, 
     excludeHiddenUnix: true
   });
-  fox.log.info("Configuring server...")
-  fox.log.success("Server " + name + " created successfully.");
+
+  fox.log.info("Configuring...");
+
+  fox.log.info("Installing modules...");
+  exec("npm --prefix " + newServerPath + " install", function(err, stdout, stderr) {
+    //TODO:  Output this to log file.
+    fox.log.success("Server " + name + " created successfully.");
+    exit();
+  });
 }
 
 

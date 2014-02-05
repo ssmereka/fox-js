@@ -24,9 +24,10 @@ var debug,
  * Constructor
  * Handles initalization of the send library.
  */
-var Send = function() {
+var Send = function(_fox) {
+  fox = _fox;
   debug = false;
-  fox = require("../");
+  
   log = fox.log;
   sanitize = require("sanitize-it");
 }

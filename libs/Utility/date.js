@@ -17,8 +17,8 @@ var fox,
  * ******************** Constructor & Initalization
  * ************************************************** */
 
-var DateLibrary = function() {
-  fox = require("../");
+var DateLibrary = function(_fox) {
+  fox = _fox;
   log = fox.log;
 }
 

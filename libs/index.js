@@ -32,20 +32,20 @@ var Authorization = require("./Authentication/authorization.js"), //
  */
 function Fox() {
 	this.config = Config;
-	
-	// Public API
-	this.authentication = new Authorization(this.config);
-	this.crypto = new Cryptography(this.config);
 
-	this.date = new DateLibrary();
-	this.log = new Log();
-	this.message = new Message();
+	this.log 			= new Log(this);
+	this.authentication = new Authorization(this);
+	this.crypto 	    = new Cryptography(this);
+	this.date 			= new DateLibrary(this);
+	this.message 		= new Message(this);
+	this.model 			= new Model(this);
+	this.send 			= new Send(this);
+	this.load 			= new Load(this);
+
+	this.start 			= this.load.start;
+	this.stop 			= this.load.stop;
+
 	//this.handleMessages = messaging.handle;
-	this.model = new Model();
-	this.send = new Send();
-	this.load = new Load(this);
-	this.start = this.load.start;
-	this.stop = this.load.stop;
 	fox = this;
 };
 

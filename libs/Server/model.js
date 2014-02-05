@@ -23,8 +23,8 @@
  * Constructor
  * Handles initalization of the model library.
  */
-var Model = function() {
-  fox = require("../");
+var Model = function(_fox) {
+  fox = _fox;
   log = fox.log;
   sanitize = require("sanitize-it");
 }

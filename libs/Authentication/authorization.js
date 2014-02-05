@@ -27,9 +27,9 @@ var fox,
  * Constructor
  * Initalize a new authorization library object.
  */
-var Authorization = function(config) {
+var Authorization = function(_fox) {
+  fox = _fox;
   allRoles = [];
-  fox      = require("../");
   sanitize = require("sanitize-it");
   debug    = (debug === undefined) ? false : debug;
   log      = fox.log;

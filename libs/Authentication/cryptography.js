@@ -30,7 +30,7 @@ var bcrypt,       // Used to hash strings and things.
  * Constructor
  * Initalize a new cryptography library object.
  */
-var Cryptography = function(config) {
+var Cryptography = function(_fox) {
   // Default debug settings.
   debug = false;
 
@@ -41,7 +41,7 @@ var Cryptography = function(config) {
   hexKeyLength = 24;
 
   //handleConfigObject(config);
-  fox = require("../");
+  fox = _fox;
   log = fox.log;
   bcrypt = require("bcrypt");
   crypto = require("crypto");

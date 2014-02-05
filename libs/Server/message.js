@@ -22,8 +22,8 @@
  * Constructor
  * Handles initalization of the message library.
  */
-var Message = function() {
-  fox = require("../");
+var Message = function(_fox) {
+  fox = _fox;
   log = fox.log;
 }
 
