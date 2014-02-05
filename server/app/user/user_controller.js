@@ -6,9 +6,9 @@
 module.exports = function(app, db, config) {
   
   var fox    = require('fox'),
-      sender = fox.send(config),
+      sender = fox.send,
       auth   = fox.authentication,
-      model  = fox.model(),
+      model  = fox.model,
       //sender = require(config.paths.serverLibFolder + "send")(config),
       //auth   = require(config.paths.serverLibFolder + "auth")(),
       //model  = require(config.paths.serverLibFolder + "model")(),

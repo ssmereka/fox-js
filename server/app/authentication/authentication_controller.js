@@ -21,7 +21,7 @@ module.exports = function(app, db, config) {
 
   //var sender   = require(config.paths.serverLibFolder + "send")(config),
   var fox = require("fox"),
-      sender = fox.send(config),
+      sender = fox.send,
       User     = db.model('User'),
       UserRole = db.model('UserRole');   
 

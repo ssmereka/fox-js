@@ -12,6 +12,7 @@
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
+ 
 var bcrypt,       // Used to hash strings and things.
     crypto,       // Used to generate random keys
     fox,          //
@@ -30,7 +31,6 @@ var bcrypt,       // Used to hash strings and things.
  * Initalize a new cryptography library object.
  */
 var Cryptography = function(config) {
-  console.log("Cryptography Constructor called");
   // Default debug settings.
   debug = false;
 

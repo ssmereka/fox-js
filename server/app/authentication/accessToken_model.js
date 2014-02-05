@@ -15,10 +15,10 @@ module.exports = function(app, db, config) {
       tokenLife   = 10;                     // Number of days a token is valid for.
 
   var fox   = require("fox");
-      date  = fox.date(config),
+      date  = fox.date,
       hash  = fox.hash,
       log   = fox.log,
-      model = fox.model(config);
+      model = fox.model;
       //hash  = require(config.paths.serverLibFolder + 'hash')(config),   // Hashing and token generation.
       //log   = require(config.paths.serverLibFolder + "log")(),          // Logging to console.
       //model = require(config.paths.serverLibFolder + "model")(config);  // Helper methods for schema models.

@@ -9,7 +9,8 @@
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
-var sanitize,       // Used to check or sanitize a variable for use.
+var fox,
+    sanitize,       // Used to check or sanitize a variable for use.
     sender,         // 
     log,            // Handles logging.
     debug,          // Display additional logs when enabled.
@@ -26,13 +27,13 @@ var sanitize,       // Used to check or sanitize a variable for use.
  * Constructor
  * Initalize a new authorization library object.
  */
-var Authorization = function(debug) {
-  console.log("Authorization Constructor called");
+var Authorization = function(config) {
   allRoles = [];
+  fox      = require("../");
   sanitize = require("sanitize-it");
   debug    = (debug === undefined) ? false : debug;
-  log      = require("../Utility/log.js")(debug);
-  sender   = require("../send.js");
+  log      = fox.log;
+  sender   = fox.send;
 }
 
 

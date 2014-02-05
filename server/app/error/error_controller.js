@@ -4,7 +4,7 @@ module.exports = function(app, db, config) {
   //var sender = require(config.paths.serverLibFolder + "send")(config);
 
   var fox = require('fox'),
-      sender = fox.send(config);
+      sender = fox.send;
   
   app.all('/*', handleErrors);
   app.all('/*', handle404);

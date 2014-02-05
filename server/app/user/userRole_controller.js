@@ -4,7 +4,7 @@ module.exports = function(app, db, config) {
   
   var fox   = require("fox");
       auth  = fox.authentication,
-      sender = fox.send(config);
+      sender = fox.send;
 
   //var sender   = require(config.paths.serverLibFolder + "send")(config),
     //  auth     = require(config.paths.serverLibFolder + "auth")(),

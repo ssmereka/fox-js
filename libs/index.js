@@ -10,15 +10,16 @@
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
-var config = require("./config.js"),       // Configuration for fox servers.
-    date,         // Handle dates in javascript.
-    //debug,        // Display additional logs when enabled.
-    fox,		  // Stores instance of the fox library.
-    loading,	  // Loading, configuring, and staring a server.
-    log = require("./Utility/log.js"),          // Handles logging.
-    messaging,    // 
-    model,        // 
-    send;
+var Authorization = require("./Authentication/authorization.js"), //
+	Config  	  = require("./Config/config.js"),           		      // Configuration for fox servers.
+    Cryptography  = require("./Authentication/cryptography.js"),  //
+    DateLibrary	  = require("./Utility/date.js"),     			  // Handle dates in javascript.
+    Load    	  = require("./Server/load.js"),	  			  // Loading, configuring, and staring a server.
+    Log     	  = require("./Utility/log.js"),      			  // Handles logging.
+    Message 	  = require("./Server/message.js"),   			  // 
+    Model   	  = require("./Server/model.js"),     			  // 
+    Send    	  = require("./Server/send.js"),				  //
+    fox; 													      // Stores instance of the fox library.
 
 
 /* ************************************************** *
@@ -30,37 +31,30 @@ var config = require("./config.js"),       // Configuration for fox servers.
  * Initalize a new cryptography library object.
  */
 function Fox() {
-	console.log("Fox Constructor called.");
-
-	//config = require("./config.js");
-	date = require("./date.js");
-	loading = require("./loading.js");
-	//log = require("./log.js");
-	messaging = require("./messaging.js");
-	model = require("./model.js");
-	send = require("./send.js");
-
+	this.config = Config;
+	
 	// Public API
-	this.crypto = new cryptographyFile(config);
-	this.authentication = new authorizationFile(config);
-	this.log = new log(config);
-	this.start = loading.start;
-	this.stop = loading.stop;
-	this.handleMessages = messaging.handle;
-	this.logging = this.log;
-	this.model = model;
-	this.send = send;
-	this.date = date;
+	this.authentication = new Authorization(this.config);
+	this.crypto = new Cryptography(this.config);
 
+	this.date = new DateLibrary();
+	this.log = new Log();
+	this.message = new Message();
+	//this.handleMessages = messaging.handle;
+	this.model = new Model();
+	this.send = new Send();
+	this.load = new Load(this);
+	this.start = this.load.start;
+	this.stop = this.load.stop;
 	fox = this;
 };
 
 var getInstance = function() {
 	if(fox === undefined) {
-		console.log("Returning new instance of fox.");
+		//console.log("Returning new instance of fox.");
 		return new Fox();
 	} else {
-		console.log("Returning current instance of fox.");
+		//console.log("Returning current instance of fox.");
 		return fox;
 	}
 }

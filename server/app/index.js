@@ -33,7 +33,7 @@ var server = {
 };
 
 // Handle messages sent to the server, such as start, stop, restart, etc.
-app.handleMessages(server);
+app.message.handler(server);
 
 // Start the server using the configuration file.
 server.start(require(path.resolve(__dirname, "../configs/config.js")));

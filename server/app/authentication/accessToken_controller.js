@@ -8,9 +8,9 @@ module.exports = function(app, db, config) {
    * ************************************************** */
 
   var fox    = require("fox"),
-      sender = fox.send(config),
+      sender = fox.send,
       auth   = fox.authentication,
-      model  = fox.model();
+      model  = fox.model;
 
 
   /*var fox         = require("fox");

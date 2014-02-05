@@ -27,7 +27,7 @@ var debug,
  * Log
  * Initalize a new logging library object.
  */
-var Log = function(config) {
+var Log = function() {
   
   // Set default debug settings.
   debug = false;
