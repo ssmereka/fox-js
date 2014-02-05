@@ -80,17 +80,6 @@ var cryptographyLibrary,
 
 
 
-var getInstance = function() {
-	if(fox === undefined) {
-		console.log("Returning new instance of fox.");
-		return new Fox();
-	} else {
-		console.log("Returning current instance of fox.");
-		return fox;
-	}
-}
-
-
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */

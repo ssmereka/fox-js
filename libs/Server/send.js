@@ -166,6 +166,7 @@ Send.prototype.sendError = sendError;
 Send.prototype.createAndSendError = createAndSendError;
 Send.prototype.sanitizeObj = sanitizeObj;
 Send.prototype.sanitizeError = sanitizeError;
+Send.prototype.send = send;
 
 
 /* ************************************************** *
