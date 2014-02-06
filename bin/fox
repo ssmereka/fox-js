@@ -115,7 +115,11 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
 
   if(isDaemonEnabled()) {
-    startServerAsDaemon(fox.config);
+    if(fox.config.environment.toLowerCase() === "local") {
+      startNodemanServer(fox.config);
+    } else {
+      startServerAsDaemon(fox.config);
+    }
   } else {
     startServer(fox.config);
   }
@@ -178,6 +182,46 @@ if ( ! isArgvHandled) {
 //**************************************************
 //******************** Private Methods
 //**************************************************
+
+/**
+ * Start the server using node-dev allowing the server
+ * to restart when a file changes.
+ */
+function startNodeDevServer(config, next) {
+  //TODO:  Add this if node-dev stops being so annoying.
+}
+
+/**
+ * Start the server using nodeman allowing the server
+ * to restart when a file changes.
+ */
+function startNodemanServer(config, next) {
+  var startCommand = 'NODE_ENV="'+config.environment+'" nodemon';
+  
+  // Watch the application directory for changes.
+  startCommand += ' --watch '+fox.config["serverPath"];
+
+  // Watch Configuration files for changes.
+  startCommand += ' --watch '+path.resolve(fox.config["serverPath"], "../configs");
+
+  startCommand += " " + fox.config["serverPath"];
+  console.log(startCommand);
+
+
+  var child = require('child_process').spawn("nodemon", [fox.config["serverPath"],' --watch '+fox.config["serverPath"],' --watch '+path.resolve(fox.config["serverPath"], "../configs")], {
+    cwd:'.'
+  });
+
+  child.stdout.on('data', function(data) {
+    process.stdout.write("" + data);
+  });
+
+  child.stderr.on('data', function(data) {
+    process.stderr.write("" + data);
+  });
+
+}
+
 
 /**
  * Start the server normally using the "node" command.  
