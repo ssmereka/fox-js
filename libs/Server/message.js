@@ -36,6 +36,8 @@ var Message = function(_fox) {
  * Handle messages sent from pm2.
  */
 var handler = function(server) {
+  
+  // Handle pm2 messages.
   process.on('message', function(msg) {
   
     // Shutdown Message - The server process is going to be killed in 
@@ -56,6 +58,32 @@ var handler = function(server) {
       log.d("Unhandled Message: " + msg);
     }
   });
+
+  // Handle nodemon shutdown message.
+  process.once("SIGUSR2", function() {
+    // Gracefully stop the server.
+    server.stop({}, function(err) {
+      // Kill the current process, and send the SIGUSR2 flag.
+      process.kill(process.pid, "SIGUSR2");
+    });
+  });
+
+
+  /** 
+   * Handle kill command from terminal
+   * 
+   * SIGINT from the terminal is supported on all platforms, and can 
+   * usually be generated with CTRL+C (though this may be configurable). 
+   * It is not generated when terminal raw mode is enabled.
+   */
+  process.on("SIGINT", function() {
+    server.stop({}, function(err) {
+      process.exit(0);
+    });
+  });
+
+  // TODO: Handle other flags http://nodejs.org/api/process.html
+  
 };
 
 

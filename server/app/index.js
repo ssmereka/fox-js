@@ -25,7 +25,7 @@ var server = {
 
   // Note:  This function has a 4 second timeout.
   stop: function(config, next) {
-    
+    console.log("STOP");
     // Gracefully shutdown the server. 
     app.stop(next);
   }
