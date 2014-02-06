@@ -44,10 +44,12 @@ var fs = require('fs');
 
 var sys = require('sys');
 
+var childProcess = require('child_process');
+
 var exec = require('child_process').exec;
 
 //**************************************************
-//******************** Setup Fox
+//******************** Setup Fox & Globals
 //**************************************************
 
 var fox = {};
@@ -80,6 +82,33 @@ fox.config["userPath"] = process.cwd();
 fox.config["serverPath"] = getServerPathSync();
 
 fox.config["cluster"]["workers"] = getNumberOfWorkers(fox.config);
+
+// List of child processes.
+var littleChildren = [];
+
+
+//**************************************************
+//******************** Handle Messages
+//**************************************************
+
+/**
+ * Handle exit from terminal.
+ *
+ * SIGINT from the terminal is supported on all 
+ * platforms, and can usually be generated with 
+ * CTRL+C (though this may be configurable). It is 
+ * not generated when terminal raw mode is enabled.
+ */
+process.once("SIGINT", function() {
+
+  // Gracefully kill any children processes
+  killChildren();
+
+  // Set a timeout of 5 seconds before force closing.
+  setTimeout(function() {
+    process.exit(0);
+  }, 5000);
+});
 
 
 //**************************************************
@@ -114,13 +143,20 @@ if(argv.l || argv.local) {
 if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
 
+  // Check if server should run in daemon mode.
   if(isDaemonEnabled()) {
-    if(fox.config.environment.toLowerCase() === "local") {
-      startNodemanServer(fox.config);
+
+    // Check if server should be clustered
+    if(isClusterEnabled()) {
+      // Start the server using pm2 daemon and cluster.
+      startPm2Server(fox.config);
     } else {
-      startServerAsDaemon(fox.config);
+      // Start the server using nodemon daemon.
+      startNodemanServer(fox.config);
     }
   } else {
+
+    // Start the server using pure node.
     startServer(fox.config);
   }
 } 
@@ -153,7 +189,8 @@ if(argv._[0] && _.contains(['clear'], argv._[0])) {
   clearServer(fox.config);
 } 
 
-// Clear - Stop and remove all server history.
+// New - Create a new server in the current directory
+// with the specified name.
 if(argv._[0] && _.contains(['new'], argv._[0])) {
   isArgvHandled = true;
   createNewServer(argv._[1]);
@@ -184,11 +221,30 @@ if ( ! isArgvHandled) {
 //**************************************************
 
 /**
- * Start the server using node-dev allowing the server
- * to restart when a file changes.
+ * Start the server normally using the "node" command.  
  */
-function startNodeDevServer(config, next) {
-  //TODO:  Add this if node-dev stops being so annoying.
+function startServer(config, next) {
+  // Setup the arguments required to start the node server.
+  var args = [
+    config.serverPath
+  ];
+
+  // Add our node enviorment.
+  var env = process.env;
+  env["NODE_ENV"] = config.environment;
+
+  // Setup our options to be sent to node.
+  var opts = {
+    cwd: '.',
+    env: env
+  };
+
+  // Create a child process running node and pipe 
+  // the output and error streams to our current terminal.
+  var child = executeCommand("node", args, opts);
+
+  // Add the child process to our list of children.
+  littleChildren.push(child);
 }
 
 /**
@@ -196,83 +252,88 @@ function startNodeDevServer(config, next) {
  * to restart when a file changes.
  */
 function startNodemanServer(config, next) {
-  var startCommand = 'NODE_ENV="'+config.environment+'" nodemon';
-  
-  // Watch the application directory for changes.
-  startCommand += ' --watch '+fox.config["serverPath"];
+  // Setup our nodemon arguments with the server to start,
+  // and files to watch for changes.
+  var args = [
+    config["serverPath"],
+    '--watch '+config["serverPath"],
+    '--watch '+path.resolve(fox.config["serverPath"], "../configs")
+  ];
 
-  // Watch Configuration files for changes.
-  startCommand += ' --watch '+path.resolve(fox.config["serverPath"], "../configs");
+  // Add our node enviorment.
+  var env = process.env;
+  env["NODE_ENV"] = config.environment;
 
-  startCommand += " " + fox.config["serverPath"];
-  console.log(startCommand);
+  // Setup our options to be sent to nodemon.
+  var opts = {
+    cwd: '.',
+    env: env
+  };
 
+  // Create a child process running nodemon and pipe 
+  // the output and error streams to our current terminal.
+  var child = executeCommand("nodemon", args, opts);
 
-  var child = require('child_process').spawn("nodemon", [fox.config["serverPath"],' --watch '+fox.config["serverPath"],' --watch '+path.resolve(fox.config["serverPath"], "../configs")], {
-    cwd:'.'
+  // Send all terminal input into the child process 
+  // running nodemon.
+  process.stdin.on('data', function(data) {
+    child.stdin.write(data);
   });
 
-  child.stdout.on('data', function(data) {
-    process.stdout.write("" + data);
-  });
-
-  child.stderr.on('data', function(data) {
-    process.stderr.write("" + data);
-  });
-
-}
-
-
-/**
- * Start the server normally using the "node" command.  
- */
-function startServer(config, next) {
-  exec('NODE_ENV="'+config.environment+'" node '+config.serverPath, function(err, stdout, stderr) {
-    sys.puts(stdout);
-    if(next) { 
-      next(undefined, true); 
-    }
-  });
+  // Add child proccess to list of all children processes
+  littleChildren.push(child);
 }
 
 /**
  * Start the server using pm2 to daemonize the process.  Also 
  * perform any clustering that is needed.
  */
-function startServerAsDaemon(config, next) {
-  exec('NODE_ENV="'+config.environment+'" pm2 start '+config.serverPath+" -i "+config.cluster.workers+" --name "+config.name, function(err, stdout, stderr) {
-    sys.puts(stdout);
-    if(next) { 
-      next(undefined, true); 
-    }
-  });
-}
+function startPm2Server(config, next) {
+  // Arguments for staring the server using pm2.
+  var args = [
+    "start",
+    config.serverPath,
+    "-i",
+    config.cluster.workers,
+    "--name", 
+    config.name
+  ];
 
-/**
- * Gracefully restart the server in deamon mode.
- */
-function restartServer(config, next) {
-  console.log("Restarting Server...");
-  exec('NODE_ENV="'+config.environment+'" pm2 gracefulReload '+config.name, function(err, stdout, stderr) {
-    sys.puts(stdout);
-    if(next) { 
-      next(undefined, true); 
-    }
-  });
-}
+  // Add the enviorment mode to the current enviorment.
+  var env = process.env;
+  env["NODE_ENV"] = config.environment;
 
-/**
- * Reload the server with zero down time.
- * This will preserve the existing connections and reload 
- * each worker one by one.
- * Note:  This will not do a gracefull shutdown.
- */
-function restartServerZeroDowntime(config, next) {
-  console.log("Reloading Server...");
-  exec('NODE_ENV="'+config.environment+'" pm2 reload '+config.name, function(err, stdout, stderr) {
-    sys.puts(stdout);
-    if(next) { 
-      next(undefined, true); 
+  // Create the options used to start the server using pm2.
+  var opts = {
+    cwd: '.',
+    env: env
+  };
+
+  // Get list of current pm2 servers.
+  var jlistProcess = executeCommandForResult("pm2", ["jlist"], { cwd: '.' }, function(err, jlist) {
+    if(err) {
+      fox.log.error(err);
+      exit();
+    }
+
+    var isServerRunning = false;
+    
+    // Convert the list to an array.
+    jlist = (jlist) ? JSON.parse(jlist) : undefined;
+
+    // Check if the server is already running.
+    if(jlist !== undefined && jlist instanceof Array && jlist.length > 0) {
+      for(var i = jlist.length-1; i >= 0; --i) {
+        if(jlist[i]["name"] === config.name && jlist[i]["pm2_env"]["status"] === "online") {
+          fox.log.error("Server " + config.name + " is already started.");
+          isServerRunning = true;
+        }
+      }
+    }
+
+    // If the server is not running, start it
+    if( ! isServerRunning) {
+      var startProcess = executeCommand("pm2", args, opts, next);
     }
   });
 }
@@ -283,36 +344,87 @@ function restartServerZeroDowntime(config, next) {
  * callback function.
  */
 function stopServer(config, next) {
-  exec('pm2 stop '+config.name, function(err, stdout, stderr) {
-    sys.puts(stdout);
-    if(next) { 
-      next(undefined, true); 
-    }
-  });
+  var opts = {
+    cwd: '.',
+    env: process.env
+  };
+  var stopProcess = executeCommand("pm2", ["stop", config.name], opts, next);
+}
+
+/**
+ * Gracefully restart the server in deamon mode.
+ */
+function restartServer(config, next) {
+  // Add the enviorment mode to the current enviorment.
+  var env = process.env;
+  env["NODE_ENV"] = config.environment;
+
+  // Create the options used to restart the server using pm2.
+  var opts = {
+    cwd: '.',
+    env: env
+  };
+
+  // Restart the named servers gracefully.
+  var restartProcess = executeCommand("pm2", ["gracefulReload", config.name], opts, next);
+}
+
+/**
+ * Reload the server with zero down time.
+ * This will preserve the existing connections and reload 
+ * each worker one by one.
+ * Note:  This will not do a gracefull shutdown.
+ */
+function restartServerZeroDowntime(config, next) {
+  // Add the enviorment mode to the current enviorment.
+  var env = process.env;
+  env["NODE_ENV"] = config.environment;
+
+  // Create the options used to reload the server using pm2.
+  var opts = {
+    cwd: '.',
+    env: env
+  };
+
+  // Reload the named servers with zero down time..
+  var reloadProcess = executeCommand("pm2", ["reload", config.name], opts, next);
 }
 
 /**
  * Clear all logs.
  */
 function clearServerLogs(config, next) {
-  exec('pm2 flush', function(err, stdout, stderr) {
-    sys.puts(stdout);
-    if(next) { 
-      next(undefined, true); 
-    }
-  });
+  console.log("Clear server logs");
+  // Add the enviorment mode to the current enviorment.
+  var env = process.env;
+  env["NODE_ENV"] = config.environment;
+
+  // Create the options used to flush the pm2 logs.
+  var opts = {
+    cwd: '.',
+    env: env
+  };
+
+  // Flush the logs from pm2
+  var flushProcess = executeCommand("pm2", ["flush"], opts, next);
 }
 
 /**
  * Delete all servers from pm2.
  */
 function deleteServersFromPm2(config, next) {
-  exec('pm2 delete '+config.name, function(err, stdout, stderr) {
-    sys.puts(stdout);
-    if(next) { 
-      next(undefined, true); 
-    }
-  });
+  // Add the enviorment mode to the current enviorment.
+  var env = process.env;
+  env["NODE_ENV"] = config.environment;
+
+  // Create the options used to flush the pm2 logs.
+  var opts = {
+    cwd: '.',
+    env: env
+  };
+
+  // Delete the named servers with from pm2.
+  var deleteProcess = executeCommand("pm2", ["delete", config.name], opts, next);
 }
 
 /**
@@ -371,6 +483,53 @@ function createNewServer(name) {
     fox.log.success("Server " + name + " created successfully.");
     exit();
   });
+}
+
+
+/**
+ * Execute a command in a child process and return the 
+ * output and/or error of that process.
+ */
+function executeCommandForResult(command, args, options, end) {
+  var child = childProcess.spawn(command, args, options);
+  var output = "";
+  var err = "";
+  child.stdout.on('data', function(data) {
+    if(data) {
+      output += data.toString();
+    }
+  });
+  child.stderr.on('data', function(data) {
+    if(data) {
+      err += data.toString();
+    }
+  });
+  child.on('close', function(code) {
+    if(end) {
+      end(err, output);
+    }
+  });
+}
+
+/**
+ * Execute a command in a child process, then return that process.
+ * The child process's standard error and output will
+ * be sent to the current terminal.
+ */
+function executeCommand(command, args, options, end) {
+  var child = childProcess.spawn(command, args, options);
+  child.stdout.on('data', function(data) {
+    process.stdout.write("" + data);
+  });
+  child.stderr.on('data', function(data) {
+    process.stderr.write("" + data);
+  });
+  child.on('close', function(code) {
+    if(end) {
+      end(code);
+    }
+  });
+  return child;
 }
 
 
@@ -465,6 +624,19 @@ function isDaemonEnabled() {
 }
 
 /**
+ * Check if the server should run in a cluster or not.
+ */
+function isClusterEnabled() {
+  if(fox && fox.config && fox.config.cluster && fox.config.cluster.enabled !== undefined) {
+    return fox.config.cluster.enabled;
+  } else {
+
+    // Default cluster to disabled.
+    return false;
+  }
+}
+
+/**
  * Get the number of workers to create based on the 
  * configuration options.
  */
@@ -485,8 +657,51 @@ function getNumberOfWorkers(config) {
 }
 
 /**
- * Exit the script.
+ * Kill all child processes gracefully, then 
+ * proceed with exiting or the callback.
  */
-function exit() {
-  process.exit(1);
+function killChildren(signal, end, index) {
+  // Default to the front of the child list.
+  index = (index === undefined) ? 0 : index;
+  // Default to sending a SIGINT.
+  signal = (signal === undefined) ? "SIGINT" : signal;
+
+  // Check if killing the last child in the list.
+  if(index === littleChildren.length-1) {
+    // Default to ending the main process if a callback
+    // is not provided.
+    end = (end) ? end : function() { exit(); };
+    
+    // Kill the child and make a call to the callback.
+    killChild(littleChildren[index], signal, end);
+  } else {
+    // Kill the child process and move on to the next child in the list.
+    killChild(littleChildren[index], signal, killChildren(signal, end, ++index));
+  }
+}
+
+/**
+ * Kill a child process sending the requrested
+ * signal.  Once the child is killed, it make a 
+ * call to the callback.
+ */
+function killChild(child, signal, next) {
+  // Event so child makes a call to the next
+  // callback after closing.
+  child.once('close', function(code) {
+    if(next) {
+      next();
+    }
+  });
+
+  // Kill the child process with the specified signal.
+  process.kill(child.pid, signal);
+}
+
+/**
+ * Exit this script with success or a specific error code.
+ */
+function exit(code) {
+  code = (code) ? code : 1;
+  process.exit(code);
 }
