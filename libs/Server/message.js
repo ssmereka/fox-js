@@ -83,7 +83,50 @@ var handler = function(server) {
   });
 
   // TODO: Handle other flags http://nodejs.org/api/process.html
-  
+
+  process.on("SIGUSR1", function() {
+    console.log("Received SIGUSR1");
+  });
+
+ process.on("SIGTERM", function() {
+    //console.log("Received SIGTERM");
+    /*server.stop({}, function(err) {
+      process.exit(0);
+    });
+    // Set a timeout of 5 seconds before force closing.
+    setTimeout(function() {
+      process.exit(0);
+    }, 5000); */
+    process.exit(0);
+  }); 
+
+  process.on("SIGPIPE", function() {
+    console.log("Received SIGPIPE");
+  });
+
+  process.on("SIGHUP", function() {
+    console.log("Received SIGHUP");
+  });
+
+  process.on("SIGBREAK", function() {
+    console.log("Received SIGBREAK");
+  }); 
+
+  process.on("SIGWINCH", function() {
+    console.log("Received SIGWINCH");
+  });
+
+/*
+  process.on("SIGKILL", function() {
+    console.log("Received SIGKILL");
+    process.exit(0);
+  }); 
+
+  process.on("SIGSTOP", function() {
+    console.log("Received SIGSTOP");
+  }); 
+*/ 
+
 };
 
 

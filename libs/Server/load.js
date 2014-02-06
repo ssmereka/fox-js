@@ -178,12 +178,10 @@ var database = function(next) {
 
       mongoose.connection.on('close', function() {
         log.e("Database connection closed.");
-        console.log("DB closed");
       });
 
       mongoose.connection.on('disconnected', function() {
         log.e("Database disconnected.");
-        console.log("DB Disconnected");
       });
 
       mongoose.connection.on('error', function(err) {
