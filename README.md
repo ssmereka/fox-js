@@ -1,13 +1,12 @@
 # Fox JS [![Build Status](https://secure.travis-ci.org/ssmereka/fox-js.png)](http://travis-ci.org/ssmereka/fox-js)
 
-
-Exactly what you need to get started building a scalable web application using javascript.  Fox-JS is a mixture of boilerplate code and a light framework for creating both the backend and frontend of a web application.  Fox-JS frontend is built on angular-js and the backend using node-js.
+Light-framework and boilerplate code to quickly build scalable web apps using javascript.  The backend is a standalone node server with authenticaiton, users, and anything else all API's need.  The frontend is a standalone angular framework already setup to communicate with the backend.
 
 ## Getting Started
 
 1. Install fox-js
 
-    sudo npm -g install fox
+    sudo npm -g install foxjs
 
 2. Create a new project
 
@@ -17,10 +16,9 @@ Exactly what you need to get started building a scalable web application using j
 
     fox start
 
-If you need to stop or restart the server simply navigate to the projects root directory and enter:
+Restart the server with zero downtime.
 
-    fox stop
-    fox restart
+	fox reload
 
 ## Configuration
 
