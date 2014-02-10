@@ -190,7 +190,7 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
       // Start the server using pure node.
       startServer(fox.config);
     } else {
-      // TODO: Add ability to start node using a deamon and cluster.
+      // TODO: Add ability to start node using a daemon and cluster.
       if(isClusterEnabled()) {
         fox.log.error("Starting node using a cluster is not yet supported.");
       }
@@ -201,7 +201,7 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
       // Start the server using nodemon daemon.
       startNodemanServer(fox.config);
     } else {
-      // TODO: Add ability to start nodemon using a deamon and cluster.
+      // TODO: Add ability to start nodemon using a daemon and cluster.
       if(isClusterEnabled()) {
         fox.log.error("Starting nodemon using a cluster is not yet supported.");
       }
@@ -209,7 +209,7 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
     }
   } else if (controllerType === 'pm2') {
     if( ! isDaemonEnabled()) {
-      fox.log.error("PM2 must be run as a deamon.");
+      fox.log.error("PM2 must be run as a daemon.");
       exit();
     } else {
       if( ! isClusterEnabled()) {
@@ -420,7 +420,7 @@ function stopServer(config, next) {
 }
 
 /**
- * Gracefully restart the server in deamon mode.
+ * Gracefully restart the server in daemon mode.
  */
 function restartServer(config, next) {
   // Add the enviorment mode to the current enviorment.
@@ -620,6 +620,10 @@ function printHelp() {
   printColumns("-l", "Start in local environment mode.");
   printColumns("-d", "Start in development environment mode.");
   printColumns("-p", "Start in production environment mode.\n");
+
+  fox.log.info("Info:")
+  printColumns("Author", "Scott Smereka");
+  printColumns("Version", "0.0.3");
   exit();
 }
 
@@ -688,7 +692,7 @@ function isDaemonEnabled() {
   } else {
 
     // Default daemon to enabled.
-    return true;
+    return false;
   }
 }
 
