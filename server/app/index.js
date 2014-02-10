@@ -6,7 +6,7 @@
  */
 
 var path = require("path");
-var app = require("fox");    
+var app = require("foxjs");    
 
 var server = {
   start: function(config, next) {

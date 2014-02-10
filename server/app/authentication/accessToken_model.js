@@ -14,7 +14,7 @@ module.exports = function(app, db, config) {
       saltRounds  = 10,                     // Number of rounds used for hashing.
       tokenLife   = 10;                     // Number of days a token is valid for.
 
-  var fox   = require("fox");
+  var fox   = require("foxjs");
       date  = fox.date,
       hash  = fox.hash,
       log   = fox.log,

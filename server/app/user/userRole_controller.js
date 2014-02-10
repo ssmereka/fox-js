@@ -2,7 +2,7 @@
 
 module.exports = function(app, db, config) {
   
-  var fox   = require("fox");
+  var fox   = require("foxjs");
       auth  = fox.authentication,
       sender = fox.send;
 

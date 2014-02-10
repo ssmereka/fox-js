@@ -5,7 +5,7 @@
 
 module.exports = function(app, db, config) {
   
-  var fox    = require('fox'),
+  var fox    = require('foxjs'),
       sender = fox.send,
       auth   = fox.authentication,
       model  = fox.model,

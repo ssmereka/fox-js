@@ -12,7 +12,7 @@ module.exports = function(app, db, config) {
       saltRounds  = 10;                     // Number of rounds used for hashing.
 
   // Load our hashing library.
-  var fox   = require("fox");
+  var fox   = require("foxjs");
       hash  = fox.crypto,
       log   = fox.log;
 

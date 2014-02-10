@@ -8,7 +8,7 @@
     "url"  : ""
   },
   "dependencies": {
-    "fox":                  "git+https://github.com/ssmereka/fox-js.git",
+    "foxjs":                "x.x.x",
     "bcrypt":               "0.7.7",
     "connect-flash":        "0.1.x",    
     "connect-mongo" :       "0.3.x",

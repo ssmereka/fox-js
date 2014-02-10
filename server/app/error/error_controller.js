@@ -3,7 +3,7 @@
 module.exports = function(app, db, config) {
   //var sender = require(config.paths.serverLibFolder + "send")(config);
 
-  var fox = require('fox'),
+  var fox = require('foxjs'),
       sender = fox.send;
   
   app.all('/*', handleErrors);
