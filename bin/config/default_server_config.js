@@ -1,5 +1,19 @@
+// ~>Config
+// ~A Scott Smereka
+
+/* Config
+ * A file for configuring the fox server.
+ */
+
+
+/* ************************************************** *
+ * ******************** Example Config
+ * ************************************************** */
+
 /**
- * Default configuration object for the backend server.
+ * Example configuration object fully explained and extended, 
+ * however this is not currently used.  Use this as a guide to 
+ * make new configurations.
  */
 var config = {
   
@@ -38,11 +52,36 @@ var config = {
 };
 
 
+/* ************************************************** *
+ * ******************** Constructor & Initalization
+ * ************************************************** */
+
+/**
+ * Constructor
+ * Initalize a new cryptography library object.
+ */
+var Config = function() {
+
+  // Define properties.
+  this.key_enviorment_local = 'local';
+  this.key_enviorment_development = 'development';
+  this.key_enviorment_production = 'production';
+  
+  this.key_controller_pm2 = 'pm2';
+  this.key_controller_node = 'node';
+  this.key_controller_nodemon = 'nodemon';
+}
+
+
+/* ************************************************** *
+ * ******************** Configurations
+ * ************************************************** */
 
 // Using node in local development mode.
-var localConfig = {
+var node = {
   name: 'fox',
   environment: 'local',
+  controller: 'node',
   daemon: false,
   cluster: {
     enabled: false
@@ -51,10 +90,11 @@ var localConfig = {
 };
 
 // Use nodemon in local development mode.
-var localDaemonConfig = {
+var local = {
   name: 'fox',
   environment: 'local',
-  daemon: true,
+  controller: 'nodemon',
+  daemon: false,
   cluster: {
     enabled: false
   },
@@ -62,9 +102,10 @@ var localDaemonConfig = {
 };
 
 // Use pm2 in clustered development mode.
-var developmentConfig = {
+var development = {
   name: 'fox',
   environment: 'local',
+  controller: 'pm2',
   daemon: true,
   cluster: {
     enabled: true,
@@ -75,9 +116,10 @@ var developmentConfig = {
 };
 
 // Use pm2 in full clustered production mode.
-var productionConfig = {
+var production = {
   name: 'fox',
   environment: 'production',
+  controller: 'pm2',
   daemon: true,
   cluster: {
     enabled: true,
@@ -86,4 +128,26 @@ var productionConfig = {
   debug: false
 };
 
-module.exports = developmentConfig;
+
+/* ************************************************** *
+ * ******************** Public API
+ * ************************************************** */
+
+Config.prototype.default = node;
+Config.prototype.node = node;
+Config.prototype.local = local;
+Config.prototype.development = development;
+Config.prototype.production = production;
+
+Config
+
+
+/* ************************************************** *
+ * ******************** Export the Public API
+ * ************************************************** */
+
+// Reveal the method called when required in other files. 
+exports = module.exports = Config;
+
+// Reveal the public API.
+exports = Config;

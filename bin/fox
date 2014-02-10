@@ -80,12 +80,35 @@ var fox = {};
 fox.log = tryRequire('fox_log.js');
 
 // Load the default backend server configuration.
-fox["config"] = tryRequire('config/default_server_config.js');
+var defaultConfig = tryRequire('config/default_server_config.js');
 
 // If the object could not be loaded, then insert a empty object.
-if( ! fox["config"]) {
+if( ! defaultConfig) {
   fox.log.warn("The default server configuration file could not be loaded.");
   fox["config"] = {}
+
+  // Environment Mode - set the current operating enviorment mode.
+  if(argv.l || argv.local) {
+    fox.config["environment"] = "local";
+  } else if(argv.d || argv.dev || argv.development) {
+    fox.config["environment"] = "development";
+  } else if(argv.p || argv.prod || argv.production) {
+    fox.config["environment"] = "production";
+  }
+} else {
+  defaultConfig = new defaultConfig();
+  // Environment Mode - set the current operating enviorment mode.
+  if(argv.n || argv.node) {
+    fox["config"] = defaultConfig.node;
+  } else if(argv.l || argv.local) {
+    fox["config"] = defaultConfig.local;
+  } else if(argv.d || argv.dev || argv.development) {
+    fox["config"] = defaultConfig.development;
+  } else if(argv.p || argv.prod || argv.production) {
+    fox["config"] = defaultConfig.production;
+  } else {
+    fox["config"] = defaultConfig.default;
+  }
 }
 
 // Absolute path to the fox bin directory.
@@ -138,8 +161,7 @@ process.once("SIGINT", function() {
 //**************************************************
 
 // Flag indicating if the user input has been handled.
-var isArgvHandled = false,
-    isDaemon = false;
+var isArgvHandled = false;
 
 // Help - Print fox usage.
 if( ! argv._[0] || (_.contains(['help', 'h'], argv._[0]))) {
@@ -152,34 +174,58 @@ if(argv.v || argv.verbose || argv.debug) {
   fox.config["debug"] = true
 }
 
-// Environment Mode - set the current operating enviorment mode.
-if(argv.l || argv.local) {
-  fox.config["environment"] = "local";
-} else if(argv.d || argv.dev || argv.development) {
-  fox.config["environment"] = "development";
-} else if(argv.p || argv.prod || argv.production) {
-  fox.config["environment"] = "production";
-}
-
 // Start - Start the server
 if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
 
-  // Check if server should run in daemon mode.
-  if(isDaemonEnabled()) {
+  // Check for a controller type.
+  var controllerType = (fox.config["controller"]) ? fox.config["controller"] : undefined;
 
-    // Check if server should be clustered
-    if(isClusterEnabled()) {
-      // Start the server using pm2 daemon and cluster.
-      startPm2Server(fox.config);
+  if(controllerType === 'node') {
+    
+    if( ! isDaemonEnabled()) {
+      // Start the server using pure node.
+      startServer(fox.config);
     } else {
+      // TODO: Add ability to start node using a deamon and cluster.
+      if(isClusterEnabled()) {
+        fox.log.error("Starting node using a cluster is not yet supported.");
+      }
+      fox.log.error("Starting node in daemon mode is not yet supported.");
+    }
+  } else if (controllerType === 'nodemon') {
+    
+    if( ! isDaemonEnabled()) {
       // Start the server using nodemon daemon.
       startNodemanServer(fox.config);
+    } else {
+      // TODO: Add ability to start nodemon using a deamon and cluster.
+      if(isClusterEnabled()) {
+        fox.log.error("Starting nodemon using a cluster is not yet supported.");
+      }
+      fox.log.error("Starting nodemon in daemon mode is not yet supported.");
+    }
+
+  } else if (controllerType === 'pm2') {
+    if( ! isDaemonEnabled()) {
+      fox.log.error("PM2 must be run as a deamon.");
+      exit();
+    } else {
+      if( ! isClusterEnabled()) {
+        var pm2Config = fox.config;
+        pm2Config["cluster"] = (pm2Config["cluster"]) ? pm2Config["cluster"] : {};
+        pm2Config.cluster["workers"] = 1;
+        
+        // Start the server using pm2 daemon and cluster of 1.
+        startPm2Server(pm2Config);
+      } else {
+        // Start the server using pm2 daemon and cluster.
+        startPm2Server(fox.config);
+      }
     }
   } else {
-
-    // Start the server using pure node.
-    startServer(fox.config);
+    fox.log.error("Controller type of '" + controllerType +"' is unrecognized.");
+    exit();
   }
 } 
 
@@ -570,6 +616,7 @@ function printHelp() {
 
   fox.log.info("Options:")
   printColumns("-v", "Enable verbose or debug mode.");
+  printColumns("-n", "Start server using plain old node.js and local mode.");
   printColumns("-l", "Start in local environment mode.");
   printColumns("-d", "Start in development environment mode.");
   printColumns("-p", "Start in production environment mode.\n");
