@@ -62,11 +62,14 @@ var config = {
  */
 var Config = function() {
 
-  // Define properties.
+  // Define Static key values
+
+  // Enviorment values.
   this.key_enviorment_local = 'local';
   this.key_enviorment_development = 'development';
   this.key_enviorment_production = 'production';
   
+  // Controller values.
   this.key_controller_pm2 = 'pm2';
   this.key_controller_node = 'node';
   this.key_controller_nodemon = 'nodemon';
@@ -82,10 +85,6 @@ var node = {
   name: 'fox',
   environment: 'local',
   controller: 'node',
-  daemon: false,
-  cluster: {
-    enabled: false
-  },
   debug: true
 };
 
@@ -94,10 +93,6 @@ var local = {
   name: 'fox',
   environment: 'local',
   controller: 'nodemon',
-  daemon: false,
-  cluster: {
-    enabled: false
-  },
   debug: true
 };
 
@@ -138,8 +133,6 @@ Config.prototype.node = node;
 Config.prototype.local = local;
 Config.prototype.development = development;
 Config.prototype.production = production;
-
-Config
 
 
 /* ************************************************** *

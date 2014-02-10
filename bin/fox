@@ -126,6 +126,10 @@ fox.config["userPath"] = process.cwd();
 // Find the path to the current server's directory.
 fox.config["serverPath"] = getServerPathSync();
 
+// Make sure there is a cluster configuration object.
+fox.config["cluster"] = (fox.config["cluster"]) ? fox.config["cluster"] : {};
+
+// Get the number of workers for a clustered server.
 fox.config["cluster"]["workers"] = getNumberOfWorkers(fox.config);
 
 // List of child processes.
@@ -182,7 +186,6 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
   var controllerType = (fox.config["controller"]) ? fox.config["controller"] : undefined;
 
   if(controllerType === 'node') {
-    
     if( ! isDaemonEnabled()) {
       // Start the server using pure node.
       startServer(fox.config);
@@ -194,7 +197,6 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
       fox.log.error("Starting node in daemon mode is not yet supported.");
     }
   } else if (controllerType === 'nodemon') {
-    
     if( ! isDaemonEnabled()) {
       // Start the server using nodemon daemon.
       startNodemanServer(fox.config);
@@ -205,7 +207,6 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
       }
       fox.log.error("Starting nodemon in daemon mode is not yet supported.");
     }
-
   } else if (controllerType === 'pm2') {
     if( ! isDaemonEnabled()) {
       fox.log.error("PM2 must be run as a deamon.");
@@ -213,7 +214,6 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
     } else {
       if( ! isClusterEnabled()) {
         var pm2Config = fox.config;
-        pm2Config["cluster"] = (pm2Config["cluster"]) ? pm2Config["cluster"] : {};
         pm2Config.cluster["workers"] = 1;
         
         // Start the server using pm2 daemon and cluster of 1.
@@ -546,7 +546,7 @@ function createNewServer(name) {
   fox.log.info("Configuring...");
 
   fox.log.info("Installing modules...");
-  exec("npm --prefix " + newServerPath + " install", function(err, stdout, stderr) {
+  childProcess.exec("npm --prefix " + newServerPath + " install", function(err, stdout, stderr) {
     //TODO:  Output this to log file.
     fox.log.success("Server " + name + " created successfully.");
     exit();
