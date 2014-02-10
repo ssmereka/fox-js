@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
 /* Fox Script
- * Handles all fox commandline commands.
+ * Handles CLI commands.
  * @Author Scott Smereka
  */
 
 
 //**************************************************
-//******************** Load Dependencies
+//******************** 3rd Party Modules
 //**************************************************
 
 /***
  * Optimist 
  * @description A library for command option parsing.
  * @repo https://github.com/substack/node-optimist
- * @License MIT/X11
+ * @license MIT/X11
  */
 var argv = require('optimist').argv;
 
@@ -22,8 +22,21 @@ var argv = require('optimist').argv;
  * Lo-Dash 
  * @description A utility library for consitency, customization, and performance.
  * @repo https://github.com/lodash/lodash
+ * @license MIT
  */
 var _ = require('lodash');
+
+/***
+ * Wrench
+ * @description A utility library for recursive file operations in node.js.
+ * @repo https://github.com/ryanmcgrath/wrench-js
+ * @license MIT
+ */
+var wrench = require('wrench');
+
+//**************************************************
+//******************** Node.JS Core Modules
+//**************************************************
 
 /***
  * Path
@@ -32,21 +45,30 @@ var _ = require('lodash');
  */
 var path = require('path');
 
-var wrench = require('wrench'),
-    util = require('util');
+/***
+ * Utility
+ * @stability 4 - API Frozen
+ * @description Utility functions in node.js core.
+ * @website http://nodejs.org/api/util.html
+ */
+var util = require('util');
 
 /***
  * FS
+ * @stability 3 - Stable
  * @description access the file system
  * @website http://nodejs.org/api/fs.html
  */
 var fs = require('fs');
 
-var sys = require('sys');
-
+/***
+ * Child Process
+ * @stability 3 - Stable
+ * @description Handle child processes in node.js
+ * @website http://nodejs.org/api/child_process.html
+ */
 var childProcess = require('child_process');
 
-var exec = require('child_process').exec;
 
 //**************************************************
 //******************** Setup Fox & Globals
@@ -203,8 +225,8 @@ if(argv._[0] && _.contains(['kill'], argv._[0])) {
     fox.log.info("You must include a port number.\nexample: kill 3000");
     exit();
   }
-  exec("sudo kill `sudo lsof -t -i:" + argv._[1] + "`", function(err, stdout, stderr) {
-    sys.puts(stdout);
+  childProcess.exec("sudo kill `sudo lsof -t -i:" + argv._[1] + "`", function(err, stdout, stderr) {
+    util.puts(stdout);
     exit();
   });
 }
