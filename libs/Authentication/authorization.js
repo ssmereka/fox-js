@@ -16,7 +16,8 @@ var fox,
     debug,          // Display additional logs when enabled.
     allRoles = [],       //
     allRoleObject,  //
-    selfRoleObject; // 
+    selfRoleObject,
+    db; // 
 
 
 /* ************************************************** *
@@ -326,6 +327,27 @@ function allowRolesOrLower(roles) {
   });
 }
 
+function allowKeys(keys) {
+  return allowKeys[keys] || (allowKeys[keys] = function(req, res, next) {
+    
+    // Check for a valid key.
+    if(req && req["params"] && req.params["access_token"]) {
+      if(keys.indexOf(req.params.access_token) != -1) {
+        return next();
+      }
+    }
+
+    console.log("keys: ");
+    console.log(keys);
+    console.log("Token: ");
+    console.log(req.body);
+    console.log(req.params);
+    
+    // User does not have an authorized key.
+    log.d("Permission denied, user does not have a valid key.", debug);
+    sender.createAndSendError(permissionDeniedText, 403, req, res, next);
+  });
+}
 
 var denyAllRoles = function() {
 
@@ -381,11 +403,16 @@ var refreshCachedRoles = function(db, next) {
 }
 
 
+/* ************************************************** *
+ * ******************** Public API
+ * ************************************************** */
+
 Authorization.prototype.queryRoleByName = queryRoleByName;
 Authorization.prototype.allowAllRoles = allowAllRoles;
 Authorization.prototype.allowRoles = allowRoles;
 Authorization.prototype.allowRolesOrHigher = allowRolesOrHigher;
 Authorization.prototype.allowRolesOrLower = allowRolesOrLower;
+Authorization.prototype.allowKeys = allowKeys;
 Authorization.prototype.refreshCachedRoles = refreshCachedRoles;
 Authorization.prototype.denyAllRoles = denyAllRoles;
 Authorization.prototype.denyRoles = denyRoles;

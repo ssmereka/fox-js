@@ -11,7 +11,7 @@
  * ************************************************** */
 
 var app, config, configModule, debug, db, log, express,
-    expressValidator, fs, mongoose, MongoStore, fox;
+    expressValidator, fs, mongoose, MongoStore, fox, accessToken;
 
 
 /* ************************************************** *
@@ -21,6 +21,7 @@ var app, config, configModule, debug, db, log, express,
 var Load = function(_fox) {
   fox = _fox;
   log = fox.log;
+  accessToken = fox.accessToken;
   debug = fox.config.debugSystem;  
 }
 
@@ -424,7 +425,6 @@ var requireTypesInFolder = function(types, folder, next) {
  */
 var loadlibs = function(next) {
   fox.authentication.refreshCachedRoles(db, function(err, roles) {
-  //require("./Authentication")(config, db, function(err, auth) {
     if(err) {
       next(err);
     } else {
@@ -525,7 +525,7 @@ var app = function appFunction(_config, next) {
 /**
  * Configure and setup Passport for authentication.
  */
-var passport = function passport(next) {
+var passport = function passport(db, next) {
   //var passport = require(config.paths.nodeModulesFolder + 'passport');
   var passport = require('passport');
 
@@ -533,6 +533,10 @@ var passport = function passport(next) {
   app.use(require('connect-flash')());  // Enables flash messages while authenticating with passport.
   app.use(passport.initialize());
   app.use(passport.session());
+
+  if(fox && fox["accessToken"]) {
+    fox.accessToken.enablePassportStrategy(db, passport);
+  }
 
   log.d("Passport configured successfully.", debug);
   if(next) {
@@ -579,7 +583,7 @@ var start = function start(config, next) {
     }
 
     // Load and configure passport for authentication.
-    passport();                                
+    passport(db);                                
 
     // Dynamically require all of our routes in the correct order.
     routes(function(err, success) {    

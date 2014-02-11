@@ -10,7 +10,8 @@
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
-var Authorization = require("./Authentication/authorization.js"), //
+var AccessToken   = require("./Authentication/accessToken.js"),
+    Authorization = require("./Authentication/authorization.js"), //
 	Config  	  = require("./Config/config.js"),           		      // Configuration for fox servers.
     Cryptography  = require("./Authentication/cryptography.js"),  //
     DateLibrary	  = require("./Utility/date.js"),     			  // Handle dates in javascript.
@@ -34,12 +35,13 @@ function Fox() {
 	this.config = Config;
 
 	this.log 			= new Log(this);
+	this.send 			= new Send(this);
 	this.authentication = new Authorization(this);
 	this.crypto 	    = new Cryptography(this);
 	this.date 			= new DateLibrary(this);
 	this.message 		= new Message(this);
 	this.model 			= new Model(this);
-	this.send 			= new Send(this);
+	this.accessToken    = new AccessToken(this);
 	this.load 			= new Load(this);
 
 	this.start 			= this.load.start;
