@@ -1,38 +1,49 @@
 // ~> Controller
 // ~A Scott Smereka
 
+/* Access Token Controller
+ * Handles logic related to performing CRUD operations
+ * on all access tokens.
+ */
+
 module.exports = function(app, db, config) {
   
+
   /* ************************************************** *
    * ******************** Load Libraries and Models
    * ************************************************** */
 
-  var fox    = require("foxjs"),
-      sender = fox.send,
-      auth   = fox.authentication,
-      model  = fox.model;
+  var fox         = require("foxjs"),            //
+      sender      = fox.send,                    //
+      auth        = fox.authentication,          //
+      model       = fox.model,                   //
+      accessToken = fox.accessToken;             //
+      
+  // Load database schemas
+  var AccessToken = db.model('AccessToken'),     //
+      User        = db.model('User');            //
 
+  // Load user roles used for authentication.
+  var adminRole = auth.queryRoleByName("admin"), //
+      selfRole  = auth.queryRoleByName("self");  //
 
-  /*var fox         = require("fox");
-      sender      = require("send")(config),
-      auth        = require(config.paths.serverLibFolder + "auth")(),
-      model       = require(config.paths.serverLibFolder + "model")(), */
-  var AccessToken = db.model('AccessToken'),
-      User        = db.model('User');
-
+  var allowAdmin = [ 
+    accessToken.allow,
+    auth.allowRolesOrHigher([adminRole])
+  ]
 
   /* ************************************************** *
    * ******************** Routes and Permissions
    * ************************************************** */
   
-  // Load user roles used for authentication.
-  var adminRole = auth.queryRoleByName("admin"),
-      selfRole  = auth.queryRoleByName("self");
 
+  app.post('/at/test.:format', allowAdmin, function(req, res, next) {
+    res.send("OK");
+  });
 
   app.get('/accessToken.:format', requestToken);
 
-  app.get('/accessTokens.:format', model.load(AccessToken, {}, { "sort": "creationDate"}), accessTokens);
+  app.get('/accessTokens.:format', allowAdmin, model.load(AccessToken, {}, { "sort": "creationDate"}), accessTokens);
 
   // All users with admin role or higher have access to the following
   // methods.  Users also have permission to access their own data in the
@@ -40,7 +51,10 @@ module.exports = function(app, db, config) {
   //app.all('/users/:userId.:format', auth.allowRolesOrHigher([adminRole, selfRole]), model.loadById(User, "userId"));
 
   // Get a specific access token.   
-  app.get('/accessTokens/:tokenId.:format', model.loadById(AccessToken, "tokenId", "user"), accessToken);
+
+  //app.get('/accessTokens/:tokenId.:format', model.loadById(AccessToken, "tokenId", "user"), accessToken);
+
+
   /*app.get('/accessTokens/:tokenId.:format', function(req,res,next) {
     console.log("Finding token");
     AccessToken.findById(req.params.tokenId).populate('user').exec(function(err, token) {

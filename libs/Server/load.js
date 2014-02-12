@@ -535,7 +535,7 @@ var passport = function passport(db, next) {
   app.use(passport.session());
 
   if(fox && fox["accessToken"]) {
-    fox.accessToken.enablePassportStrategy(db, passport);
+    fox.accessToken.enable(db);
   }
 
   log.d("Passport configured successfully.", debug);

@@ -12,32 +12,46 @@ module.exports = function(app, db, config) {
    * ******************** Module Variables
    * ************************************************** */
 
-  var ObjectId = db.Types.ObjectId,     // Mongo DB Object ID.
-      User     = db.model('User'),      // User model defined by server.
-      UserRole = db.model('UserRole'),  // User role model defiend by server.
-      fox      = require("foxjs"),      // Fox library
-      sender   = fox.send,              // Fox methods for sending responses to requests.
-      log      = fox.log,               // Fox methods for logging error and debug information.
-      auth     = fox.authentication;    // Fox methods for controlling access to routes and data.
+  var async       = require('async'),      // Async library for processing functions.
+      ObjectId    = db.Types.ObjectId;     // Mongo DB object ID.
 
-  var adminRole   = auth.queryRoleByName("admin"),  // Admin role object.
+  // Fox framework
+  var fox         = require("foxjs"),      // Fox library
+      sender      = fox.send,              // Fox methods for sending responses to requests.
+      log         = fox.log,               // Fox methods for logging error and debug information.
+      auth        = fox.authentication,    // Fox methods for controlling access to routes and data.
+      accessToken = fox.accessToken;       // Fox methods for authorizing users based on access tokens.
+
+  // Database models
+  var User        = db.model('User'),      // User model defined by server.
+      UserRole    = db.model('UserRole');  // User role model defiend by server.
+
+  // Authentication variables and methods.
+  var superAdminRole   = auth.queryRoleByName("superadmin"),  // Admin role object.
       installKeys = [ config.installKey ];          // List of keys allowed to perform the install action.
+
+  // Routes for authenticating an admin user via session or access token.
+  var allowSuperAdmin = [ 
+    accessToken.allow,
+    auth.allowRolesOrHigher([superAdminRole])
+  ]
+
 
   /* ************************************************** *
    * ******************** Routes
    * ************************************************** */
 
   // Install the server's database components.
-  app.post('/install.:format', auth.allowKeys(installKeys), install);
+  app.post('/install.:format', auth.allowKeysOnce(installKeys), install);
 
   // Remove the server's database components.
-  app.post('/uninstall.:format', auth.allowRolesOrHigher([adminRole]), uninstall);
+  app.post('/uninstall.:format', allowSuperAdmin, uninstall);
 
   // Purge the database of collections altered by an install.
-  app.post('/purge.:format', auth.allowRolesOrHigher([adminRole]), purge);
+  app.post('/purge.:format', allowSuperAdmin, purge);
 
   // Purge the database of all data so a fresh install can be made.
-  app.post('/purgeall.:format', auth.allowRolesOrHigher([adminRole]), purgeAll);
+  app.post('/purgeall.:format', allowSuperAdmin, purgeAll);
 
 
   /* ************************************************** *
@@ -48,15 +62,20 @@ module.exports = function(app, db, config) {
    * Load the server's setup information into the database.
    */
   function install(req, res, next) {
-    console.log("IN INSTALL");
-    loadDatabaseSchema(config, "userRoles", function(err) {
-      loadDatabaseSchema(config, "user", function(err) {
+
+    // Load a list of predefined users to the database.
+    addUsersToDatabase(createUserObjects(config), function(err) {
+      if(err) {
+        return sendError(err, req, res, next);
+      }
+      
+      // Load all the roles required by the server.
+      addUserRolesToDatabase(createUserRoleObjects(config), function(err) {
         if(err) {
           return sendError(err, req, res, next);
         }
-
         sender.send(true, req, res, next);
-      });  
+      });
     });
   }
 
@@ -64,14 +83,21 @@ module.exports = function(app, db, config) {
    * Remove all the setup information from the database.
    */
   function uninstall(req, res, next) {
-    removeUsersFromDatabase(createUserObjects(config), function(err) {
+
+    // Remove user roles added by install.
+    removeInstallUserRoleObjects(function(err) {
       if(err) {
         return sender.sendError(err, req, res, next);
       }
-      removeUserRolesFromDatabase(createUserRoleObjects(config), function(err) {
+      
+      // Remove users added by install.
+      removeInstallUserObjects(function(err) {
         if(err) {
-          return sender.sendError(err, req, res ,next);
+          return sender.sendError(err, req, res, next);
         }
+
+        // Remove all fading keys.
+        dropCollectionByName("fadingkeys");
 
         sender.send(true, req, res, next);
       });
@@ -81,7 +107,7 @@ module.exports = function(app, db, config) {
   /**
    * Purge all collections altered by the install process.
    */
-  function purge() {
+  function purge(req, res, next) {
     dropCollectionByName("userroles");
     dropCollectionByName("users");
     sender.send(true, req, res, next);
@@ -90,7 +116,7 @@ module.exports = function(app, db, config) {
   /**
    * Purge all collections in the database.
    */
-  function purgeAll() {
+  function purgeAll(req, res, next) {
     dropAllCollections(function(err) {
       if(err) {
         return sender.sendError(err, req, res ,next);
@@ -110,26 +136,13 @@ module.exports = function(app, db, config) {
    */
   function addUsersToDatabase(users, next) {
     for(var i = users.length-1; i >=0; --i) {
-      addToSchema(users[i]);
-      if( ! next) {
-        log.i("Added user ".white + users[i].email.cyan + " to the database with the ".white + "install key".cyan + " as the password.".white);
-      }
-    }
-
-    if(next) {
-      return next();
-    }
-  }
-
-  /**
-   * Remove an array of user schema objects from the database.
-   */
-  function removeUsersFromDatabase(users, next) {
-    for(var i = users.length-1; i >=0; --i) {
-      removeFromSchema(users[i]);
-      if( ! next) {
-        log.i("Removed user "+users[i].email+" from database.");
-      }
+      addToSchema(users[i], function(err, user) {
+        if(err) {
+          log.e(err);
+        } else {
+          log.i("Added user ".white + user.email.cyan + " to the database with the ".white + "install key".cyan + " as the password.".white);
+        }
+      });
     }
 
     if(next) {
@@ -140,28 +153,15 @@ module.exports = function(app, db, config) {
   /**
    * Add an array of user role schema objects to the database.
    */
-  function removeUserRolesFromDatabase(roles, next) {
+  function addUserRolesToDatabase(roles, next) {
     for(var i = roles.length-1; i >=0; --i) {
-      addToSchema(roles[i]);
-      if( ! next) {
-        log.i("Added user role "+roles[i].name+" to the database.");
-      }
-    }
-
-    if(next) {
-      return next();
-    }
-  }
-
-  /**
-   * Remove an array of user role schema objects from the database.
-   */
-  function removeUserRolesFromDatabase(roles, next) {
-    for(var i = roles.length-1; i >=0; --i) {
-      removeFromSchema(roles[i]);
-      if( ! next) {
-        log.i("Removed user role "+roles[i].name+" from database.");
-      }
+      addToSchema(roles[i], function(err, role) {
+        if(err) {
+          log.e(err);
+        } else {
+          log.i("Added user role ".white+role.name.cyan+" to the database.".white);
+        }
+      });
     }
 
     if(next) {
@@ -174,32 +174,12 @@ module.exports = function(app, db, config) {
    */
   function addToSchema(schemaObj, next) {
     schemaObj.save(function(err, newSchemaObj) {
-      if(err) {
-        log.e(err);
-        if(next !== undefined)
-          return next(err);
-      }
-
-      if(next !== undefined)
-        next(newSchemaObj);
-    });
-  }
-
-  /**
-   * Remove a schema object from the database.
-   */
-  function removeFromSchema(schemaObj, next) {
-    schemaObj.remove(function(err, removedSchemaObj) {
-      if(err) {
-        if(next) {
-          return next(err);
-        }
-
-        log.e(err);
-      }
-
       if(next) {
-        next(removedSchemaObj);
+        return next(err, newSchemaObj);
+      }
+
+      if(err) {
+        log.e(err);
       }
     });
   }
@@ -208,9 +188,16 @@ module.exports = function(app, db, config) {
    * Remove all data in the specified collection.
    */
   function dropCollectionByName(schema) {
-    if(schema !== undefined && db.connection.collections[schema] !== undefined) {
-      db.connection.collections[schema].drop();
+    if(schema) {
+      schema = schema.toLowerCase();
+      if(db.connection.collections[schema] !== undefined) {
+        db.connection.collections[schema].drop();
+        log.i("Removed all objects in schema ".white + schema.cyan);
+        return;
+      } 
     }
+
+    log.e("Cannot drop collection " + schema);
   }
 
   /**
@@ -239,86 +226,118 @@ module.exports = function(app, db, config) {
    * ******************** Install Data
    * ************************************************** */
 
+  // List of roles will be added to the database with receding permission levels. 
+  var roleNames = ['all', 'self', 'superadmin', 'admin', 'moderator', 'user', 'guest'];
+  //TODO: Handle a role list over 10 roles long.  Currently object id generation is 
+  //      based on the list being from 0 - 10 long.
+  
+  // Query name of the server admin account.
+  var superAdminName = "superadmin";
+
+  /**
+   * Create a list of user objects to be loaded into the database.
+   * If debug mode is enabled, a user will be installed for each role.
+   */
+  function createUserObjects(config) {
+    users = [];
+    for(var i = 0; i < roleNames.length; i++) {
+      // If not in debug mode, then only add the super admin role.
+      if( ! config.debugSystem && roleNames[i] != superAdminName) {
+        continue;
+      }
+
+      users.push(new User({
+        activated: true,
+        firstName: roleNames[i],
+        email: roleNames[i].replace(/\s+/g, '').toLowerCase() + "@localhost.com",
+        password: config.installKey,
+        securityAnswer: config.installKey,
+        roles: [ ObjectId("5000000000000000000000a" + i) ],
+        securityQuestion: 'What is the install key?',
+        securityAnswer: config.installKey
+      }));
+    }
+    return users;
+  }
+
   /**
    * Create all the user roles to be added to the database
    * on an install.
    */
-  function createUserRoleObjects(config) {
+  function createUserRoleObjects() {
     var roles = [];
-
-    var i = 0;
-    roles.push(new UserRole({ name: 'all',         index: i, _id: ObjectId("5000000000000000000000a" + i++) }));
-    roles.push(new UserRole({ name: 'self',        index: i, _id: ObjectId("5000000000000000000000a" + i++) }));
-    
-    roles.push(new UserRole({ name: 'super admin', index: i, _id: ObjectId("5000000000000000000000a" + i++) }));
-    roles.push(new UserRole({ name: 'admin',       index: i, _id: ObjectId("5000000000000000000000a" + i++) }));
-    roles.push(new UserRole({ name: 'moderator',   index: i, _id: ObjectId("5000000000000000000000a" + i++) }));
-    roles.push(new UserRole({ name: 'user',        index: i, _id: ObjectId("5000000000000000000000a" + i++) }));
-    roles.push(new UserRole({ name: 'guest',       index: i, _id: ObjectId("5000000000000000000000a" + i++) }));
-
+    for(var i = 0; i < roleNames.length; i++) {
+      roles.push(new UserRole({ name: roleNames[i], index: i, _id: ObjectId("5000000000000000000000a" + i) }));
+    }
     return roles;
   }
 
   /**
-   * Create all the users to be added to the database on 
-   * an install.
+   * Remove all installed user objects from the database.
    */
-  function createUserObjects(config) {
-    users = [];
-    
-    // Super Admin
-    users.push(new User({ 
-      activated: true,
-      email: "superadmin@localhost.com",
-      firstName: "Super Admin",
-      password: config.installKey,
-      securityAnswer: config.installKey,
-      roles: [ ObjectId("5000000000000000000000a2") ], 
-      security_question: 'What is the install key?' }));
-    
-    if(config.debugSystem) {
-      // Admin
-      users.push(new User({ 
-        activated: true,
-        email: "admin@localhost.com",
-        firstName: "Admin",
-        password: config.installKey,
-        securityAnswer: config.installKey,
-        roles: [ ObjectId("5000000000000000000000a3") ], 
-        security_question: 'What is the install key?' }));
-
-      // Moderator
-      users.push(new User({ 
-        activated: true,
-        email: "moderator@localhost.com",
-        firstName: "Moderator",
-        password: config.installKey,
-        securityAnswer: config.installKey,
-        roles: [ ObjectId("5000000000000000000000a4") ], 
-        security_question: 'What is the install key?' }));
-
-      // User
-      users.push(new User({ 
-        activated: true,
-        email: "user@localhost.com",
-        firstName: "User",
-        password: config.installKey,
-        securityAnswer: config.installKey,
-        roles: [ ObjectId("5000000000000000000000a5") ], 
-        security_question: 'What is the install key?' }));
-
-      // Guest
-      users.push(new User({ 
-        activated: true,
-        email: "guest@localhost.com",
-        firstName: "Guest",
-        password: config.installKey,
-        securityAnswer: config.installKey,
-        roles: [ ObjectId("5000000000000000000000a6") ], 
-        security_question: 'What is the install key?' }));
+  function removeInstallUserObjects(next) {
+    var tasks = [];
+    for(var i = 0; i < roleNames.length; i++) {
+      queueFindAndDeleteFunction(tasks, User, { "firstName" : roleNames[i] });
     }
 
-    return users;
+    async.parallel(tasks, function(err, results) {
+      for(var i=0; i < results.length; i++) {
+        if(results[i]) {
+          log.i("Removed user ".white +roleNames[i].cyan+ " from database.".white);
+        } else {
+          log.i("Could ".white+"not".cyan+" remove user ".white +roleNames[i].cyan +" from database.".white);
+        }
+      }
+      next(err);
+    });
+  }
+
+
+  /**
+   * Remove all installed user role objects from the database.
+   */
+  function removeInstallUserRoleObjects(next) {
+    var tasks = [];
+    for(var i = 0; i < roleNames.length; i++) {
+      queueFindAndDeleteFunction(tasks, UserRole, { "name" : roleNames[i] });
+    }
+
+    async.parallel(tasks, function(err, results) {
+      for(var i=0; i < results.length; i++) {
+        if(results[i]) {
+          log.i("Removed user role ".white +roleNames[i].cyan +" from database.".white);
+        } else {
+          log.i("Could ".white+"not".cyan+" remove user role ".white +roleNames[i].cyan +" from database.".white);
+        }
+      }
+      if(next) {
+        next(err);
+      } else if(err) {
+        log.e(err);
+      }
+    });
+  }
+
+  /**
+   * Create a function that finds and deletes an object in 
+   * a collection, then adds that function to a queue.
+   */
+  function queueFindAndDeleteFunction(queue, model, query) {
+    queue.push(function(next) {
+      model.findOne(query, function(err, obj) {
+        if(err || ! obj) {
+          return next(err, false);
+        }
+
+        obj.remove(function(err) {
+          if(err) {
+            return next(err, false);
+          }
+          return next(undefined, true);
+        });
+      });
+    });
   }
 
 }

@@ -17,6 +17,7 @@ var fox,
     allRoles = [],       //
     allRoleObject,  //
     selfRoleObject,
+    url,
     db; // 
 
 
@@ -35,6 +36,7 @@ var Authorization = function(_fox) {
   debug    = (debug === undefined) ? false : debug;
   log      = fox.log;
   sender   = fox.send;
+  url = require("url");
 }
 
 
@@ -329,23 +331,73 @@ function allowRolesOrLower(roles) {
 
 function allowKeys(keys) {
   return allowKeys[keys] || (allowKeys[keys] = function(req, res, next) {
-    
+    var token,
+        queryString = url.parse(req.url, true).query;
+
+    // Check query string for access token.
+    if(queryString && queryString["access_token"]) {
+      token = queryString["access_token"];
+    } else if(req.params && req.params["access_token"]){
+      token = req.params["access_token"];
+    } else if(req.body && req.body["access_token"]) {
+      token = req.body["access_token"];
+    }
+
     // Check for a valid key.
-    if(req && req["params"] && req.params["access_token"]) {
-      if(keys.indexOf(req.params.access_token) != -1) {
+    if(token) {
+      if(keys.indexOf(token) != -1) {
         return next();
       }
     }
-
-    console.log("keys: ");
-    console.log(keys);
-    console.log("Token: ");
-    console.log(req.body);
-    console.log(req.params);
     
     // User does not have an authorized key.
     log.d("Permission denied, user does not have a valid key.", debug);
     sender.createAndSendError(permissionDeniedText, 403, req, res, next);
+  });
+}
+
+function allowKeysOnce(keys) {
+  return allowKeysOnce[keys] || (allowKeys[keys] = function(req, res, next) {
+    var token,
+        queryString = url.parse(req.url, true).query;
+
+    // Check query string for access token.
+    if(queryString && queryString["access_token"]) {
+      token = queryString["access_token"];
+    } else if(req.params && req.params["access_token"]){
+      token = req.params["access_token"];
+    } else if(req.body && req.body["access_token"]) {
+      token = req.body["access_token"];
+    }
+
+    // Check for a valid token
+    if( ! token ) {
+      return sender.createAndSendError(permissionDeniedText, 403, req, res, next);
+    }
+    
+    var keyIndex = keys.indexOf(token);
+    if( keyIndex == -1) {
+      return sender.createAndSendError(permissionDeniedText, 403, req, res, next); 
+    }
+
+    var FadingKey = db.model("FadingKey");
+
+    FadingKey.findOne({key: keys[keyIndex]}, function(err, key){
+      if(err) {
+        return sender.sendError(err, req, res, next);
+      }
+
+      if( ! key) {
+        key = new FadingKey({
+          key: keys[keyIndex]
+        });
+      } else if( ! key.valid()) {
+        return sender.createAndSendError(permissionDeniedText, 403, req, res, next);
+      }
+
+      key.use();
+      return next();
+    });
   });
 }
 
@@ -366,7 +418,8 @@ var denyRolesOrLower = function() {
 };
 
 
-var refreshCachedRoles = function(db, next) {
+var refreshCachedRoles = function(_db, next) {
+  db = _db
   var UserRole = db.model('UserRole');
 
   UserRole.find({}).sort({index: 1}).exec(function(err, _allRoles) {
@@ -413,6 +466,7 @@ Authorization.prototype.allowRoles = allowRoles;
 Authorization.prototype.allowRolesOrHigher = allowRolesOrHigher;
 Authorization.prototype.allowRolesOrLower = allowRolesOrLower;
 Authorization.prototype.allowKeys = allowKeys;
+Authorization.prototype.allowKeysOnce = allowKeysOnce;
 Authorization.prototype.refreshCachedRoles = refreshCachedRoles;
 Authorization.prototype.denyAllRoles = denyAllRoles;
 Authorization.prototype.denyRoles = denyRoles;

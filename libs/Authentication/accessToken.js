@@ -14,7 +14,11 @@ var fox,          //
     log,          // Handles logging.
     debug,        // Display additional logs when enabled.
     BearerStrategy,  //API Token libary using the Bearer token strategy.
-    AccessTokenModel;
+    isEnabled,
+    AccessTokenModel,
+    sender,
+    db,
+    passport;
 
 
 /* ************************************************** *
@@ -29,7 +33,8 @@ var AccessToken = function(_fox) {
   debug = false;
   fox = _fox;
   log = fox.log;
-  BearerStrategy = require('passport-http-bearer').Strategy
+  sender = fox.send;
+  isEnabled = false;
 }
 
 
@@ -37,26 +42,54 @@ var AccessToken = function(_fox) {
  * ******************** Public Methods
  * ************************************************** */
 
-/**
- * Enable the access token passport strategy for authenticaiton.
- */
-var enablePassportStrategy = function(db, passport, next) {
-  if( ! db) {
-    log.e("Cannot load access token passport strategy.");
+var enable = function(_db, _passport, _bearerStrategy) {
+  if( ! _db) {
+    log.e("Cannot enable access token authentication, database is not defined.");
+    return;
   }
-  AccessTokenModel = db.model("AccessToken");
-  passport.use(new BearerStrategy(passportStrategy));
+  db = _db;
 
-  log.d("Enabled passport access token strategy.", debug);
-  next();
+  if( ! _passport) {
+    _passport = require('passport');
+
+    if( ! _passport) {
+      log.e("Cannot enable access token authentication, passport is not defined.");
+      return;
+    }
+  }
+  passport = _passport;
+
+  if( ! _bearerStrategy) {
+    _bearerStrategy = require('passport-http-bearer').Strategy
+
+    if( ! _bearerStrategy) {
+      log.e("Cannot enable access token authentication, bearer strategy is not defined.");
+      return;
+    }
+  }
+  BearerStrategy = _bearerStrategy;
+  AccessTokenModel = db.model("AccessToken");
+  passport.use('bearer', new BearerStrategy(strategy));
+  isEnabled = true;
+};
+
+var authenticate = function(req, res, next) {
+  if(isEnabled) {
+    return passport.authenticate('bearer', { session: false })(req, res, next);
+  } else {
+    enable(req, res, next);
+  }
 }
+
 
 /**
  * Disable the access token passport strategy for authentication.
  */
-var disablePassportStrategy = function(passport, next) {
+var disable = function(next) {
   next();
 }
+
+
 
 
 /* ************************************************** *
@@ -71,7 +104,7 @@ var disablePassportStrategy = function(passport, next) {
  * strategy using:
  * "new BearerStrategy(passportStrategy);"
  */
-var passportStrategy = function(possibleToken, next) {
+var strategy = function(possibleToken, next) {
   process.nextTick(function() {
     AccessTokenModel.findOne({tokenHash: possibleToken}).populate('user', 'first_name last_name email roles activated').populate('user.roles').exec(function(err, token) {
       if(err) {
@@ -81,6 +114,7 @@ var passportStrategy = function(possibleToken, next) {
       // Check for invalid token.
       if( ! token) {
         //TODO: Log a break in attempt
+        //TODO: Return error as 403 not 500
         return next(new Error('Access token is invalid.'));
       }
 
@@ -95,19 +129,18 @@ var passportStrategy = function(possibleToken, next) {
       }
 
       // At this point token is valid.
-      return next(undefined, user);
+      return next(undefined, token.user);
     });
   });
 }
-
 
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */
 
 // Expose the public methods available.
-AccessToken.prototype.enablePassportStrategy = enablePassportStrategy;
-AccessToken.prototype.disablePassportStrategy = disablePassportStrategy;
+AccessToken.prototype.enable = enable;
+AccessToken.prototype.allow = authenticate;
 
 
 /* ************************************************** *

@@ -39,7 +39,7 @@ module.exports = function(app, db, config) {
 
   // All user methods after this require a user with an Admin
   // role or higher for access.
-  app.all('/users(/|.)*', auth.allowRolesOrHigher([adminRole]));
+  //app.all('/users(/|.)*', auth.allowRolesOrHigher([adminRole]));
 
   // Get all users information.
   app.get('/users.:format', model.load(User, {}, {sort: "lastName"}), users);
@@ -62,10 +62,21 @@ module.exports = function(app, db, config) {
     sender.send(user.sanitize(), req, res);                          // Handles the request by sending back the appropriate response, if we havn't already.
   }
 
+  function users(req, res, next) {
+    User.find({}, function(err, users) {
+      if(err) {
+        return next(err);
+
+      }
+      sender.send(users, req, res);
+    });
+  }
+
   /* Users
    * Get all the users and return them in the requested format.
    */
-  function users(req, res, next) {
+  function tusers(req, res, next) {
+
     var users = req.queryResult;
     if( ! users) return next();
 
