@@ -1,7 +1,7 @@
 {
   "name": "foxjs",
   "author": "Scott Smereka",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "homepage": "",
   "keywords": [
@@ -34,6 +34,7 @@
     "optimist": "x.x.x",
     "lodash": "x.x.x",
     "wrench": "~1.5.6",
-    "winston": "x.x.x"
+    "winston": "x.x.x",
+    "passport-http-bearer": "x.x.x"
   }
 }
