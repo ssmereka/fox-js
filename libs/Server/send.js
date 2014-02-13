@@ -30,6 +30,17 @@ var Send = function(_fox) {
   
   log = fox.log;
   sanitize = require("sanitize-it");
+  handleConfig(fox["config"]);
+}
+
+/**
+ * Setup the send module based on options available in the
+ * configuration object.
+ */
+var handleConfig = function(config) {
+  if(config) {
+    debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
+  }
 }
 
 
@@ -37,124 +48,206 @@ var Send = function(_fox) {
  * ******************** Private API
  * ************************************************** */
 
-var sanitizeObj = function(obj, req) {
-  // Return object as is, if this is not an api call.
-  if(! sanitize.isApi(req)) {
-    return (obj) ? obj : undefined;
-  }
-
-  // Return obj as API object.
-  var apiObj = {}
-  apiObj["status"] = "OK"
-  apiObj["response"] = obj;
-  return apiObj;
-}
-
-var sanitizeError = function(err, req) {
-  // Return error as object.
-  if(! sanitize.isApi(req)) {
-    var obj = { "error" : err.message, "status": err.status };
+/**
+ * Create a response object from any errors or objects that 
+ * need to be returned to the caller.  This is meant to 
+ * take a routes result and format it for a user.
+ */
+var createResponseObject = function(err, obj) {
+  var resObj = {};
+  obj = (obj) ? obj : {};
+  
+  // If there is an error, set the error properties.
+  if(err) {  
     
-    if(debug) {
-      obj["trace"] = err.stack;
-      obj["url"] = (req && req.url) ? req.url : undefined;
+    // Set the error type and error message.
+    if(Object.prototype.toString.call( err ) === '[object Array]') {
+      resObj["errorType"] = "array";
+      resObj["error"] = [];
+      for(var i= 0; i < err.length; i++) {
+        resObj["error"].push(err[i]["message"]);
+      }
+    } else {
+      resObj["errorType"] = "string";
+      resObj["error"] = err["message"];
     }
-    
-    return obj;
+
+    // Set the response status based on the error status code.
+    resObj["status"] = getStatus(err["status"]);
+
+    if(debug) {
+      resObj["trace"] = err["stack"];
+    }
+  } else {
+    // Set the response status based on the status code of 200.
+    resObj["status"] = getStatus(200);
   }
 
-  // Return error as API object.
-  var apiErr = {}
-  //apiErr["status"] = err.status;
-  apiErr["status"] = "ERROR";
-  apiErr["errorcode"] = err.status;
-  apiErr["error"] = err.message;
-  apiErr["response"] = {};
-  if(debug) {
-    apiErr["trace"] = err.stack;
-    apiErr["url"] = (req && req.url) ? req.url : undefined;
+  // Set the response type to array or object.
+  if(Object.prototype.toString.call( obj ) === '[object Array]') {
+    resObj["responseType"] = "array";
+  } else {
+    resObj["responseType"] = "object";
   }
-  return apiErr;
+
+  // Set the response object
+  resObj["response"] = obj;
+
+  return resObj;
 }
 
+/**
+ * Send a response object to the requestor.
+ */
 var send = function(obj, req, res, next) {
-  // If the request was an API request, then format it as so.
-  obj = sanitizeObj(obj, req);
+  // Format the object into a response object.
+  obj = createResponseObject(undefined, obj);
 
-  if(sanitize.isJson(req)) {
-    return res.send(JSON.stringify(obj));
-  }
-
+  // Send a TEXT response.
   if(sanitize.isText(req)) {
     return res.type('txt').send(JSON.stringify(obj));
   }
 
-  if(next !== undefined) {
-    return next();
-  }
-
-  // Default to JSON if we can't continue on.
-  if(obj !== undefined) {
-    return res.send(obj);
-  }
+  // Default by returning json.
+  return res.json(obj);
 };
 
-var createAndSendError = function(err, status, req, res, next) {
-  if(err && ! err.message) {
-    var obj = new Error(err);
-    err = obj;
-  }
+/** 
+ * Create an error and send it in a response object to the requestor.
+ */
+var createAndSendError = function(errMessage, status, req, res, next) {
+  errMessage = (errMessage) ? errMessage : "Unknown error occurred.";
+  status = (status) ? status : 500;
 
-  if(! err) {
-    err = new Error("undefined");
-  }
-
-  if(! err.status) {
-    if(status) {
-      err.status = status;
-    }
-  }
+  var err = new Error(errMessage);
+  err["status"] = status;
 
   return this.sendError(err, req, res, next);
 };
 
+/**
+ * Send an error in a response object to the requestor.
+ */
 var sendError = function(err, req, res, next) {
-  // Ensure we have a valid error object.
-  if(! err) {
-    err = new Error("undefined");
-  }
-  
-  // Ensure the error object has a status.
-  if(! err.status) {
-    err.status = 500;
-  }
+  err = (err) ? err : new Error("Unknown error occurred.");
+  err["status"] = (err["status"]) ? err["status"] : 500;
 
-  // Log the error if we are in debug mode.
+  // Create a response object.
+  obj = createResponseObject(err);
+  console.log(obj);
+
+  // If in debug mode, log the error.
   log.e(err, debug);
-
-  // Create an object we can send to the user.
-  var errObj = sanitizeError(err, req);
-  
-  // Log the error url if it is available.
-  if(errObj.url) {
-    log.d("\t" + "URL: " + req.url)
-  }
 
   // Send a TEXT response.
   if(sanitize.isText(req)) {
-    return res.type('txt').send(errObj.toString(), err.status);
+    return res.type('txt').send(JSON.stringify(obj), err.status);
   }
 
-  // Send a JSON response.  Default to JSON if the format is not specified.
-  if(sanitize.isJson(req) || (req && req.format === undefined)) {
-    return res.send(errObj, err.status);
-  }
-
-  // Keep moving on, we couldn't handle the request here.
-  if(next !== undefined) {
-    return next();
-  }
+  // Default to JSON.
+  return res.send(obj, err.status);
 };
+
+/**
+ * Make a json object pretty by formatting it
+ * and adding HTML tags to give it syntax highlighting.
+ */
+function prettifyJson(obj) {
+  return syntaxHighlight(JSON.stringify(obj, undefined, 4));
+}
+
+/**
+ * Add HTML syntax highlighting to a json object.
+ */
+function syntaxHighlight(json) {
+  if (typeof json != 'string') {
+       json = JSON.stringify(json, undefined, 2);
+  }
+  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+      var cls = 'number';
+      if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+              cls = 'key';
+          } else {
+              cls = 'string';
+          }
+      } else if (/true|false/.test(match)) {
+          cls = 'boolean';
+      } else if (/null/.test(match)) {
+          cls = 'null';
+      }
+      return '<span class="' + cls + '">' + match + '</span>';
+  });
+}
+
+/**
+ * Get the status string from a status code.
+ */
+var getStatus = function(code) {
+  return code + " " + getStatusCodeString(code);
+}
+
+/**
+ * Return the status string associated with a status code.
+ * This follows the RFC spec:
+ * http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
+ */
+var getStatusCodeString = function(code) {
+  if( ! code) {
+    return "undefined";
+  }
+
+  switch(code) {
+    // 2xx Successful
+    case 200: return "ok";
+    case 201: return "created";
+    case 202: return "accepted";
+    case 203: return "non-authoritative information";
+    case 205: return "reset content";
+    case 206: return "partial content";
+    
+    // 3xx Redirection
+    case 300: return "multiple choices";
+    case 301: return "moved permanently";
+    case 302: return "found";
+    case 303: return "see other";
+    case 304: return "not modified";
+    case 305: return "use proxy";
+    //case 306: return "unused";
+    case 307: return "temporary redirect";
+    
+    // 4xx Client Error
+    case 400: return "bad request";
+    case 401: return "unauthorized";
+    case 402: return "payment required";
+    case 403: return "forbidden";
+    case 404: return "not found";
+    case 405: return "method not allowed";
+    case 406: return "not acceptable";
+    case 407: return "proxy authentication required";
+    case 408: return "request timeout";
+    case 409: return "conflict";
+    case 410: return "gone";
+    case 411: return "length required";
+    case 412: return "precondition failed";
+    case 413: return "request entity too large";
+    case 414: return "request-uri too long";
+    case 415: return "unsupported media type";
+    case 416: return "requested range not satisfiable";
+    case 417: return "expectation failed";
+    
+    // 5xx Server Error
+    case 500: return "internal server error";
+    case 501: return "not implemented";
+    case 502: return "bad gateway";
+    case 503: return "service unavailable";
+    case 504: return "gateway timeout";
+    case 505: return "http version not supported";
+
+    default:  return "unknown";
+  }
+}
 
 
 /* ************************************************** *
@@ -162,11 +255,10 @@ var sendError = function(err, req, res, next) {
  * ************************************************** */
 
 // Expose the public methods available.
+Send.prototype.send = send;
 Send.prototype.sendError = sendError;
 Send.prototype.createAndSendError = createAndSendError;
-Send.prototype.sanitizeObj = sanitizeObj;
-Send.prototype.sanitizeError = sanitizeError;
-Send.prototype.send = send;
+Send.prototype.prettifyJson = prettifyJson;
 
 
 /* ************************************************** *
