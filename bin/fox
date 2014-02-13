@@ -34,6 +34,8 @@ var _ = require('lodash');
  */
 var wrench = require('wrench');
 
+var request = require('request');
+
 //**************************************************
 //******************** Node.JS Core Modules
 //**************************************************
@@ -380,11 +382,12 @@ function startPm2Server(config, next) {
   // Get list of current pm2 servers.
   var jlistProcess = executeCommandForResult("pm2", ["jlist"], { cwd: '.' }, function(err, jlist) {
     if(err) {
+      if(next) {
+        return next(err);
+      }
       fox.log.error(err);
       exit();
     }
-
-    var isServerRunning = false;
     
     // Convert the list to an array.
     jlist = (jlist) ? JSON.parse(jlist) : undefined;
@@ -393,16 +396,15 @@ function startPm2Server(config, next) {
     if(jlist !== undefined && jlist instanceof Array && jlist.length > 0) {
       for(var i = jlist.length-1; i >= 0; --i) {
         if(jlist[i]["name"] === config.name && jlist[i]["pm2_env"]["status"] === "online") {
-          fox.log.error("Server " + config.name + " is already started.");
-          isServerRunning = true;
+          if(next) {
+            return next(new Error("Server " + config.name + " is already started."));
+          }
+          return fox.log.error("Server " + config.name + " is already started.");
         }
       }
     }
 
-    // If the server is not running, start it
-    if( ! isServerRunning) {
-      var startProcess = executeCommand("pm2", args, opts, next);
-    }
+    var startProcess = executeCommand("pm2", args, opts, next);
   });
 }
 
@@ -535,7 +537,7 @@ function createNewServer(name) {
     }
   }
 
-  fox.log.info("Creating " + name + "...");
+  fox.log.info("5. Creating " + name + "...");
   wrench.copyDirSyncRecursive(fox.config.foxServerPath, newServerPath, {
     forceDelete: true, 
     preserveFiles: true, 
@@ -543,13 +545,28 @@ function createNewServer(name) {
     excludeHiddenUnix: true
   });
 
-  fox.log.info("Configuring...");
+  fox.log.info("4. Configuring...");
 
-  fox.log.info("Installing modules...");
+  fox.log.info("3. Installing modules...");
   childProcess.exec("npm --prefix " + newServerPath + " install", function(err, stdout, stderr) {
-    //TODO:  Output this to log file.
-    fox.log.success("Server " + name + " created successfully.");
-    exit();
+
+    // Starting server
+    fox.log.info("2. Starting server...");
+    childProcess.exec("fox start -d", function(err, stdout, stderr) {
+      if(err) {
+        return fox.log.error(err);
+      }
+
+      // Install server database.
+      fox.log.info("1. Initalizing database...")
+      installServer(generateInstallKey(), function(err){
+        if(err) {
+          return fox.log.error(err);
+        }
+        //TODO:  Output this to log file.
+        fox.log.info("0. "+name+" created and started successfully.");
+      });
+    });
   });
 }
 
@@ -600,6 +617,25 @@ function executeCommand(command, args, options, end) {
   return child;
 }
 
+function installServer(installKey, next) {
+  request.post("http://localhost:3001/install.json?access_token="+installKey, {}, function(err, r, body) {
+    body = (body) ? JSON.parse(body) : {};
+    
+    if(body["error"]) {
+      return next("("+body["status"]+") "+body["error"]);
+    }
+
+    return next(err);
+  });
+}
+
+function uninstallServer() {
+  //TODO: 
+}
+
+function generateInstallKey() {
+  return "IOlQ9V6Tg6RVL7DSJFL248723Bm3JjCF34FI0TJOVPvRzz";
+}
 
 /**
  * Print the fox script's usage.
