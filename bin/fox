@@ -151,7 +151,6 @@ var littleChildren = [];
  * not generated when terminal raw mode is enabled.
  */
 process.once("SIGINT", function() {
-
   // Gracefully kill any children processes
   killChildren();
 
@@ -264,6 +263,12 @@ if(argv._[0] && _.contains(['clear'], argv._[0])) {
 if(argv._[0] && _.contains(['new'], argv._[0])) {
   isArgvHandled = true;
   createNewServer(argv._[1]);
+} 
+
+// Logs - Display a stream of the current server logs.
+if(argv._[0] && (_.contains(['log'], argv._[0])) || _.contains(['logs'], argv._[0])) {
+  isArgvHandled = true;
+  showServerLogs(fox.config);
 } 
 
 // Kill - Kill an application running on a given port.
@@ -460,11 +465,26 @@ function restartServerZeroDowntime(config, next) {
   var reloadProcess = executeCommand("pm2", ["reload", config.name], opts, next);
 }
 
+function showServerLogs(config, next) {
+  // Create the options used to reload the server using pm2.
+  var opts = {
+    cwd: '.',
+    env: process.env
+  };
+
+  var startProcess = executeCommand("pm2", ["logs"], opts, function(code) {
+    if(next) {
+      next();
+    }
+  });
+}
+
+
 /**
  * Clear all logs.
  */
 function clearServerLogs(config, next) {
-  console.log("Clear server logs");
+  fox.log.info("Clearing server logs...");
   // Add the enviorment mode to the current enviorment.
   var env = process.env;
   env["NODE_ENV"] = config.environment;
@@ -614,6 +634,7 @@ function executeCommand(command, args, options, end) {
       end(code);
     }
   });
+  littleChildren.push(child);
   return child;
 }
 
@@ -648,7 +669,8 @@ function printHelp() {
   printColumns("stop", "Stop the server.");
   printColumns("restart", "Restart the server.");
   printColumns("reload", "Restart the server with zero downtime.");
-  printColumns("clear", "Stop the server and clear all logs and history.\n");
+  printColumns("clear", "Stop the server and clear all logs and history.");
+  printColumns("logs", "Show server logs\n");
 
   fox.log.info("Options:")
   printColumns("-v", "Enable verbose or debug mode.");
