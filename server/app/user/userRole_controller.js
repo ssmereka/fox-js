@@ -13,13 +13,13 @@ module.exports = function(app, db, config) {
   /********************************************************/
   /************************ Routes ************************/
 
-  app.get('/userRoles.:format', userRoles);                          // Get all users.
-  app.get('/userRoles/:userRole.:format', userRole);                 // Get a specific user.
+  app.get('/userRoles.:format', userRoles, sender.send);                          // Get all users.
+  app.get('/userRoles/:userRole.:format', userRole, sender.send);                 // Get a specific user.
 
-  app.post('/userRoles.:format', create);                            // Create a new user.
-  app.post('/userRoles/:userRole.:format', update);                  // Update an existing user.
+  app.post('/userRoles.:format', create, sender.send);                            // Create a new user.
+  app.post('/userRoles/:userRole.:format', update, sender.send);                  // Update an existing user.
 
-  app.delete('/userRoles/:userRole.:format', remove);                // Delete an existing user.
+  app.delete('/userRoles/:userRole.:format', remove, sender.send);                // Delete an existing user.
 
 
   /********************************************************/
@@ -40,7 +40,7 @@ module.exports = function(app, db, config) {
     UserRole.find().sort('index').exec(function(err, userRoles) {    // Find all the user roles and sort them by their permission level.
       if(err) return next(err);
 
-      sender.send(userRoles, req, res);                              // Handles the request by sending back the appropriate response.
+      next(undefined, userRoles);
     });
   }
 

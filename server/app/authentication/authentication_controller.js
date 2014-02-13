@@ -30,10 +30,10 @@ module.exports = function(app, db, config) {
    * ******************** Define Routes
    * ************************************************** */
 
-  app.get('/authStatus.:format', isLoggedIn);
+  app.get('/authStatus.:format', isLoggedIn, sender.send);
 
-  app.post('/login.:format', login);
-  app.post('/logout.:format', logout);
+  app.post('/login.:format', login, sender.send);
+  app.post('/logout.:format', logout, sender.send);
 
 
   /* ************************************************** *
@@ -45,10 +45,10 @@ module.exports = function(app, db, config) {
    */
   function logout(req, res, next) {
     if(! req.isAuthenticated()) {
-      return sender.createAndSendError("User is already logged out.", 400, req, res, next);
+      return next(sender.createError("User is already logged out."), 400);
     }
     req.logout();
-    return sender.send("OK", req, res, next);
+    next(undefined, sender.createSuccessObject())
   }
 
   /**
@@ -58,7 +58,7 @@ module.exports = function(app, db, config) {
   function login(req, res, next) {
     // Check if the user is already logged in.
     if(req.isAuthenticated()) {
-      return sender.createAndSendError("User is already logged in.", 400, req, res, next);
+      return next(sender.createError("User is already logged in.", 400);
     }
 
     // If the user is not logged in, authenticate them using the local (username and password) authentication strategy.
@@ -69,7 +69,7 @@ module.exports = function(app, db, config) {
 
       // If authentication was not successful, send the info back in the response.
       if ( ! user || user_error) {
-        return sender.createAndSendError(user_error, 401, req, res, next);
+        return next(sender.createError(user_error, 401);
       }
 
       // If authentication was successful, log in the user and notify the requester.
@@ -78,7 +78,7 @@ module.exports = function(app, db, config) {
           return next(err);
         }
         
-        return sender.send("OK", req, res, next);
+        return next(undefined, sender.createSuccessObject())
       });
     })(req, res, next);
   }
@@ -88,9 +88,9 @@ module.exports = function(app, db, config) {
    */
   function isLoggedIn(req, res, next) {
     if(req.isAuthenticated()) {
-      return sender.send(true, req, res, next);
+      return next(undefined, sender.createSuccessObject())
     } else {
-      return sender.send(false, req, res, next);
+      return next(undefined, sender.createSuccessObject(false))
     }
   }
 

@@ -42,16 +42,16 @@ module.exports = function(app, db, config) {
    * ************************************************** */
 
   // Install the server's database components.
-  app.post('/install.:format', auth.allowKeysOnce(installKeys), install);
+  app.post('/install.:format', auth.allowKeysOnce(installKeys), install, sender.send);
 
   // Remove the server's database components.
-  app.post('/uninstall.:format', allowSuperAdmin, uninstall);
+  app.post('/uninstall.:format', allowSuperAdmin, uninstall, sender.send);
 
   // Purge the database of collections altered by an install.
-  app.post('/purge.:format', allowSuperAdmin, purge);
+  app.post('/purge.:format', allowSuperAdmin, purge, sender.send);
 
   // Purge the database of all data so a fresh install can be made.
-  app.post('/purgeall.:format', allowSuperAdmin, purgeAll);
+  app.post('/purgeall.:format', allowSuperAdmin, purgeAll, sender.send);
 
 
   /* ************************************************** *
@@ -66,15 +66,15 @@ module.exports = function(app, db, config) {
     // Load a list of predefined users to the database.
     addUsersToDatabase(createUserObjects(config), function(err) {
       if(err) {
-        return sendError(err, req, res, next);
+        return next(err);
       }
       
       // Load all the roles required by the server.
       addUserRolesToDatabase(createUserRoleObjects(config), function(err) {
         if(err) {
-          return sendError(err, req, res, next);
+          return next(err);
         }
-        sender.send(true, req, res, next);
+        next(undefined, sender.createSuccessObject());
       });
     });
   }
@@ -87,19 +87,19 @@ module.exports = function(app, db, config) {
     // Remove user roles added by install.
     removeInstallUserRoleObjects(function(err) {
       if(err) {
-        return sender.sendError(err, req, res, next);
+        return next(err);
       }
       
       // Remove users added by install.
       removeInstallUserObjects(function(err) {
         if(err) {
-          return sender.sendError(err, req, res, next);
+          return next(err);
         }
 
         // Remove all fading keys.
         dropCollectionByName("fadingkeys");
 
-        sender.send(true, req, res, next);
+        next(undefined, sender.createSuccessObject());
       });
     });
   }
@@ -110,7 +110,7 @@ module.exports = function(app, db, config) {
   function purge(req, res, next) {
     dropCollectionByName("userroles");
     dropCollectionByName("users");
-    sender.send(true, req, res, next);
+    next(undefined, sender.createSuccessObject());
   }
 
   /**
@@ -119,10 +119,10 @@ module.exports = function(app, db, config) {
   function purgeAll(req, res, next) {
     dropAllCollections(function(err) {
       if(err) {
-        return sender.sendError(err, req, res ,next);
+        return next(err);
       }
 
-      sender.send(true, req, res, next);
+      next(undefined, sender.createSuccessObject());
     });
   }
 

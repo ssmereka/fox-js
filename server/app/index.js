@@ -18,7 +18,7 @@ var server = {
     config.routes.push("controller");    
     
     // Lastly load error handler(s) to catch any unhandled requests.
-    config.routes.push("error");     
+    config.routes.push("error");    
 
     app.start(config, next);
   },

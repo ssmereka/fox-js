@@ -37,13 +37,9 @@ module.exports = function(app, db, config) {
    * ************************************************** */
   
 
-  app.post('/at/test.:format', allowAdmin, function(req, res, next) {
-    res.send("OK");
-  });
+  app.get('/accessToken.:format', requestToken, sender.send);
 
-  app.get('/accessToken.:format', requestToken);
-
-  app.get('/accessTokens.:format', allowAdmin, model.load(AccessToken, {}, { "sort": "creationDate"}), accessTokens);
+  app.get('/accessTokens.:format', allowAdmin, model.load(AccessToken, {}, { "sort": "creationDate"}), accessTokens, sender.send);
 
   // All users with admin role or higher have access to the following
   // methods.  Users also have permission to access their own data in the
@@ -138,7 +134,7 @@ module.exports = function(app, db, config) {
     user.update(req.body, (req.user) ? req.user._id : undefined, function(err, user) {  // Update the new user object with the values from the request body.  Also, if the person creating the new user is identified, send that along in the request.
       if(err) next(err);
 
-      sender.send(user.sanitize(), req, res);                                                     // Handles the request by sending back the appropriate response, if we havn't already.
+      next(undefined, user.sanitize());                                                     // Handles the request by sending back the appropriate response, if we havn't already.
     });
   }
 
@@ -152,7 +148,7 @@ module.exports = function(app, db, config) {
     if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
 
     user.update(req.body, (req.user) ? req.user._id : undefined, function(err, user) {  // Update the user object with the values from the request body.  Also, if the person updating the user is identified, send that along in the request.
-      sender.send(user.sanitize(), req, res);                        // Handles the request by sending back the appropriate response, if we havn't already.
+      next(undefined, user.sanitize());                       // Handles the request by sending back the appropriate response, if we havn't already.
     });
   }
 
@@ -168,7 +164,7 @@ module.exports = function(app, db, config) {
     user.delete((req.user) ? req.user._id : undefined, function(err, user, success) {  // Delete the user object and anything linked to it.  Also, if the person deleting the user is identified, send that along in the request.
       if(err) return next(err);
 
-      sender.send(user.sanitize(), req, res);                        // Handles the request by sending back the appropriate response, if we havn't already.   
+      next(undefined, user.sanitize());                       // Handles the request by sending back the appropriate response, if we havn't already.   
     });
   }
 

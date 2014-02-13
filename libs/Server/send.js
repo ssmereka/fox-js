@@ -112,6 +112,16 @@ var send = function(obj, req, res, next) {
   return res.json(obj);
 };
 
+var sendResponse = function(err, obj) {
+  return send[err, obj] || (send[err, obj] = function(req, res, next) {
+    if(err) {
+      return sendError(err, req, res, next);
+    }
+    
+    send(obj, req, res, next);
+  });
+}
+
 /** 
  * Create an error and send it in a response object to the requestor.
  */
@@ -124,6 +134,16 @@ var createAndSendError = function(errMessage, status, req, res, next) {
 
   return this.sendError(err, req, res, next);
 };
+
+var createError = function(errMessage, status) {
+  errMessage = (errMessage) ? errMessage : "Unknown error occurred.";
+  status = (status) ? status : 500;
+
+  var err = new Error(errMessage);
+  err["status"] = status;
+
+  return err;
+}
 
 /**
  * Send an error in a response object to the requestor.
@@ -249,16 +269,23 @@ var getStatusCodeString = function(code) {
   }
 }
 
+var sendEmail = function(addresses) {
+
+}
 
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */
 
 // Expose the public methods available.
-Send.prototype.send = send;
+Send.prototype.send = sendResponse;
+//Send.prototype.sendResponse = sendResponse;
 Send.prototype.sendError = sendError;
-Send.prototype.createAndSendError = createAndSendError;
+Send.prototype.createError = createError;
+//Send.prototype.createAndSendError = createAndSendError;
+
 Send.prototype.prettifyJson = prettifyJson;
+Send.prototype.email = sendEmail;
 
 
 /* ************************************************** *

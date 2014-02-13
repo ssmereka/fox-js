@@ -29,23 +29,23 @@ module.exports = function(app, db, config) {
   app.all('/users/:userId.:format', auth.allowRolesOrHigher([adminRole, selfRole]), model.loadById(User, "userId"));
 
   // Get a specific user.   
-  app.get('/users/:userId.:format', user);
+  app.get('/users/:userId.:format', user, sender.send);
   
   // Update a specific user.
-  app.post('/users/:userId.:format', update);
+  app.post('/users/:userId.:format', update, sender.send);
   
   // Delete a specific user.
-  app.delete('/users/:userId.:format', remove);
+  app.delete('/users/:userId.:format', remove, sender.send);
 
   // All user methods after this require a user with an Admin
   // role or higher for access.
   //app.all('/users(/|.)*', auth.allowRolesOrHigher([adminRole]));
 
   // Get all users information.
-  app.get('/users.:format', model.load(User, {}, {sort: "lastName"}), users);
+  app.get('/users.:format', model.load(User, {}, {sort: "lastName"}), users, sender.send);
   
   // Create a new user.
-  app.post('/users.:format', create);
+  app.post('/users.:format', create, sender.send);
 
 
 /* ************************************************** *
@@ -57,9 +57,9 @@ module.exports = function(app, db, config) {
    */
   function user(req, res, next) {
     var user = req.queryResult;                                      // Get the user object queried from the url's userId paramter.
-    if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
+    if( ! req.queryResult) return next(sender.createError("User was not found."));                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
 
-    sender.send(user.sanitize(), req, res);                          // Handles the request by sending back the appropriate response, if we havn't already.
+    next(undefined, user.sanitize());
   }
 
   function users(req, res, next) {
@@ -68,24 +68,24 @@ module.exports = function(app, db, config) {
         return next(err);
 
       }
-      sender.send(users, req, res);
+      next(undefined, users);
     });
   }
 
   /* Users
    * Get all the users and return them in the requested format.
    */
-  function tusers(req, res, next) {
+  function users(req, res, next) {
 
     var users = req.queryResult;
-    if( ! users) return next();
+    if( ! users) return next(sender.createError("Users were not found."));
 
     // Sanitize the users information before sending it back.
     for(var i = 0; i < users.length; i++) {
       users[i] = users[i].sanitize();
     }
 
-    sender.send(users, req, res);                                  // Handles the request by sending back the appropriate response, if we havn't already.
+    next(undefined, users);                                  // Handles the request by sending back the appropriate response, if we havn't already.
   }
 
   /* Create
@@ -97,7 +97,7 @@ module.exports = function(app, db, config) {
     user.update(req.body, (req.user) ? req.user._id : undefined, function(err, user) {  // Update the new user object with the values from the request body.  Also, if the person creating the new user is identified, send that along in the request.
       if(err) next(err);
 
-      sender.send(user.sanitize(), req, res);                                                     // Handles the request by sending back the appropriate response, if we havn't already.
+      next(undefined, user.sanitize());                                                     // Handles the request by sending back the appropriate response, if we havn't already.
     });
   }
 
@@ -108,10 +108,10 @@ module.exports = function(app, db, config) {
    */
   function update(req, res, next) {
     var user = req.queryResult;                                      // Get the user object queried from the url's userId paramter.
-    if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
+    if( ! req.queryResult) return next(sender.createError("User was not found."));                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
 
     user.update(req.body, (req.user) ? req.user._id : undefined, function(err, user) {  // Update the user object with the values from the request body.  Also, if the person updating the user is identified, send that along in the request.
-      sender.send(user.sanitize(), req, res);                        // Handles the request by sending back the appropriate response, if we havn't already.
+      next(undefined, user.sanitize());                        // Handles the request by sending back the appropriate response, if we havn't already.
     });
   }
 
@@ -122,12 +122,12 @@ module.exports = function(app, db, config) {
    */
   function remove(req, res, next) {
     var user = req.queryResult;                                      // Get the user object queried from the url's userId paramter.
-    if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
+    if( ! req.queryResult) return next(sender.createError("User was not found."));                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
 
     user.delete((req.user) ? req.user._id : undefined, function(err, user, success) {  // Delete the user object and anything linked to it.  Also, if the person deleting the user is identified, send that along in the request.
       if(err) return next(err);
 
-      sender.send(user.sanitize(), req, res);                        // Handles the request by sending back the appropriate response, if we havn't already.   
+      next(undefined, user.sanitize());                    // Handles the request by sending back the appropriate response, if we havn't already.   
     });
   }
 
