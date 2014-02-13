@@ -8,6 +8,7 @@
     "url"  : ""
   },
   "dependencies": {
+    "async":                "x.x.x",
     "foxjs":                "x.x.x",
     "bcrypt":               "0.7.7",
     "connect-flash":        "0.1.x",    
