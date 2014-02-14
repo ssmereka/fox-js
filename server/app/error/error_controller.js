@@ -14,7 +14,7 @@ module.exports = function(app, db, config) {
   }
 
   function handle404(req, res, next) {
-    return next(sender.createError("Method or Request not found.", 404);
+    return next(sender.createError("Method or Request not found.", 404));
   }
 
 };

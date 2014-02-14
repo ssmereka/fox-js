@@ -45,7 +45,7 @@ module.exports = function(app, db, config) {
    */
   function logout(req, res, next) {
     if(! req.isAuthenticated()) {
-      return next(sender.createError("User is already logged out."), 400);
+      return next(sender.createError("User is already logged out.", 400));
     }
     req.logout();
     next(undefined, sender.createSuccessObject())
@@ -58,7 +58,7 @@ module.exports = function(app, db, config) {
   function login(req, res, next) {
     // Check if the user is already logged in.
     if(req.isAuthenticated()) {
-      return next(sender.createError("User is already logged in.", 400);
+      return next(sender.createError("User is already logged in.", 400));
     }
 
     // If the user is not logged in, authenticate them using the local (username and password) authentication strategy.
@@ -69,7 +69,7 @@ module.exports = function(app, db, config) {
 
       // If authentication was not successful, send the info back in the response.
       if ( ! user || user_error) {
-        return next(sender.createError(user_error, 401);
+        return next(sender.createError(user_error, 401));
       }
 
       // If authentication was successful, log in the user and notify the requester.
