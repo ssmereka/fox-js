@@ -17,6 +17,9 @@ var server = {
     // Load all non-static controllers.
     config.routes.push("controller");    
     
+    // Load all response controllers
+    config.routes.push("response");
+
     // Lastly load error handler(s) to catch any unhandled requests.
     config.routes.push("error");    
 

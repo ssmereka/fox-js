@@ -1,17 +1,12 @@
 // ~> Controller
 // ~A Scott Smereka
 
-
-
 module.exports = function(app, db, config) {
   
   var fox    = require('foxjs'),
       sender = fox.send,
       auth   = fox.authentication,
       model  = fox.model,
-      //sender = require(config.paths.serverLibFolder + "send")(config),
-      //auth   = require(config.paths.serverLibFolder + "auth")(),
-      //model  = require(config.paths.serverLibFolder + "model")(),
       User   = db.model('User');                                     // Pull in the user schema
 
 
@@ -29,23 +24,23 @@ module.exports = function(app, db, config) {
   app.all('/users/:userId.:format', auth.allowRolesOrHigher([adminRole, selfRole]), model.loadById(User, "userId"));
 
   // Get a specific user.   
-  app.get('/users/:userId.:format', user, sender.send);
+  app.get('/users/:userId.:format', user);
   
   // Update a specific user.
-  app.post('/users/:userId.:format', update, sender.send);
+  app.post('/users/:userId.:format', update);
   
   // Delete a specific user.
-  app.delete('/users/:userId.:format', remove, sender.send);
+  app.delete('/users/:userId.:format', remove);
 
   // All user methods after this require a user with an Admin
   // role or higher for access.
   //app.all('/users(/|.)*', auth.allowRolesOrHigher([adminRole]));
 
   // Get all users information.
-  app.get('/users.:format', model.load(User, {}, {sort: "lastName"}), users, sender.send);
+  app.get('/users.:format', model.load(User, {}, {sort: "lastName"}), users);
   
   // Create a new user.
-  app.post('/users.:format', create, sender.send);
+  app.post('/users.:format', create);
 
 
 /* ************************************************** *
@@ -59,7 +54,7 @@ module.exports = function(app, db, config) {
     var user = req.queryResult;                                      // Get the user object queried from the url's userId paramter.
     if( ! req.queryResult) return next(sender.createError("User was not found."));                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
 
-    next(undefined, user.sanitize());
+    sender.setResponse(user.sanitize(), req, res, next);
   }
 
   function users(req, res, next) {
@@ -68,7 +63,7 @@ module.exports = function(app, db, config) {
         return next(err);
 
       }
-      next(undefined, users);
+      sender.setResponse(users, req, res, next);
     });
   }
 
@@ -85,7 +80,7 @@ module.exports = function(app, db, config) {
       users[i] = users[i].sanitize();
     }
 
-    next(undefined, users);                                  // Handles the request by sending back the appropriate response, if we havn't already.
+    sender.setResponse(users, req, res, next);                                  // Handles the request by sending back the appropriate response, if we havn't already.
   }
 
   /* Create
@@ -97,7 +92,7 @@ module.exports = function(app, db, config) {
     user.update(req.body, (req.user) ? req.user._id : undefined, function(err, user) {  // Update the new user object with the values from the request body.  Also, if the person creating the new user is identified, send that along in the request.
       if(err) next(err);
 
-      next(undefined, user.sanitize());                                                     // Handles the request by sending back the appropriate response, if we havn't already.
+      sender.setResponse(user.sanitize(), req, res, next);                                                     // Handles the request by sending back the appropriate response, if we havn't already.
     });
   }
 
@@ -111,7 +106,7 @@ module.exports = function(app, db, config) {
     if( ! req.queryResult) return next(sender.createError("User was not found."));                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
 
     user.update(req.body, (req.user) ? req.user._id : undefined, function(err, user) {  // Update the user object with the values from the request body.  Also, if the person updating the user is identified, send that along in the request.
-      next(undefined, user.sanitize());                        // Handles the request by sending back the appropriate response, if we havn't already.
+      sender.setResponse(user.sanitize(), req, res, next);                        // Handles the request by sending back the appropriate response, if we havn't already.
     });
   }
 
@@ -127,7 +122,7 @@ module.exports = function(app, db, config) {
     user.delete((req.user) ? req.user._id : undefined, function(err, user, success) {  // Delete the user object and anything linked to it.  Also, if the person deleting the user is identified, send that along in the request.
       if(err) return next(err);
 
-      next(undefined, user.sanitize());                    // Handles the request by sending back the appropriate response, if we havn't already.   
+      sender.setResponse(user.sanitize(), req, res, next);                    // Handles the request by sending back the appropriate response, if we havn't already.   
     });
   }
 

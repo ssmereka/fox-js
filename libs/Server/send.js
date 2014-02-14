@@ -45,7 +45,126 @@ var handleConfig = function(config) {
 
 
 /* ************************************************** *
- * ******************** Private API
+ * ******************** Private API Methods
+ * ************************************************** */
+
+/**
+ * Store the response object in a private location
+ * to be later accessed in a different route.
+ */
+var setResponse = function(obj, req, res, next) {
+  req.locals.response = obj = createResponseObject(undefined, obj);
+  if(next) {
+    next();
+  }
+}
+
+/**
+ * Get the response object from the private store.
+ */
+var getResponse = function(req) {
+  return req.locals.response;
+}
+
+/**
+ * Send a response object to the requestor.
+ */
+var sendResponse = function(obj, req, res, next) {
+  // Format the object into a response object.
+  obj = createResponseObject(undefined, obj);
+
+  // Send a TEXT response.
+  if(sanitize.isText(req)) {
+    return res.type('txt').send(JSON.stringify(obj));
+  }
+
+  // Default by returning json.
+  return res.json(obj);
+}
+
+/** 
+ * Create an error and send it in a response object to the requestor.
+ */
+var createAndSendError = function(errMessage, status, req, res, next) {
+  errMessage = (errMessage) ? errMessage : "Unknown error occurred.";
+  status = (status) ? status : 500;
+
+  var err = new Error(errMessage);
+  err["status"] = status;
+
+  return this.sendError(err, req, res, next);
+};
+
+/**
+ * Create an error object from an error message and status.
+ */
+var createError = function(errMessage, status) {
+  errMessage = (errMessage) ? errMessage : "Unknown error occurred.";
+  status = (status) ? status : 500;
+
+  var err = new Error(errMessage);
+  err["status"] = status;
+
+  return err;
+}
+
+/**
+ * Send an error in a response object to the requestor.
+ */
+var sendError = function(err, req, res, next) {
+  err = (err) ? err : new Error("Unknown error occurred.");
+  err["status"] = (err["status"]) ? err["status"] : 500;
+
+  // Create a response object.
+  obj = createResponseObject(err);
+  console.log(obj);
+
+  // If in debug mode, log the error.
+  log.e(err, debug);
+
+  // Send a TEXT response.
+  if(sanitize.isText(req)) {
+    return res.type('txt').send(JSON.stringify(obj), err.status);
+  }
+
+  // Default to JSON.
+  return res.send(obj, err.status);
+};
+
+/**
+ * Create an object to show a request was successful.
+ */
+var createSuccessObject = function(success) {
+  return {
+    success: (success === undefined) ? true : success; 
+  }
+}
+
+/**
+ * Create an object to show a request was successful and
+ * then send it.
+ */
+var createAndSendSuccessObject = function(success, req, res, next) {
+  sendResponse(createSuccessObject(success), req, res, next);
+}
+
+/**
+ * Make a json object pretty by formatting it
+ * and adding HTML tags to give it syntax highlighting.
+ */
+function prettifyJson(obj) {
+  return syntaxHighlight(JSON.stringify(obj, undefined, 4));
+}
+
+
+
+var sendEmail = function(addresses) {
+
+}
+
+
+/* ************************************************** *
+ * ******************** Private Methods
  * ************************************************** */
 
 /**
@@ -94,111 +213,6 @@ var createResponseObject = function(err, obj) {
   resObj["response"] = obj;
 
   return resObj;
-}
-
-/**
- * Send a response object to the requestor.
- */
-var send = function(obj, req, res, next) {
-  // Format the object into a response object.
-  obj = createResponseObject(undefined, obj);
-
-  // Send a TEXT response.
-  if(sanitize.isText(req)) {
-    return res.type('txt').send(JSON.stringify(obj));
-  }
-
-  // Default by returning json.
-  return res.json(obj);
-};
-
-var sendResponse = function(err, obj) {
-  return send[err, obj] || (send[err, obj] = function(req, res, next) {
-    if(err) {
-      return sendError(err, req, res, next);
-    }
-    
-    send(obj, req, res, next);
-  });
-}
-
-/** 
- * Create an error and send it in a response object to the requestor.
- */
-var createAndSendError = function(errMessage, status, req, res, next) {
-  errMessage = (errMessage) ? errMessage : "Unknown error occurred.";
-  status = (status) ? status : 500;
-
-  var err = new Error(errMessage);
-  err["status"] = status;
-
-  return this.sendError(err, req, res, next);
-};
-
-var createError = function(errMessage, status) {
-  errMessage = (errMessage) ? errMessage : "Unknown error occurred.";
-  status = (status) ? status : 500;
-
-  var err = new Error(errMessage);
-  err["status"] = status;
-
-  return err;
-}
-
-/**
- * Send an error in a response object to the requestor.
- */
-var sendError = function(err, req, res, next) {
-  err = (err) ? err : new Error("Unknown error occurred.");
-  err["status"] = (err["status"]) ? err["status"] : 500;
-
-  // Create a response object.
-  obj = createResponseObject(err);
-  console.log(obj);
-
-  // If in debug mode, log the error.
-  log.e(err, debug);
-
-  // Send a TEXT response.
-  if(sanitize.isText(req)) {
-    return res.type('txt').send(JSON.stringify(obj), err.status);
-  }
-
-  // Default to JSON.
-  return res.send(obj, err.status);
-};
-
-/**
- * Make a json object pretty by formatting it
- * and adding HTML tags to give it syntax highlighting.
- */
-function prettifyJson(obj) {
-  return syntaxHighlight(JSON.stringify(obj, undefined, 4));
-}
-
-/**
- * Add HTML syntax highlighting to a json object.
- */
-function syntaxHighlight(json) {
-  if (typeof json != 'string') {
-       json = JSON.stringify(json, undefined, 2);
-  }
-  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-      var cls = 'number';
-      if (/^"/.test(match)) {
-          if (/:$/.test(match)) {
-              cls = 'key';
-          } else {
-              cls = 'string';
-          }
-      } else if (/true|false/.test(match)) {
-          cls = 'boolean';
-      } else if (/null/.test(match)) {
-          cls = 'null';
-      }
-      return '<span class="' + cls + '">' + match + '</span>';
-  });
 }
 
 /**
@@ -269,9 +283,31 @@ var getStatusCodeString = function(code) {
   }
 }
 
-var sendEmail = function(addresses) {
-
+/**
+ * Add HTML syntax highlighting to a json object.
+ */
+function syntaxHighlight(json) {
+  if (typeof json != 'string') {
+       json = JSON.stringify(json, undefined, 2);
+  }
+  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+      var cls = 'number';
+      if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+              cls = 'key';
+          } else {
+              cls = 'string';
+          }
+      } else if (/true|false/.test(match)) {
+          cls = 'boolean';
+      } else if (/null/.test(match)) {
+          cls = 'null';
+      }
+      return '<span class="' + cls + '">' + match + '</span>';
+  });
 }
+
 
 /* ************************************************** *
  * ******************** Public API
@@ -279,11 +315,14 @@ var sendEmail = function(addresses) {
 
 // Expose the public methods available.
 Send.prototype.send = sendResponse;
-//Send.prototype.sendResponse = sendResponse;
-Send.prototype.sendError = sendError;
+Send.prototype.setResponse = setResponse;
+Send.prototype.getResponse = getResponse;
+Send.prototype.sendResponse = sendResponse;
+Send.prototype.createAndSendError = createAndSendError;
 Send.prototype.createError = createError;
-//Send.prototype.createAndSendError = createAndSendError;
-
+Send.prototype.sendError = sendError;
+Send.prototype.createSuccessObject = createSuccessObject;
+Send.prototype.createAndSendSuccessObject = createAndSendSuccessObject;
 Send.prototype.prettifyJson = prettifyJson;
 Send.prototype.email = sendEmail;
 

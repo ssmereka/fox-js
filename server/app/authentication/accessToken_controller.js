@@ -37,9 +37,9 @@ module.exports = function(app, db, config) {
    * ************************************************** */
   
 
-  app.get('/accessToken.:format', requestToken, sender.send);
+  app.get('/accessToken.:format', requestToken);
 
-  app.get('/accessTokens.:format', allowAdmin, model.load(AccessToken, {}, { "sort": "creationDate"}), accessTokens, sender.send);
+  app.get('/accessTokens.:format', allowAdmin, model.load(AccessToken, {}, { "sort": "creationDate"}), accessTokens);
 
   // All users with admin role or higher have access to the following
   // methods.  Users also have permission to access their own data in the
@@ -92,7 +92,7 @@ module.exports = function(app, db, config) {
       token.save(function(err, token) {
         console.log(err);
       });
-      sender.send(token, req, res);
+      sender.setResponse(token, req, res, next);
     });
   }
 
@@ -105,7 +105,7 @@ module.exports = function(app, db, config) {
     var token = req.queryResult;                            // Get the access token object queried from the url's tokenId paramter.
     if( ! req.queryResult) return next();                   // If the token object is blank, then the requested token was not found and we cannot handle the request here, so move along.
 
-    sender.send(token.sanitize(), req, res);                // Handles the request by sending back the appropriate response, if we havn't already.
+    sender.setResponse(token.sanitize(), req, res, next);// Handles the request by sending back the appropriate response, if we havn't already.             
   }
 
   /**
@@ -122,7 +122,7 @@ module.exports = function(app, db, config) {
       tokens[i] = tokens[i].sanitize();
     }
 
-    sender.send(tokens, req, res);                          // Handles the request by sending back the appropriate response, if we havn't already.
+    sender.setResponse(tokens, req, res, next);                          // Handles the request by sending back the appropriate response, if we havn't already.
   }
 
   /* Create
@@ -134,7 +134,7 @@ module.exports = function(app, db, config) {
     user.update(req.body, (req.user) ? req.user._id : undefined, function(err, user) {  // Update the new user object with the values from the request body.  Also, if the person creating the new user is identified, send that along in the request.
       if(err) next(err);
 
-      next(undefined, user.sanitize());                                                     // Handles the request by sending back the appropriate response, if we havn't already.
+      sender.setResponse(user.sanitize(), req, res, next);                                   // Handles the request by sending back the appropriate response, if we havn't already.
     });
   }
 
@@ -148,7 +148,7 @@ module.exports = function(app, db, config) {
     if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
 
     user.update(req.body, (req.user) ? req.user._id : undefined, function(err, user) {  // Update the user object with the values from the request body.  Also, if the person updating the user is identified, send that along in the request.
-      next(undefined, user.sanitize());                       // Handles the request by sending back the appropriate response, if we havn't already.
+      sender.setResponse(user.sanitize(), req, res, next);                       // Handles the request by sending back the appropriate response, if we havn't already.
     });
   }
 
@@ -164,7 +164,7 @@ module.exports = function(app, db, config) {
     user.delete((req.user) ? req.user._id : undefined, function(err, user, success) {  // Delete the user object and anything linked to it.  Also, if the person deleting the user is identified, send that along in the request.
       if(err) return next(err);
 
-      next(undefined, user.sanitize());                       // Handles the request by sending back the appropriate response, if we havn't already.   
+      sender.setResponse(user.sanitize(), req, res, next);                       // Handles the request by sending back the appropriate response, if we havn't already.   
     });
   }
 

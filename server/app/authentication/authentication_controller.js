@@ -48,7 +48,7 @@ module.exports = function(app, db, config) {
       return next(sender.createError("User is already logged out.", 400));
     }
     req.logout();
-    next(undefined, sender.createSuccessObject())
+    sender.setResponse(sender.createSuccessObject(), req, res, next);
   }
 
   /**
@@ -78,7 +78,7 @@ module.exports = function(app, db, config) {
           return next(err);
         }
         
-        return next(undefined, sender.createSuccessObject())
+        return sender.setResponse(sender.createSuccessObject(), req, res, next);
       });
     })(req, res, next);
   }
@@ -88,9 +88,9 @@ module.exports = function(app, db, config) {
    */
   function isLoggedIn(req, res, next) {
     if(req.isAuthenticated()) {
-      return next(undefined, sender.createSuccessObject())
+      return sender.setResponse(sender.createSuccessObject(), req, res, next);
     } else {
-      return next(undefined, sender.createSuccessObject(false))
+      return sender.setResponse(sender.createSuccessObject(false), req, res, next);
     }
   }
 
@@ -98,6 +98,10 @@ module.exports = function(app, db, config) {
    * ******************** Passport Methods
    * ************************************************** */
 
+  /**
+   * Method used by passport to get a user ID from a 
+   * user object. ?
+   */
   var serializeUser = function(user, next) {
     return next(null, user._id);
   }
