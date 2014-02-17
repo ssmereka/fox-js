@@ -22,4 +22,22 @@ Restart the server with zero downtime.
 
 ## Configuration
 
+
+
+
+### Libraries
+
+* [send](#send)
+
+<a name="each" />
+### send
+
+Send a response, error, and/or anything else you might want to a requestor.  The send library handles formatting responses so they can be reliablely parsed.  In addition helper methods are provided for sending other things, such as emails.
+
+__send__
+
+
+
+
+
 ## [MIT License](http://www.tldrlegal.com/license/mit-license "MIT License")

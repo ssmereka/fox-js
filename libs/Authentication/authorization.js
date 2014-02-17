@@ -40,7 +40,6 @@ var Authorization = function(_fox) {
 }
 
 
-
 //var allRoles = [], allRoleObject, sanitize, selfRoleObject, debug, log, sender, isInit = false;
 
 var permissionDeniedText = "You do not have permission to perform that action.";
