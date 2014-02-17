@@ -44,8 +44,8 @@ module.exports = function(app, db, config) {
       installKeys    = [ config.installKey ];               // List of keys allowed to perform the install action.
 
   var allowSuperAdmin = [                                   // Authenticate a call allowing only the super admin or higher roles.
-    //accessToken.allow 
-    //auth.allowRolesOrHigher([superAdminRole])
+    accessToken.allow,
+    auth.allowRolesOrHigher([superAdminRole])
   ]
 
 

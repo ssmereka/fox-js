@@ -28,8 +28,8 @@ module.exports = function(app, db, config) {
       selfRole  = auth.queryRoleByName("self");  //
 
   var allowAdmin = [ 
-    accessToken.allow,
-    auth.allowRolesOrHigher([adminRole])
+    //accessToken.allow,
+    //auth.allowRolesOrHigher([adminRole])
   ]
 
   /* ************************************************** *

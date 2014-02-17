@@ -19,6 +19,7 @@ var AccessToken   = require("./Authentication/accessToken.js"),
     Log     	  = require("./Utility/log.js"),      			  // Handles logging.
     Message 	  = require("./Server/message.js"),   			  // 
     Model   	  = require("./Server/model.js"),     			  // 
+    Request       = require("./Server/request.js"),
     Send    	  = require("./Server/send.js"),				  //
     fox; 													      // Stores instance of the fox library.
 
@@ -43,7 +44,7 @@ function Fox() {
 	this.model 			= new Model(this);
 	this.accessToken    = new AccessToken(this);
 	this.load 			= new Load(this);
-
+	this.request        = new Request(this);
 	this.start 			= this.load.start;
 	this.stop 			= this.load.stop;
 

@@ -9,31 +9,48 @@
 /* ************************************************** *
  * ******************** Load Modules
  * ************************************************** */
+
 var passport         = require("passport"),                       // Used for authentication
     sanitize         = require('sanitize-it'),                    // Used to sanitize data into something predictable.  For example a value of 'null' or 'undefined' both equal undefined.
     LocalStrategy    = require('passport-local').Strategy;        // Authentication strategy of username and password used by passport module.
 
 module.exports = function(app, db, config) {
 
+
   /* ************************************************** *
    * ******************** Load libraries and Models
    * ************************************************** */
 
-  //var sender   = require(config.paths.serverLibFolder + "send")(config),
   var fox      = require("foxjs"),
+      log      = fox.log,
       sender   = fox.send,
+      request  = fox.request,
+      url      = require("url"),
       User     = db.model('User'),
       UserRole = db.model('UserRole');   
       
+  // Route(s) to require username and password parameters
+  // and move them into the body.
+  var requireUsernameAndPassword = [
+    request.joinAndRequireParameters({
+      username: "",
+      password: ""
+    })
+  ]
+ 
 
   /* ************************************************** *
    * ******************** Define Routes
    * ************************************************** */
 
-  app.get('/authStatus.:format', isLoggedIn, sender.send);
+  // Get the current authentication status.
+  app.get('/login/status.:format', isLoggedIn);
 
-  app.post('/login.:format', login, sender.send);
-  app.post('/logout.:format', logout, sender.send);
+  // Login to a session using username and password.
+  app.post('/login.:format', requireUsernameAndPassword, login);
+
+  // Logout of the current session.
+  app.post('/logout.:format', logout);
 
 
   /* ************************************************** *
@@ -69,7 +86,7 @@ module.exports = function(app, db, config) {
 
       // If authentication was not successful, send the info back in the response.
       if ( ! user || user_error) {
-        return next(sender.createError(user_error, 401));
+        return next(user_error);
       }
 
       // If authentication was successful, log in the user and notify the requester.
@@ -94,20 +111,21 @@ module.exports = function(app, db, config) {
     }
   }
 
+
   /* ************************************************** *
    * ******************** Passport Methods
    * ************************************************** */
 
   /**
-   * Method used by passport to get a user ID from a 
-   * user object. ?
+   * Passport method to get the user ID from the user object.
    */
   var serializeUser = function(user, next) {
     return next(null, user._id);
   }
 
   /**
-   * Get a user, by ID, from the database and return it to passport.
+   * Passport method to find a user in the database 
+   * given their user ID.
    */
   var deserializeUser = function(userId, next) {
     User.findById(userId, function(err, user) {
@@ -121,32 +139,38 @@ module.exports = function(app, db, config) {
    */
   var usernameAndPasswordAuth = function (username, password, next) {
     if(sanitize.value(username) === undefined) {
-        console.log("Username cant be null");
-        return next(null, false, new Error('Please enter an email address.' ));
+        log.e("Username cannot be undefined", debug);
+        return next(null, false, sender.createError('Please enter an email address.', 400));
     }
     
     if(sanitize.value(password) === undefined) {
-        console.log("Password can't be null")
-        return next(null, false, new Error('Please enter a password.' ));
+        log.e("Password cannot be undefined", debug);
+        return next(null, false, sender.createError('Please enter a password.', 400));
     }
 
     User.findOne({email: username}, function(err, user) {
         if(err) {
-          next(err, false, err.message);
-        } else if(!user) {                                                            // If the username does not match a user in the database, report an error.
-            next(null, false, new Error('Username or password is invalid.'));
+          next(err, false, err);
+        } else if(!user) {      
+            log.e("Login attempt failed:  username is invalid.", debug);                                                      // If the username does not match a user in the database, report an error.
+            next(null, false, sender.createError('Username or password is invalid.', 403));
             user.failedLoginAttempt();
         } else if(!user.authenticate(password)) {                                 // If the password does not match the found user, report an error.
-            next(null, false, new Error('Username or password is invalid.'));
+            log.e("Login attempt failed: "+user.email+" password is invalid.", debug);
+            next(null, false, sender.createError('Username or password is invalid.', 403));
             user.failedLoginAttempt();        
         } else if(user.activated === false) {                                         // If the user is not activated, report an error.
-            next(null, false, user.deactivatedMessage );
+            log.e("Login attempt failed:  user is not activated.", debug);
+            next(null, false, sender.createError(user.deactivatedMessage, 403));
         } else {                                                                      // Otherwise, the username and password are valid, let the user login.
-            next(null, user);  //TODO: Limit what is shown here, remove password hash and stuff.
+            
+            //TODO: Limit what is shown here, remove password hash and stuff.
+            next(null, user.sanitize());  
             user.successfulLogin();
         }
     });
   }
+
 
   /* ************************************************** *
    * ******************** Passport Configuration
