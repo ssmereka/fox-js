@@ -75,6 +75,192 @@ info:   Version                  0.1.0
 <a name="cryptography" />
 ## Cryptography
 
+Simplifies encryption and decryption of data while also providing helper methods for common cryptography tasks.
+
+### Methods
+* [Hash](#cryptographyHash)
+* [Hash Synchronous](#cryptographyHashSync)
+* [Generate Key](#cryptographyGenerateKey)
+* [Generate Key Synchronous](#cryptographyGenerateKeySync)
+* [Generate Hashed Key](#cryptographyGenerateHashedKey)
+* [Generate Hashed Key Synchronous](#cryptographyGenerateHashedKeySync)
+
+---------------------------------------
+<a name="cryptographyHash" />
+### hash(string, rounds, next)
+
+Hash a string asynchronously using a salt and number of salt rounds.  If salt rounds are not specified, then the default number of rounds will be used.
+
+Before storing sensitive user information, like a password, you should first hash the string.  
+
+__Arguments__
+* string - a string to be hashed.
+* rounds - number of hashing rounds to perform. (optional)
+* next - callback for the send method. (optional)
+
+__Example__
+```js
+var crypto = fox.crypto;  // Load the crypto library.
+
+function setUserPassword(user, password, next) {
+    // Hash the user's new password
+    crypto.hash(password, 10, function(err, hash){
+        // Check for and return any errors.
+        if(err) {
+            return next(err);
+        }
+        
+        user.password = hash;  // Set the new password
+        user.save();           // Save the updated user.
+        next();                // Call the callback.
+    });
+}
+```
+---------------------------------------
+<a name="cryptographyHashSync" />
+### hashSync(string, rounds)
+
+Hash a string synchronously using a salt and number of salt rounds.  If salt rounds are not specified, then the default number of rounds will be used.
+
+Before storing sensitive user information, like a password, you should first hash the string.  
+
+__Arguments__
+* string - a string to be hashed.
+* rounds - number of hashing rounds to perform. (optional)
+
+__Example__
+```js
+var crypto = fox.crypto;  // Load the crypto library.
+
+function setUserPasswordSync(user, password) {
+    // Hash the user's new password
+    var hashedPassword = crypto.hash(password, 10);
+    
+    // Check for any errors that may have occurred.
+    if( ! hashedPassword) {
+        return false;
+    }
+    
+    user.password = hash;   // Set the new password
+    user.save();            // Save the updated user.
+    return true;            // Return the result.
+}
+```
+---------------------------------------
+<a name="cryptographyGenerateKey" />
+### generateKey(keyLength, next)
+
+Asynchronously generate a random string key of a given length.
+
+__Arguments__
+* keyLength - length of the string key to be generated.
+* next - callback for the send method. (optional)
+
+__Example__
+```js
+var crypto = fox.crypto;  // Load the crypto library.
+
+function setUserResetPasswordToken(user, next) {
+    // Create a random key and hash it.
+    crypto.generateKey(24, function(err, hash) {
+        
+        // Check for and return any errors.
+        if(err) {
+            return next(err);
+        }
+        
+        user.resetPasswordToken = hash;  // Set the new reset password token
+        user.save();                     // Save the updated user.
+        next(undefined, hash);           // Return the generated key in the callback.
+    });
+}
+```
+---------------------------------------
+<a name="cryptographyGenerateKeySync" />
+### generateKeySync(keyLength, next)
+
+Synchronously generate a random string key of a given length.
+
+__Arguments__
+* keyLength - length of the string key to be generated.
+
+__Example__
+```js
+var crypto = fox.crypto;  // Load the crypto library.
+
+function setUserResetPasswordTokenSync(user) {
+    // Create a random key and hash it.
+    var hash = crypto.generateKey(24);
+    
+    // Check for errors.
+    if( ! hash) {
+        return undefined;
+    }
+        
+    user.resetPasswordToken = hash;   // Set the new password
+    user.save();            // Save the updated user.
+    return hash;            // Return the generated key.
+}
+```
+---------------------------------------
+<a name="cryptographyGenerateHashedKey" />
+### generateHashedKey(keyLength, next)
+
+Asynchronously generate a random string key of a given length, then hash that key and return the results.
+
+__Arguments__
+* keyLength - length of the string key to be generated.
+* next - callback for the send method. (optional)
+
+__Example__
+```js
+var crypto = fox.crypto;  // Load the crypto library.
+
+function setDefaultUserPassword(user, next) {
+    // Create a random key and hash it.
+    crypto.generateHashedKey(24, function(err, hash) {
+    
+        // Check for and return any errors.
+        if(err) {
+            return next(err);
+        }
+        
+        user.password = hash;  // Set the new password
+        user.save();           // Save the updated user.
+        next();                // Call the callback.
+    });
+}
+```
+---------------------------------------
+<a name="cryptographyGenerateHashedKeySync" />
+### generateHashedKeySync(keyLength)
+
+Synchronously generate a random string key of a given length, then hash that key and return the results.
+
+__Arguments__
+* keyLength - length of the string key to be generated.
+
+__Example__
+```js
+var crypto = fox.crypto;  // Load the crypto library.
+
+function setDefaultUserPassword(user) {
+    // Create a random key and hash it.
+    var hash = crypto.generateHashedKey(24);
+    
+    // Check for errors.
+    if( ! hash) {
+        return false;
+    }
+        
+    user.password = hash;   // Set the new password
+    user.save();            // Save the updated user.
+    return true;            // Return the result.
+}
+```
+---------------------------------------
+
+
 <a name="date" />
 ## Date
 
@@ -95,7 +281,18 @@ info:   Version                  0.1.0
 
 Send JSON responses or errors in a unified format so they can be easily parsed by a requestor.  Additional methods, such as emailing, are also provided.
 
+### Methods
+* [Send](#sendSend)
+* [Send Error](#sendSendError)
+* [Create Error](#sendCreateError)
+* [Create and Send Error](#sendCreateAndSendError)
+* [Create Success Object](#sendCreateSuccessObject)
+* [Create and Send Success Object](#sendCreateAndSendSuccessObject)
+* [Set Response](#sendSetResponse)
+* [Get Response](#sendGetResponse)
+
 ---------------------------------------
+<a name="sendSend" />
 ### send(obj, req, res, next)
 
 Send an object or array to the requestor.  Send will format the object or array so it can be easily parsed.
@@ -120,6 +317,7 @@ function user(req, res, next) {
 }
 ```
 ---------------------------------------
+<a name="sendSendError" />
 ### sendError(err, req, res, next)
 
 Send an error or array of errors to the requestor.  SendError will format the object or array so it can be easily parsed.
@@ -145,6 +343,7 @@ function users(req, res, next) {
 }
 ```
 ---------------------------------------
+<a name="sendCreateError" />
 ### createError(msg, status)
 
 Create an error to send to a requestor.  This will handle formatting the error so it can be used by other Send methods.
@@ -167,6 +366,7 @@ function users(req, res, next) {
 }
 ```
 ---------------------------------------
+<a name="sendCreateAndSendError" />
 ### createAndSendError(msg, status, req, res, next)
 
 Create and send an error to a requestor.  This will handle creating, formatting, and sending the error.
@@ -189,6 +389,7 @@ function users(req, res, next) {
 }
 ```
 ---------------------------------------
+<a name="sendCreateSuccessObject" />
 ### createSuccessObject(success)
 
 Create a success or failure message to send to a requestor.  Instead of simply sending true or false, this method handles formatting the success or failure in a easy to parse json message.
@@ -210,6 +411,7 @@ function doIt(req, res, next) {
 }
 ```
 ---------------------------------------
+<a name="sendCreateAndSendSuccessObject" />
 ### createAndSendSuccessObject(success, req, res, next)
 
 Create and send a success or failure message to a requestor.  Instead of just sending true or false, this method handles formatting the success or failure in a easy to parse json message.
@@ -231,6 +433,7 @@ function doIt(req, res, next) {
 }
 ```
 ---------------------------------------
+<a name="sendSetResponse" />
 ### setResponse(obj, req, res, next)
 
 Set the local response object or array.  The response is the result to be returned to the requestor.  Use this method when more than one route needs to be executed before returning the response to the requestor.  Simply set the response object in any route and access it in another route using the getResponse(res) method.
@@ -270,6 +473,7 @@ function trackRequests(req, res, next) {
 }
 ```
 ---------------------------------------
+<a name="sendGetResponse" />
 ### getResponse(obj, req, res, next)
 
 Get the local response object or array.  The response is the result to be returned to the requestor.  Use this method to obtain a stored response from a previous route.
