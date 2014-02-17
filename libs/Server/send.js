@@ -1,8 +1,9 @@
 // ~> Library
 // ~A Scott Smereka
 
-/* Model
- * Library for handling common tasks for a MongoDB models.
+/* Send
+ * Library for handling sending information to 
+ * a user or requestor.
  */
 
 
@@ -25,10 +26,14 @@ var debug,
  * Handles initalization of the send library.
  */
 var Send = function(_fox) {
+  if(! _fox) {
+    return console.log("Error loading foxjs module.");
+  }
+
   fox = _fox;
+  log = fox.log;
   debug = false;
   
-  log = fox.log;
   sanitize = require("sanitize-it");
   handleConfig(fox["config"]);
 }
@@ -53,7 +58,7 @@ var handleConfig = function(config) {
  * to be later accessed in a different route.
  */
 var setResponse = function(obj, req, res, next) {
-  req.locals.response = obj = createResponseObject(undefined, obj);
+  res.locals.response = obj;
   if(next) {
     next();
   }
@@ -62,8 +67,8 @@ var setResponse = function(obj, req, res, next) {
 /**
  * Get the response object from the private store.
  */
-var getResponse = function(req) {
-  return req.locals.response;
+var getResponse = function(res) {
+  return res.locals.response;
 }
 
 /**
@@ -117,7 +122,6 @@ var sendError = function(err, req, res, next) {
 
   // Create a response object.
   obj = createResponseObject(err);
-  console.log(obj);
 
   // If in debug mode, log the error.
   log.e(err, debug);
@@ -136,7 +140,7 @@ var sendError = function(err, req, res, next) {
  */
 var createSuccessObject = function(success) {
   return {
-    success: (success === undefined) ? true : success; 
+    success: (success === undefined) ? true : success
   }
 }
 
@@ -178,7 +182,6 @@ var createResponseObject = function(err, obj) {
   
   // If there is an error, set the error properties.
   if(err) {  
-    
     // Set the error type and error message.
     if(Object.prototype.toString.call( err ) === '[object Array]') {
       resObj["errorType"] = "array";

@@ -7,15 +7,10 @@ module.exports = function(app, db, config) {
   
   app.all('/*', sendResponse);
 
-  function sendResponse(err, req, res, next) {
-    // If there is an error, move on.
-    if(err) {
-      next(err);
-    }
-
+  function sendResponse(req, res, next) {
     // If there is a response object, send it.
-    if(sender.getResponse) {
-      return sender.sendResponse(sender.getResponse, req, res, next);
+    if(sender.getResponse(res)) {
+      return sender.sendResponse(sender.getResponse(res), req, res, next);
     }
 
     // If there is not a response object, move on.

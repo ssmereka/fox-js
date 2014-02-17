@@ -114,18 +114,23 @@ var strategy = function(possibleToken, next) {
       // Check for invalid token.
       if( ! token) {
         //TODO: Log a break in attempt
-        //TODO: Return error as 403 not 500
-        return next(new Error('Access token is invalid.'));
+        var err = new Error('Access token is invalid.');
+        err.status = 403;
+        return next(err);
       }
 
       // Check for deactivated user.
       if( ! token.user.activated) {
-        return next(new Error('User is deactivated.'));
+        var err = new Error('User is deactivated.');
+        err.status = 403;
+        return next(err);
       }
 
       // Check for deactivated acess token.
       if( ! token.activated) {
-        return next(new Error('User\'s access token is deactivated.'));
+        var err = new Error('User\'s access token is deactivated.')
+        err.status = 403;
+        return next(err);
       }
 
       // At this point token is valid.

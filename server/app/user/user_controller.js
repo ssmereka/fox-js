@@ -37,7 +37,8 @@ module.exports = function(app, db, config) {
   //app.all('/users(/|.)*', auth.allowRolesOrHigher([adminRole]));
 
   // Get all users information.
-  app.get('/users.:format', model.load(User, {}, {sort: "lastName"}), users);
+  //app.get('/users.:format', model.load(User, {}, {sort: "lastName"}), users);
+  app.get('/users.:format', users);
   
   // Create a new user.
   app.post('/users.:format', create);
@@ -61,7 +62,6 @@ module.exports = function(app, db, config) {
     User.find({}, function(err, users) {
       if(err) {
         return next(err);
-
       }
       sender.setResponse(users, req, res, next);
     });
@@ -70,8 +70,8 @@ module.exports = function(app, db, config) {
   /* Users
    * Get all the users and return them in the requested format.
    */
-  function users(req, res, next) {
-
+  /*function users(req, res, next) {
+    console.log("USERS");
     var users = req.queryResult;
     if( ! users) return next(sender.createError("Users were not found."));
 
@@ -81,7 +81,7 @@ module.exports = function(app, db, config) {
     }
 
     sender.setResponse(users, req, res, next);                                  // Handles the request by sending back the appropriate response, if we havn't already.
-  }
+  } */
 
   /* Create
    * Create a new user with the attributes specified in the post 
