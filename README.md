@@ -12,13 +12,37 @@ Light-framework and boilerplate code to quickly build scalable web apps using ja
 
     fox new "My Project Name"
 
-3. Start the server and start coding!  No need to restart the server, changes will be live after saving a file.
+3. Start the server in local mode and start coding!  No need to restart the server, changes will be live after saving a file.
 
-    fox start
+    fox start -l
 
-Restart the server with zero downtime.
 
-	fox reload
+## Fox CLI
+
+You can control your server using the command line interface.  After fox is installed, you can type fox to show a list of commands.
+```bash
+info: Usage:  fox <command> <options>
+
+info: Commands:
+info:   new <name>               Create a new server with a specified name.
+info:   start                    Start the server.
+info:   stop                     Stop the server.
+info:   restart                  Restart the server.
+info:   reload                   Restart the server with zero downtime.
+info:   clear                    Stop the server and clear all logs and history.
+info:   logs                     Show server logs
+
+info: Options:
+info:   -v                       Enable verbose or debug mode.
+info:   -n                       Start server using plain old node.js and local mode.
+info:   -l                       Start in local environment mode.
+info:   -d                       Start in development environment mode.
+info:   -p                       Start in production environment mode.
+
+info: Info:
+info:   Author                   Scott Smereka
+info:   Version                  0.1.0
+```
 
 ## Configuration
 
@@ -27,10 +51,47 @@ Restart the server with zero downtime.
 
 # Libraries
 
-* [send](#send)
+* [Access Token](#accessToken)
+* [Authorization](#authorization)
+* [Config](#config)
+* [Cryptography](#cryptography)
+* [Date](#date)
+* [Load](#load)
+* [Log](#log)
+* [Message](#message)
+* [Model](#model)
+* [Send](#send)
 
-<a name="each" />
-## send
+
+<a name="accessToken" />
+## Access Token
+
+<a name="authorization" />
+## Authorization
+
+<a name="config" />
+## Config
+
+<a name="cryptography" />
+## Cryptography
+
+<a name="date" />
+## Date
+
+<a name="load" />
+## Load
+
+<a name="log" />
+## Log
+
+<a name="message" />
+## Message
+
+<a name="model" />
+## Model
+
+<a name="send" />
+## Send
 
 Send JSON responses or errors in a unified format so they can be easily parsed by a requestor.  Additional methods, such as emailing, are also provided.
 
