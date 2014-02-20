@@ -25,6 +25,7 @@ module.exports = function(app, db, config) {
       log      = fox.log,
       sender   = fox.send,
       request  = fox.request,
+      debug    = config.debug;
       url      = require("url"),
       User     = db.model('User'),
       UserRole = db.model('UserRole');   
@@ -154,7 +155,7 @@ module.exports = function(app, db, config) {
         } else if(!user) {      
             log.e("Login attempt failed:  username is invalid.", debug);                                                      // If the username does not match a user in the database, report an error.
             next(null, false, sender.createError('Username or password is invalid.', 403));
-            user.failedLoginAttempt();
+            //user.failedLoginAttempt();
         } else if(!user.authenticate(password)) {                                 // If the password does not match the found user, report an error.
             log.e("Login attempt failed: "+user.email+" password is invalid.", debug);
             next(null, false, sender.createError('Username or password is invalid.', 403));

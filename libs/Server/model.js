@@ -12,7 +12,12 @@
 
  var fox,
      log,
-     sanitize;
+     auth,
+     sanitize,
+     app,
+     database,
+     config,
+     debug;
 
 
 /* ************************************************** *
@@ -26,7 +31,9 @@
 var Model = function(_fox) {
   fox = _fox;
   log = fox.log;
+  auth = fox.authentication;
   sanitize = require("sanitize-it");
+  debug = false;
 }
 
 
@@ -57,12 +64,15 @@ var loadById = function(Schema, queryObject, populateFields, populateSelects, po
 
       Schema.findById(req.params[queryObject]).populate(populateFields, populateSelects, populateModels, populateConditions).exec(function(err, obj) {
         if(err) {
+          console.log(err);
           next(err);
         } else if( ! obj){
           log.w("Could not find schema object.  Query Object:", debug);
           log.w("\t" + queryObject);
         } else {
+          console.log("Found result: ");
           req.queryResult = obj;
+          console.log(req.queryResult);
         }
         return next();
       });
@@ -143,11 +153,17 @@ var load = function load(Schema, queryObject, opts) {
     queryObject = {};
   }
   return load[Schema, queryObject, opts] || (load[Schema, queryObject, opts] = function(req, res, next) {
-  //return function(req, res, next) {
-    var sort = "";
-    var query = mergeObjects(req.query, queryObject);
 
-    log.d("Query: " + JSON.stringify(query));
+    var sort = "";
+
+    // Grab the request query object, removing auth tokens if they exist.
+    var requestQuery = req.query;
+    if(requestQuery["access_token"]) {
+      delete requestQuery.access_token;
+    }
+    var query = mergeObjects(requestQuery, queryObject);
+
+    log.d("Query: " + JSON.stringify(query), debug);
 
     if(opts) {
       sort = (opts["sort"]) ? opts["sort"] : "";
@@ -168,6 +184,169 @@ var load = function load(Schema, queryObject, opts) {
 };
 
 
+
+var setQueryResult = function(obj, req, defaultValue) {
+  if(req) {
+    req.queryResult = (obj === undefined) ? defaultValue : obj;
+  } else {
+    log.e("Cannot set query result, request object is null.");
+  }
+}
+
+var getQueryResult = function(req, defaultValue) {
+  return (req && req.queryResult !== undefined) ? req.queryResult : defaultValue;
+}
+
+
+var get = function(Schema, isSanitize) {
+  return get[Schema, isSanitize] || (get[Schema, isSanitize] = function(req, res, next) {
+    // Get the object from the query result.
+    var results = getQueryResult(req);
+
+    // If there wasn't a result, move on.
+    if( ! results) {
+      return next();
+    }
+
+    if(isSanitize === undefined || isSanitize) {
+      obj.sanitize();
+    }
+
+    // Set the response object to be returned to the caller.
+    sender.setResponse(obj, req, res, next);
+  })
+}
+
+var getAll = function(Schema, isSanitize) {
+  return getAll[Schema, isSanitize] || (getAll[Schema, isSanitize] = function(req, res, next) {
+    // Get the object from the query result.
+    var objs = req.queryResult;
+
+    // If there wasn't a result, move on.
+    if( ! req.queryResult) {
+      return next();
+    }
+
+    // Sanitize the access token information before sending it back.
+    if(isSanitize === undefined || isSanitize) {
+      for(var i = 0; i < objs.length; i++) {
+        objs[i] = objs[i].sanitize();
+      }
+    }
+
+    // Set the response object to be returned to the caller.
+    sender.setResponse(objs, req, res, next);
+  });
+}
+
+var create = function(Schema, isSanitize) {
+  return create[Schema, isSanitize] || (create[Schema, isSanitize] = function(req, res, next) {
+    var obj = new AccessToken();
+    obj.update(req.body, (req.user) ? req.user._id : undefined, function(err, obj) {  // Update the new user object with the values from the request body.  Also, if the person creating the new user is identified, send that along in the request.
+      if(err) next(err);
+
+      if(isSanitize === undefined || isSanitize) {
+        obj.sanitize();
+      }
+
+      sender.setResponse(obj, req, res, next);                                   // Handles the request by sending back the appropriate response, if we havn't already.
+    });
+  });
+}
+
+var update = function(Schema, isSanitize) {
+  return update[Schema, isSanitize] || (update[Schema, isSanitize] = function(req, res, next) {
+    var obj = req.queryResult;                                      // Get the acess token object queried from the url's userId paramter.
+    if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
+
+    obj.update(req.body, (req.user) ? req.user._id : undefined, function(err, obj) {  // Update the user object with the values from the request body.  Also, if the person updating the user is identified, send that along in the request.
+      if(err) next(err);
+
+      if(isSanitize === undefined || isSanitize) {
+        obj.sanitize();
+      }
+
+      sender.setResponse(obj, req, res, next);                       // Handles the request by sending back the appropriate response, if we havn't already.
+    });
+  });
+}
+
+var remove = function(Schema, isSanitize) {
+  return remove[Schema, isSanitize] || (remove[Schema, isSanitize] = function(req, res, next) {
+    var obj = req.queryResult;                                      // Get the user object queried from the url's userId paramter.
+    if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
+
+    obj.delete((req.user) ? req.user._id : undefined, function(err, obj, success) {  // Delete the user object and anything linked to it.  Also, if the person deleting the user is identified, send that along in the request.
+      if(err) return next(err);
+
+      sender.setResponse(user.sanitize(), req, res, next);                       // Handles the request by sending back the appropriate response, if we havn't already.   
+    });
+  });
+}
+
+
+var enableCrud = function(_app, _db, _config) {
+  app = (_app) ? _app : app;
+  db = (_db) ? _db : db;
+  config = (_config) ? _config : config;
+
+  if(! app || ! db || ! config) {
+    return false;
+  }
+
+  //enableCrudForSchema(schemaName);
+
+}
+
+/*var enableCrudOnSchemas = function(schemas) {
+  for(var i = schemas.length-1; i >= 0; --i) {
+    enableCrudForSchema(schemas[i])
+  }
+} */
+
+var enableCrudOnAllSchemas = function(_app, _db, _config) {
+  db = _db;
+  app = _app;
+  config = _config;
+
+  var defaultViewAuthMethod = auth.allowRolesOrHigher(auth.queryRoleByName(config.roles.defaultViewRole));
+  var defaultEditAuthMethod = auth.allowRolesOrHigher(auth.queryRoleByName(config.roles.defaultEditRole));
+
+  if(db && db.models) {
+    for(var key in db.models) {
+      if(db.models.hasOwnProperty(key)) {
+        enableSchemaCrud(key, defaultViewAuthMethod, defaultEditAuthMethod);
+      }
+    }
+  }
+}
+
+var enableSchemaCrud = function(schemaName, viewAuthMethod, editAuthMethod) {
+  schema = db.model(schemaName);
+  collectionName = schemaName.toLowerCase() + 's';
+
+  viewAuthMethod = (viewAuthMethod) ? viewAuthMethod : [];
+  editAuthMethod = (editAuthMethod) ? editAuthMethod : [];
+
+  // Get an access token by ID.
+  app.get('/'+collectionName+'/:id.:format', viewAuthMethod, loadById(schema, "id"), get(schema));
+
+  // Get all access tokens.
+  app.get('/'+collectionName+'.:format', viewAuthMethod, load(schema, {}, { "sort": "creationDate"}), getAll(schema));
+
+  // Update an access token.
+  app.post('/'+collectionName+'/:id.:format', editAuthMethod, update(schema));
+
+  // Create an access token.
+  app.post('/'+collectionName+'.:format', editAuthMethod, create(schema));
+
+  // Delete an access token.
+  app.delete('/'+collectionName+'/:id.:format', editAuthMethod, remove(schema));
+
+  log.i("CRUD enabled for the ".white +schemaName.cyan+" schema.".white, debug);
+}
+
+
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */
@@ -176,6 +355,15 @@ var load = function load(Schema, queryObject, opts) {
 Model.prototype.load = load;
 Model.prototype.update = update;
 Model.prototype.loadById = loadById;
+
+Model.prototype.get = get;
+Model.prototype.getAll = getAll;
+Model.prototype.create = create;
+Model.prototype.update = update;
+Model.prototype.remove = remove;
+
+Model.prototype.enableCrud = enableCrud;
+Model.prototype.enableCrudOnAllSchemas = enableCrudOnAllSchemas; 
 
 
 /* ************************************************** *

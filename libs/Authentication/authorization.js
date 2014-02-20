@@ -18,7 +18,8 @@ var fox,
     allRoleObject,  //
     selfRoleObject,
     url,
-    db; // 
+    db,
+    auth; // 
 
 
 /* ************************************************** *
@@ -29,8 +30,9 @@ var fox,
  * Constructor
  * Initalize a new authorization library object.
  */
-var Authorization = function(_fox) {
+var Authorization = function(_fox, _auth) {
   fox = _fox;
+  auth = _auth;
   allRoles = [];
   sanitize = require("sanitize-it");
   debug    = (debug === undefined) ? false : debug;
@@ -48,43 +50,62 @@ var permissionDeniedText = "You do not have permission to perform that action.";
  * Check for any reasons why the user would be unauthorized or
  * authorized before we start checking roles.
  */
-var checkRolePreconditions = function(req, roles, next) {
-  // Check if the user is logged in.
-  if( ! req.isAuthenticated() ) {
-    log.d("User is not logged in, permission denied.", debug);
-    var err = new Error("You must be logged in to perform that action.")
-    err.status = 403;
-    return next(err);
-  }
+var checkRolePreconditions = function(roles, req, res, next) {
+  //console.log("Role Checker, are you authenticated " + req.isAuthenticated());
 
-  // Check if we have any roles to enforce, if we don't then as long as the user is logged in, they are authenticated.
-  if(roles === undefined) {
-    log.w("allowRoles(): Roles was undefined, permission allowed for all logged in users.");
-    return next(undefined, allRoles);
-  }
-
-  // Look through all the roles and check for special conditions.
-  for(var i = roles.length-1; i >= 0; --i) {
-    
-    // Check for the "All" role.  The all role automatically
-    // gives the logged in user permission to perform the action.
-    if(roles[i]._id.equals(allRoleObject._id)) {
-      return next(undefined, allRoles, true);
+  auth.accessToken.allow(req, res, function(err) {
+    if(err) {
+      return next(err);
     }
 
-    // Check for the "Self" role.  The self role automatically
-    // gives the logged in user permision to perform an action
-    // on themselves.
-    if(roles[i]._id.equals(selfRoleObject._id)) {
-      roles.splice(i,1);
-      if(req && req.params && req.params.userId && req.params.userId == req.user._id) {
-        log.d("User has been granted permission to perform an action on itself.", debug);
+    // Check if the user is logged in.
+    if( ! req.isAuthenticated() ) {
+      log.d("User is not logged in, permission denied.", debug);
+      var err = new Error("You must be logged in to perform that action.")
+      err.status = 403;
+      return next(err);
+    }
+
+    // Check if we have any roles to enforce, if we don't then as long as the user is logged in, they are authenticated.
+    if(roles === undefined) {
+      log.w("allowRoles(): Roles was undefined, permission allowed for all logged in users.");
+      return next(undefined, allRoles);
+    }
+
+    // Make sure roles is an array.
+    if(roles !== undefined && roles !== null && Object.prototype.toString.call( roles ) !== '[object Array]') {
+      roles = [roles];
+    }
+
+    // Look through all the roles and check for special conditions.
+    for(var i = roles.length-1; i >= 0; --i) {
+
+      // Remove invalid roles (undefined, null, or arrays)
+      if(roles[i] === undefined || roles[i] === null || Object.prototype.toString.call( roles[i] ) === '[object Array]') {
+        roles.splice(i, 1);
+        continue;
+      }
+
+      // Check for the "All" role.  The all role automatically
+      // gives the logged in user permission to perform the action.
+      if(allRoleObject && roles[i]._id.equals(allRoleObject._id)) {
         return next(undefined, allRoles, true);
       }
-    }
-  }
 
-  return next(undefined, roles);
+      // Check for the "Self" role.  The self role automatically
+      // gives the logged in user permision to perform an action
+      // on themselves.
+      if(selfRoleObject && roles[i]._id.equals(selfRoleObject._id)) {
+        roles.splice(i,1);
+        if(req && req.params && req.params.userId && req.params.userId == req.user._id) {
+          log.d("User has been granted permission to perform an action on itself.", debug);
+          return next(undefined, allRoles, true);
+        }
+      }
+    }
+
+    return next(undefined, roles);
+  });
 }
 
 /**
@@ -98,9 +119,9 @@ var findLowestRole = function(roles) {
 
   // Find the permission level of each user role in the sorted list of all roles.
   for(var x = roles.length-1; x >= 0; --x) {
-    roleObjectId = (roles[x]._id) ? roles[x]._id : roles[x];
+    roleObjectId = (roles[x] && roles[x]._id) ? roles[x]._id : roles[x];
     for(var y = allRoles.length-1; y >=0; --y) {
-      if(allRoles[y]._id.equals(roleObjectId)) {
+      if(allRoles[y] && allRoles[y]._id.equals(roleObjectId)) {
         index = y;
         break;
       }
@@ -199,7 +220,7 @@ var allowAllRoles = function () {
 var allowRoles = function(roles) {
   return allowRoles[roles] || (allowRoles[roles] = function(req, res, next) {
     // Check all preconditions for user role comparisons.
-    checkRolePreconditions(req, roles, function(err, roles, override) {
+    checkRolePreconditions(roles, req, res, function(err, roles, override) {
       if(err) {
         return next(err, req, res, next);
       }
@@ -244,11 +265,11 @@ var allowRoles = function(roles) {
 function allowRolesOrHigher(roles) {
   return allowRolesOrHigher[roles] || (allowRolesOrHigher[roles] = function(req, res, next) {
     // Check all preconditions for user role comparisons.
-    checkRolePreconditions(req, roles, function(err, roles, override) {
+    checkRolePreconditions(roles, req, res, function(err, roles, override) {
       if(err) {
         return next(err, req, res, next);
       }
-
+      
       // Check if role authentication should be enforced.  Some
       // preconditions, such as allowing all roles, will allow
       // all logged in users to be authenticated.
@@ -292,7 +313,7 @@ function allowRolesOrHigher(roles) {
 function allowRolesOrLower(roles) {
   return allowRolesOrLower[roles] || (allowRolesOrLower[roles] = function(req, res, next) {
     // Check all preconditions for user role comparisons.
-    checkRolePreconditions(req, roles, function(err, roles, override) {
+    checkRolePreconditions(roles, req, res, function(err, roles, override) {
       if(err) {
         return next(err, req, res, next);
       }
@@ -424,7 +445,7 @@ var refreshCachedRoles = function(_db, next) {
   UserRole.find({}).sort({index: 1}).exec(function(err, _allRoles) {
     if(err) {
       next(err);
-    } else if(! _allRoles) {
+    } else if(! _allRoles ) {
       next(undefined, []);
     } else {
 

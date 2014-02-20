@@ -10,15 +10,16 @@
  * ******************** Library Variables
  * ************************************************** */
  
-var fox,          //
-    log,          // Handles logging.
-    debug,        // Display additional logs when enabled.
-    BearerStrategy,  //API Token libary using the Bearer token strategy.
-    isEnabled,
-    AccessTokenModel,
-    sender,
-    db,
-    passport;
+var AccessTokenModel,     // Model for access tokens
+    auth,                 // Authentication module.
+    BearerStrategy,       // Passport strategy for bearer tokens.
+    debug = false,        // Debug flag for this module.
+    db,                   // Database connection.
+    fox,                  // Fox module reference.
+    log,                  // Logging module reference.
+    isEnabled = false,    // Flag for whether or not to use access tokens.
+    passport,             // Passport module reference.
+    url = require("url"); // Node js url parser module.
 
 
 /* ************************************************** *
@@ -30,11 +31,26 @@ var fox,          //
  * Initalize a new Access Token library object.
  */
 var AccessToken = function(_fox) {
-  debug = false;
+  if( ! _fox) {
+    console.log("Access Token Module: Failed to load, missing fox module parameter.");
+  }
+
   fox = _fox;
   log = fox.log;
-  sender = fox.send;
-  isEnabled = false;
+
+  handleConfigObject(fox["config"]);
+}
+
+/**
+ * Handle initalizing the access token module from a fox configuration object.
+ * If the configuration object is invalid or undefined, nothing will change.
+ */
+function handleConfigObject(config) {
+  if( ! config) {
+    return;
+  }
+
+  debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
 }
 
 
@@ -42,10 +58,13 @@ var AccessToken = function(_fox) {
  * ******************** Public Methods
  * ************************************************** */
 
+/**
+ * Enable the access token module.  When enabled, all authorization 
+ * methods will also check for access tokens as well as sessions.
+ */
 var enable = function(_db, _passport, _bearerStrategy) {
   if( ! _db) {
-    log.e("Cannot enable access token authentication, database is not defined.");
-    return;
+    return log.e("Cannot enable access token authentication, database is not defined.");
   }
   db = _db;
 
@@ -53,18 +72,18 @@ var enable = function(_db, _passport, _bearerStrategy) {
     _passport = require('passport');
 
     if( ! _passport) {
-      log.e("Cannot enable access token authentication, passport is not defined.");
-      return;
+      return log.e("Cannot enable access token authentication, passport is not defined.");
     }
   }
   passport = _passport;
 
   if( ! _bearerStrategy) {
-    _bearerStrategy = require('passport-http-bearer').Strategy
+    var _bearer = require('passport-http-bearer');
 
-    if( ! _bearerStrategy) {
-      log.e("Cannot enable access token authentication, bearer strategy is not defined.");
-      return;
+    if( ! _bearer) {
+      return log.e("Cannot enable access token authentication, bearer strategy is not defined.");
+    } else {
+      _bearerStrategy = _bearerStrategy.Strategy;
     }
   }
   BearerStrategy = _bearerStrategy;
@@ -73,23 +92,52 @@ var enable = function(_db, _passport, _bearerStrategy) {
   isEnabled = true;
 };
 
-var authenticate = function(req, res, next) {
-  if(isEnabled) {
-    return passport.authenticate('bearer', { session: false })(req, res, next);
-  } else {
-    enable(req, res, next);
+/**
+ * Allow a route to be authenticated via an access token.
+ * If an access token is presented, it will be verified like a 
+ * login attempt.  If the access token is not available, the user 
+ * is already authenticated, or access token authentication is turned 
+ * off, then this method will do nothing.
+ */
+var allow = function(req, res, next) {
+  // Check if access token is enabled, or for an already 
+  // authenticated user.
+  if( ! isEnabled || req.isAuthenticated()) {
+    return next();
   }
+  
+  // Check for access_token, if one is not found then move on.
+  var queryString = url.parse(req.url, true).query;
+  if( ! queryString["access_token"]) {
+    return next();
+  }
+
+  // Perform authentication via access token strategy.
+  return passport.authenticate('bearer', { session: false })(req, res, next);
 }
+
 
 
 /**
  * Disable the access token passport strategy for authentication.
  */
 var disable = function(next) {
+  isEnabled = false;
   next();
 }
 
+/**
+ * Require an access token to access anything beyond this route.
+ * If access token is not enable, it will not enforce this requirement.
+ */
+var requireAccessToken = function() {
+  if( ! isEnabled) {
+    return next();
+  }
 
+  // Perform authentication via access token strategy.
+  return passport.authenticate('bearer', { session: false })(req, res, next);
+}
 
 
 /* ************************************************** *
@@ -106,7 +154,7 @@ var disable = function(next) {
  */
 var strategy = function(possibleToken, next) {
   process.nextTick(function() {
-    AccessTokenModel.findOne({tokenHash: possibleToken}).populate('user', 'first_name last_name email roles activated').populate('user.roles').exec(function(err, token) {
+    AccessTokenModel.findOne({token: possibleToken}).populate('user', 'first_name last_name email roles activated').populate('user.roles').exec(function(err, token) {
       if(err) {
         return next(err);
       } 
@@ -126,26 +174,28 @@ var strategy = function(possibleToken, next) {
         return next(err);
       }
 
-      // Check for deactivated acess token.
-      if( ! token.activated) {
-        var err = new Error('User\'s access token is deactivated.')
-        err.status = 403;
-        return next(err);
-      }
+      // Check for a valid token
+      token.authenticate(function(err) {
+        if(err) {
+          return next(err);
+        }
 
-      // At this point token is valid.
-      return next(undefined, token.user);
+        // At this point token is valid.
+        return next(undefined, token.user);
+      });
     });
   });
 }
+
 
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */
 
 // Expose the public methods available.
-AccessToken.prototype.enable = enable;
-AccessToken.prototype.allow = authenticate;
+AccessToken.prototype.enable  = enable;
+AccessToken.prototype.require = requireAccessToken;
+AccessToken.prototype.allow   = allow;
 
 
 /* ************************************************** *

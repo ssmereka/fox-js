@@ -32,10 +32,22 @@ var config = {
     serverNodeModulesFolder: path.resolve(__dirname, "../node_modules") + "/"
   },
 
-  // Routes determines the order in which models and controllers are required.
-  // Note:  Models are automatically required for you so you do not need to
-  // list them here.  An example routes value is: [ "controller", "error" ]
-  routes: []
+  // Routes determines the order in which models and controllers are required
+  // and therefore executed.  All models and static routes are loaded 
+  // automatically for you so you should not list them here.
+  // An example routes value is: [ "controller", "error" ]
+  // which loads all the controllers and finally an error handler.
+  routes: [ 
+    
+    // Load all non-static controllers.
+    "controller", 
+    
+    //
+    "response", 
+    
+    // Lastly load error handler(s) to catch any unhandled requests.
+    "error"
+  ]
 }
 
 // Export the configuration object.

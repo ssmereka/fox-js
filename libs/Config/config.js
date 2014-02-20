@@ -143,6 +143,18 @@ var allConfig = {
   },
   routes: [],                                                  // Routes array lists the order in which routes will be required.
   routeTypeIdentifier: "~>",                                   // Concatenated with a route type to uniquely identify a file as a specific route type.
+  roles: {
+    defaultEditRole: "admin",
+    defaultViewRole: "admin"
+  },
+  schemas: {
+    crud: {
+      enabled: true,
+      includeAllByDefault: true,
+      ignoreSchemas: [],
+      includeSchemas: [], 
+    }
+  },
   email_host: server_email_host,
   email_address: server_email_address,
   email_password: server_email_password,

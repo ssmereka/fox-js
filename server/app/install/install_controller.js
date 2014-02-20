@@ -44,8 +44,8 @@ module.exports = function(app, db, config) {
       installKeys    = [ config.installKey ];               // List of keys allowed to perform the install action.
 
   var allowSuperAdmin = [                                   // Authenticate a call allowing only the super admin or higher roles.
-    accessToken.allow,
-    auth.allowRolesOrHigher([superAdminRole])
+    //accessToken.allow,
+    //auth.allowRolesOrHigher([superAdminRole])
   ]
 
 
@@ -174,28 +174,55 @@ module.exports = function(app, db, config) {
    * Add an array of user schema objects to the database.
    */
   function addUsersToDatabase(users, next) {
-    var errors;
-
     // Loop through each user.
     for(var i = users.length-1; i >=0; --i) {
-      
       // Add the user to the database.
       addToSchema(users[i], function(err, user) {
         if(err) {
-          if(errors) {
-            errors.push(err);
-          } else {
-            errors = [ err ];
-          }
+          log.e(err, debug);
         } else {
           log.i("Added user ".white + user.email.cyan + " to the database with the ".white + "install key".cyan + " as the password.".white, debug);
+          user.createAccessToken({activated:true},function(err){
+            if(err) {
+              log.e(err, debug);
+            }
+          });
         }
       });
     }
 
     if(next) {
-      next(errors);
+      next();
     }
+  }
+
+  /**
+   * Add access tokens for each user to the database.
+   */
+  function addAccessTokensToDatabase(next) {
+    console.log("Add access tokens?");
+    User.find({}, function(err, users) {
+      if(err) {
+        if(next) {
+          return next(err);
+        }
+        log.e(err, debug);
+      }
+      console.log("users");
+      console.log(users);
+      for(var i = 0; i < users.length; i++) {
+        users[i].createAccessToken(function(err) {
+          if(err) {
+            log.e(err, debug);
+          }
+
+          log.i("Added access token for user " + users[i].name.white, debug);
+        });
+      }
+      if(next) {
+        return next();        
+      }
+    });
   }
 
   /**

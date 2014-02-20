@@ -11,6 +11,7 @@
  * ******************** Library Variables
  * ************************************************** */
 var AccessToken   = require("./Authentication/accessToken.js"),
+    Authentication = require("./Authentication"),
     Authorization = require("./Authentication/authorization.js"), //
 	Config  	  = require("./Config/config.js"),           		      // Configuration for fox servers.
     Cryptography  = require("./Authentication/cryptography.js"),  //
@@ -35,14 +36,23 @@ var AccessToken   = require("./Authentication/accessToken.js"),
 function Fox() {
 	this.config = Config;
 
+	// Require log and sender first, these are 
+	// commonly required by other modules.
 	this.log 			= new Log(this);
 	this.send 			= new Send(this);
-	this.authentication = new Authorization(this);
-	this.crypto 	    = new Cryptography(this);
+	
+	this.auth  = new Authentication(this);
+	this.authentication = this.auth.authorization;
+	this.crypto = this.auth.cryptography;
+	this.accessToken = this.auth.accessToken;
+
+
+	//this.authentication = new Authorization(this);
+	//this.crypto 	    = new Cryptography(this);
 	this.date 			= new DateLibrary(this);
 	this.message 		= new Message(this);
 	this.model 			= new Model(this);
-	this.accessToken    = new AccessToken(this);
+	//this.accessToken    = new AccessToken(this);
 	this.load 			= new Load(this);
 	this.request        = new Request(this);
 	this.start 			= this.load.start;

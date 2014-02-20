@@ -1,12 +1,28 @@
 // ~> Model
 // ~A Scott Smereka
 
-var sanitize    = require('sanitize-it');                     // Module to sanitize user input.
+/* Access Token Model
+ * Describes a token that can be issued or used 
+ * for a limited amount of time to authenticate 
+ * a request on behalf of a user.
+ */
+
+/* ************************************************** *
+ * ******************** Load Libraries
+ * ************************************************** */
+
+var fox      = require("foxjs"),
+    crypto   = fox.crypto,
+    date     = fox.date,
+    log      = fox.log,
+    model    = fox.model,
+    sanitize = require('sanitize-it');
+
 
 module.exports = function(app, db, config) {
 
   /* ************************************************** *
-   * ******************** Load Libraries
+   * ******************** Module Variables
    * ************************************************** */
 
   var Schema      = db.Schema,              // Mongoose schema object for MongoDB documents.
@@ -14,74 +30,64 @@ module.exports = function(app, db, config) {
       saltRounds  = 10,                     // Number of rounds used for hashing.
       tokenLife   = 10;                     // Number of days a token is valid for.
 
-  var fox   = require("foxjs");
-      date  = fox.date,
-      hash  = fox.hash,
-      log   = fox.log,
-      model = fox.model;
-      //hash  = require(config.paths.serverLibFolder + 'hash')(config),   // Hashing and token generation.
-      //log   = require(config.paths.serverLibFolder + "log")(),          // Logging to console.
-      //model = require(config.paths.serverLibFolder + "model")(config);  // Helper methods for schema models.
-
 
   /* ************************************************** *
    * ******************** Schema Default Methods
    * ************************************************** */
 
   /**
-   * Set the default expiration date for an access
-   * token schema object.
+   * Set the default expiration date for an access token
+   * schema object.
    */
   var setExpDate = function() {
     var now = new Date();
     return now.setDate(now.getDate() + tokenLife);
   }
 
+  /**
+   * Generate an access token synchronously.
+   */
+  var generateToken = function() {
+    return crypto.generateKeySync(24);
+  }
+
+
   /* ************************************************** *
    * ******************** Access Token Schema
    * ************************************************** */
 
   /**
-   * Defines an access token used to authenticate an
-   * application.
+   * Defines an access token used to authenticate a requestor
+   * on behalf of a user.
    */
   var AccessToken = new Schema({
-    activated:      { type: Boolean, default: false },            // When true, allows access token to authenticate on behalf of the user.
-    creationDate:   { type: Date, default: Date.now },            // Date and time the token was created.
-    expirationDate: { type: Date, default: setExpDate },          // Date and time the token will expire.
-    lastUpdated:    { type: Date, default: Date.now },            // When this object was last updated by a user.
-    lastUpdatedBy:  { type: ObjectId, ref: 'User' },              // Who last updated this object.
-    maxUsage:       { type: Number, default: -1 },                // Maximum number of times the access token can be used.
-    tokenHash:      { type: String, unique: true },               // The token's calculated hash used to authenticate a user's access token.
-    usage:          { type: Number, default: 0 },                 // Number of times the api token has been used.
-    user:           { type: ObjectId, ref: 'User', unique: true } // User the token is linked to.
-  });
-
-
-  /* ************************************************** *
-   * ******************** Virtual Attributes
-   * ************************************************** */
-
-  /**
-   * Returns the access token hash.
-   */
-  AccessToken.virtual('token').get(function() {
-    return this.tokenHash;
-  });
-
-  /**
-   * Sets the the access token to the string parameter value.
-   * If an invalid parameter value is specified (such as undefined)
-   * then a new token will be generated and set.
-   * The token will be returned if the function was successful, 
-   * otherwise undefined will be returned.
-   */
-  AccessToken.virtual('token').set(function(token) {
-    if(sanitize.string(token) === undefined)
-      token = hash.generateKeySync(24);
     
-    this.tokenHash = hash.hashKeySync(token, saltRounds);        // Synchronous call to create a bcrypt salt & hash, then set that hash as the password.
-    return token;
+    // When true, allows the access token to be authenticated on behalf of the user.
+    activated:      {  type: Boolean, default: false  },            
+    
+    // Date and time the token was created.
+    creationDate:   {  type: Date, default: Date.now  },  
+
+    // Date and time the token will expire.          
+    expirationDate: {  type: Date, default: setExpDate  },   
+
+    // When this object was last updated by a user.
+    lastUpdated:    {  type: Date, default: Date.now  },
+
+    // Who last updated this object.
+    lastUpdatedBy:  {  type: ObjectId, ref: 'User'  },
+
+    // Maximum number of times the access token can be used.  A negative value indicates no limit.    
+    maxUsage:       {  type: Number, default: -1  },  
+
+    // Access token used to authenticate a user without a session.
+    token:          {  type: String, unique: true, default: generateToken  }, 
+
+    // Number of times the api token has been used.
+    usage:          { type: Number, default: 0 }, 
+
+    // User the token is linked to.
+    user:           { type: ObjectId, ref: 'User', unique: true } 
   });
 
 
@@ -94,33 +100,58 @@ module.exports = function(app, db, config) {
    * or false.  This can be used synchronously or 
    * asynchronously by passing in a next parameter.
    */
-  AccessToken.methods.authenticate = function(token, next) {
+  AccessToken.methods.authenticate = function(next) {
     var now = new Date();
 
-    // Check for a valid possible token
-    if(sanitize.string(token) === undefined) {
-      return false;
-    }
-
-    // Creation date must be prior to right now.
-    if(date.diff(now, this.creationDate) < 0) {
+    // Check if token is activated
+    if( ! this.activated) {
+      var err = new Error("Token is not activated.");
+      err.status = 403;
+      if(next) {
+        return next(err, false);
+      }
+      log.e(err, debug);
       return false;
     }
 
     // Expiration date must be later than now.
     if(date.diff(this.expirationDate, now) <= 0) {
+      var err = new Error("Token is expired.");
+      err.status = 403;
+      if(next) {
+        return next(err, false);
+      }
+      log.e(err, debug);
       return false;
     }
 
-    // Usage must be less than our max usage.
-    if(this.usage >= this.maxUsage) {
+    // If max usage is enabled, current usage must be less than our max usage.
+    if(this.maxUsage > 0 && this.usage >= this.maxUsage) {
+      var err = new Error("Token has exceeded its usage limit.");
+      err.status = 403;
+      if(next) {
+        return next(err, false);
+      }
+      log.e(err, debug);
       return false;
     }
 
-    // Check if the token matches our token hash.
-    if(next)
-      return bcrypt.compare(token, this.tokenHash, next);     // Asynchronous call to compare the possible access token to the encrypted access token.
-    return bcrypt.compareSync(token, this.tokenHash);         // Synchronous call to compare the possible access token to the encrypted access token.
+    // Creation date must be prior to right now.
+    if(date.diff(now, this.creationDate) < 0) {
+      var err = new Error("Token creation date is invalid.");
+      err.status = 403;
+      if(next) {
+        return next(err, false);
+      }
+      log.e(err, debug);
+      return false;
+    }
+
+    if(next) {
+      return next(undefined, true);
+    }
+
+    return true;
   }
 
   /**
@@ -128,21 +159,19 @@ module.exports = function(app, db, config) {
    * access token.  Returns true if it matches and
    * false otherwise.
    */
-  AccessToken.methods.isToken = function(token, next) {
-    if(next)
-      return bcrypt.compare(token, this.tokenHash, next);     // Asynchronous call to compare the possible access token to the encrypted access token.
-    return bcrypt.compareSync(token, this.tokenHash);         // Synchronous call to compare the possible access token to the encrypted access token.
+  AccessToken.methods.isToken = function(token) {
+    return (token === this.token);
   }
 
   /**
    * Generate a new access token and clear all tracking 
    * stats for the old access token.
    */
-  AccessToken.methods.refreshToken = function(token, next) {
+  AccessToken.methods.refreshToken = function(next) {
     var now = new Date();
-    this.token = token;
+    this.token = generateToken();
     this.creationDate = now;
-    this.expirationDate = now.setDate(now.getDate() + tokenLife); 
+    this.expirationDate = setExpDate(); 
     this.usage = 0;
     if(next) {
       this.save(next);
@@ -190,7 +219,6 @@ module.exports = function(app, db, config) {
     // Sanitize any possibly populated objects
     token.user = (sanitize.objectId(token.user)) ? token.user : new User(token.user).sanitize();
 
-    delete token.tokenHash;
     delete token.__v;
     return token;
   }
@@ -264,14 +292,15 @@ module.exports = function(app, db, config) {
    * Note:  This is executed after the schema model checks.
    */
   AccessToken.pre('save', function(next) {
-    var accessToken = this;
+    //var accessToken = this;
 
     // If there isn't an access token already generated,
     // then create one.
     // TODO:  See if this is necessary.
-    if(sanitize.string(accessToken.token) === undefined) {
-      accessToken.token = undefined;
-    }
+    //if(sanitize.string(accessToken.token) === undefined) {
+      //accessToken.tokenString = crypto.generateKeySync(24);
+      //accessToken.set('token', accessToken.tokenString);
+    //}
 
     return next();
   });

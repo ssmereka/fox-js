@@ -16,6 +16,8 @@ module.exports = function(app, db, config) {
       hash  = fox.crypto,
       log   = fox.log;
 
+  var AccessToken;
+
   //var hash = require(config.paths.serverLibFolder + 'hash')(config),
     //  log  = require(config.paths.serverLibFolder + "log")();
 
@@ -47,7 +49,7 @@ module.exports = function(app, db, config) {
    * Returns the user's full name.
    */
   User.virtual('name').get(function() {
-    return this.firstName + this.lastName;
+    return this.firstName + ((this.lastName) ? this.lastName : "");
   });
 
   /* Get Password
@@ -91,8 +93,73 @@ module.exports = function(app, db, config) {
     return true;
   });
 
+  User.virtual('accessToken').get(function(accessToken) {
+    if( ! AccessToken) {
+      if(db.model("AccessToken")) {
+        AccessToken = db.model("AccessToken");
+      } else {
+        log.e("Cannot load access token model.", debug);
+        return undefined;
+      }
+    }
+
+    AccessToken.findOne({user: this._id}, function(err, accessToken) {
+      if(err) {
+        log.e(err, debug);
+        return undefined;
+      } 
+      return accessToken.token;
+    });
+
+  });
+
+  User.virtual('token').get(function(accessToken) {
+    if( ! AccessToken) {
+      if(db.model("AccessToken")) {
+        AccessToken = db.model("AccessToken");
+      } else {
+        log.e("Cannot load access token model.", debug);
+        return undefined;
+      }
+    }
+
+    AccessToken.findOne({user: this._id}, function(err, accessToken) {
+      if(err) {
+        log.e(err, debug);
+        return undefined;
+      } else if( ! accessToken) {
+        return undefined;
+      }
+
+      return accessToken.token;
+    });
+
+  });
+
   /********************************************************/
   /********************* User Methods *********************/
+
+
+  User.methods.createAccessToken = function(obj, next) {
+    console.log("Make access token for " + this.name);
+    if( ! AccessToken) {
+      if(db.model("AccessToken")) {
+        AccessToken = db.model("AccessToken");
+      } else {
+        var err = new Error("Cannot load access token model.");
+        if(next) {
+          return next(err)
+        } 
+        return log.e(err, debug);
+      }
+    }
+
+    obj = (obj) ? obj : {};
+    obj["user"] = this._id;
+    
+    var accessToken = new AccessToken(obj);
+    accessToken.save(next);
+  }
 
   /* Is Security Answer
    * Checks if the parameter matches the user's stored security answer.

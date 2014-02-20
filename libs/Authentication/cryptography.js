@@ -235,6 +235,13 @@ var generateKeySync = function(keyLength) {
   }
 };
 
+var compare = function(value1, value2, next) {
+  bcrypt.compare(value1, value2, next);
+}
+
+var compareSync = function(value1, value2) {
+  return bcrypt.compareSync(value1, value2);
+}
 
 /* ************************************************** *
  * ******************** Public API
@@ -247,6 +254,8 @@ Cryptography.prototype.generateHashedKey = generateHashedKey;
 Cryptography.prototype.generateHashedKeySync = generateHashedKeySync;
 Cryptography.prototype.generateKey = generateKey;
 Cryptography.prototype.generateKeySync = generateKeySync;
+Cryptography.prototype.compare = compare;
+Cryptography.prototype.compareSync = compareSync;
 
 
 /* ************************************************** *

@@ -462,7 +462,7 @@ function requireFile(path) {
  * Also handle initial configurations for our application and express.
  * Finally connect to the database.
  */
-var app = function appFunction(_config, next) {
+var application = function appFunction(_config, next) {
   // Load and initalize some of our external modules, libraries, and global variables.
   // This includes loading our configuration object.
   if( ! modules(_config)) {
@@ -508,11 +508,11 @@ var app = function appFunction(_config, next) {
       } else if( ! success) {
         return next(new Error("Could not load models."));
       }
-      
+
       // Load and initalize libraries that require some time to laod.
       loadlibs(function(err, success) {
         if(err || ! success) {
-          return next(err || new Erro("An error occured while trying to preload some libraries."));
+          return next(err || new Error("An error occured while trying to preload some libraries."));
         }
         
         next(err, app, config, db);   // Return the app, config, and database objects.
@@ -535,7 +535,7 @@ var passport = function passport(db, next) {
   app.use(passport.session());
 
   if(fox && fox["accessToken"]) {
-    fox.accessToken.enable(db);
+    fox.accessToken.enable(db, passport, require('passport-http-bearer').Strategy);
   }
 
   log.d("Passport configured successfully.", debug);
@@ -576,7 +576,7 @@ var routes = function routes(next) {
 
 var start = function start(config, next) {
   // Create our config object, application, and connect to the database.
-  app(config, function(err, app, config, db) { 
+  application(config, function(err, app, config, db) { 
     if(err) { 
       // Error occurred and server cannot start, display error.
       return (next) ? next(err) : console.log(err);
@@ -585,8 +585,11 @@ var start = function start(config, next) {
     // Load and configure passport for authentication.
     passport(db);                                
 
+    fox.model.enableCrudOnAllSchemas(app, db, config);
+
     // Dynamically require all of our routes in the correct order.
     routes(function(err, success) {    
+
       // Start the server. 
       server();                        
       
@@ -634,7 +637,7 @@ var stop = function stop(next) {
  * ************************************************** */
 
 // Expose the public methods available.
-Load.prototype.app = app;
+Load.prototype.app = application;
 Load.prototype.passport = passport;
 Load.prototype.routes = routes;
 Load.prototype.server = server;

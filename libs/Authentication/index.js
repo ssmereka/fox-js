@@ -1,40 +1,64 @@
-/**
- * Global variables for the module.
+// ~> Library
+// ~A Scott Smereka
+
+/* Authentication
+ * Library for authorizing requests and performing 
+ * tasks related to security.
  */
-//config,               // Configuration object for the server.
-var    debug = true,                // Boolean flag for debugging the Authentication module.
-    db,                   // Connected database object for the server.
-    isInitalized = false, // Boolean flag for whether or not this module has been iniatlized.
-    log,                  // Log module.
-    sanitize,             // Sanitize objects and variables.
-    sender;               // Handle sending messages to the user(s).
 
-//var authorization = require("./authorization.js");
-//var cryptography = require("./cryptography.js");
+/* ************************************************** *
+ * ******************** Library Variables
+ * ************************************************** */
 
-//console.log(authorization);
-/*var AuthenticationLibrary = {
-  roleBasedAuthorization: authorization,
-  cryptography: cryptography
-};*/
+var Cryptography = require("./cryptography.js");
+var Authorization = require("./authorization.js");
+var AccessToken = require("./accessToken.js");
 
-var config = {};
-var authorization = require("./authorization.js");
-var cryptography = require("./cryptography.js");
+var config,
+	  debug = false,
+	  fox;
 
 
+/* ************************************************** *
+ * ******************** Constructor & Initalization
+ * ************************************************** */
 
-//var Authentication = exports;
+var Authentication = function (_fox) {
+  // Check for a fox module.
+  if( ! _fox) {
+  	return console.log("Authentication Module:  Failed to load, missing fox module parameter.");
+  }
 
-var Authentication = function () {
-  
+  // Check fox module dependencies. 
+  if(! _fox["log"] || ! _fox["send"]) {
+  	return console.log("Authentication Module:  Failed to load, missing log and sender modules.");
+  }
+
+  // Setup the authentication module.
+  fox = _fox;
+  handleConfigObject(fox.config);
+
+  // Load sub modules in the correct order.
+  this.accessToken = new AccessToken(fox);
+  this.authorization = new Authorization(fox, this);
+  this.cryptography = new Cryptography(fox, this);
 }
 
-//Authentication.prototype.hash = hash;
+/**
+ * Configure the authentication module from the 
+ * fox configuration object, if available.
+ */
+function handleConfigObject(config) {
+	if( ! config) {
+		return;
+	}
+	debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
+}
 
-//Authentication.roleBasedAuthorization = new authorization(config); //new require("./authorization.js")(config);
-//Authentication.cryptography = new cryptography(config);
 
-module.exports = Authentication;
+/* ************************************************** *
+ * ******************** Export the Public API
+ * ************************************************** */
 
-
+exports = module.exports = Authentication;
+exports = Authentication;
