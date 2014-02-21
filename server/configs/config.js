@@ -13,6 +13,10 @@ var path            = require('path'),
 
 var config = {
 	
+  accessTokens: {
+    tokenLifeInDays: 10
+  },
+
   // When enabled additional system level debug information shown.
   debugSystem: true,
 

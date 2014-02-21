@@ -167,6 +167,12 @@ var strategy = function(possibleToken, next) {
         return next(err);
       }
 
+      if( ! token["user"]) {
+        var err = new Error("Access token must be assigned to a user.");
+        err.status = 403;
+        return next(err);
+      }
+
       // Check for deactivated user.
       if( ! token.user.activated) {
         var err = new Error('User is deactivated.');

@@ -15,9 +15,9 @@
      auth,
      sanitize,
      app,
-     database,
+     db,
      config,
-     debug;
+     debug = false;
 
 
 /* ************************************************** *
@@ -29,16 +29,35 @@
  * Handles initalization of the model library.
  */
 var Model = function(_fox) {
+  if(! _fox) {
+    return console.log("Model Module: Error loading foxjs module.");
+  }
+
+  // Load local libraries.
   fox = _fox;
   log = fox.log;
   auth = fox.authentication;
+  
+  // Load external modules.
   sanitize = require("sanitize-it");
-  debug = false;
+
+  // Setup Model based on config.
+  handleConfig(fox["config"]);
+}
+
+/**
+ * Setup the send module based on options available in the
+ * configuration object.
+ */
+var handleConfig = function(config) {
+  if(config) {
+    debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
+  }
 }
 
 
 /* ************************************************** *
- * ******************** Private API
+ * ******************** Private Methods
  * ************************************************** */
 
 /* Merge Objects
@@ -52,6 +71,30 @@ function mergeObjects(obj1, obj2) {
   }
   return obj1;
 }
+
+
+/* ************************************************** *
+ * ******************** Private API
+ * ************************************************** */
+
+/**
+ * Set the query result so it can be used by later routes.
+ */
+var setQueryResult = function(obj, req, defaultValue) {
+  if(req) {
+    req.queryResult = (obj === undefined) ? defaultValue : obj;
+  } else {
+    log.e("Cannot set query result, request object is null.");
+  }
+}
+
+/**
+ * Get the query result from a previous lookup.
+ */
+var getQueryResult = function(req, defaultValue) {
+  return (req && req.queryResult !== undefined) ? req.queryResult : defaultValue;
+}
+
 
 var loadById = function(Schema, queryObject, populateFields, populateSelects, populateModels, populateConditions) {
   return loadById[Schema, queryObject, populateFields, populateSelects, populateModels, populateConditions] || (loadById[Schema, queryObject, populateFields, populateSelects, populateModels, populateConditions] = function(req, res, next) {
@@ -79,71 +122,6 @@ var loadById = function(Schema, queryObject, populateFields, populateSelects, po
     } else {
       return next();
     }
-  });
-};
-
-
-
-var update = function update(obj, currentObject, userId, isUpdated, next) {
-  return update[obj, currentObject, userId, isUpdated, next] || (update[obj, currentObject, userId, isUpdated, next] = function() {
-    var now   = Date.now,
-        value = undefined;
-
-    // Check if any changes were made to the object.
-    // If there were not, then return, we are done here.
-    if( ! isUpdated) {
-      if(next !== undefined) {
-        return next(undefined, true);
-      }
-      return true;
-    }
-
-    // check for a valid update object.
-    if( ! obj) {
-      var err = new Error('Cannot update the schema object because the first parameter "obj" is not valid.')
-      err.status = 500;
-
-      // If a callback was supplied, then pass the error on.
-      if(next !== undefined) {
-        return next(err);
-      }
-      
-      // Otherwise just print the error.
-      return log.e(err);
-    }
-
-    // Update the last updated by attribute with the parameter object's
-    // information or the userId parameter.  If neither is present, then
-    // set the value to undefined because we don't know who updated it last.
-    value = sanitize.objectId(obj['lastUpdatedBy']);
-    currentObject['lastUpdatedBy'] = (value) ? value : sanitize.objectId(userId);
-    
-    // Update the last updated date and time with the parameter object's
-    // informaiton or the time this function was called.
-    value = sanitize.objectId(obj['lastUpdated']);
-    currentObject['lastUpdated'] = (value) ? value : now;
-    
-    currentObject.save(function(err, currentObject) {
-      // If the current object was not returned,
-      // and there was no error, then create a generic error.
-      if(! user && ! err) {
-        var err = new Error('There was a problem saving the updated user object.');
-        err.status = 500;
-      }
-
-      // If there were any errors, then return them or log them.
-      if(err) {
-        if(next !== undefined) {
-          return next(err);
-        }
-        return log.e(err);
-      }
-
-      // Upon success, call the next function if we can.
-      if(next !== undefined) {
-        next(undefined, currentObject);
-      }
-    });
   });
 };
 
@@ -185,104 +163,16 @@ var load = function load(Schema, queryObject, opts) {
 
 
 
-var setQueryResult = function(obj, req, defaultValue) {
-  if(req) {
-    req.queryResult = (obj === undefined) ? defaultValue : obj;
-  } else {
-    log.e("Cannot set query result, request object is null.");
-  }
-}
-
-var getQueryResult = function(req, defaultValue) {
-  return (req && req.queryResult !== undefined) ? req.queryResult : defaultValue;
-}
 
 
-var get = function(Schema, isSanitize) {
-  return get[Schema, isSanitize] || (get[Schema, isSanitize] = function(req, res, next) {
-    // Get the object from the query result.
-    var results = getQueryResult(req);
 
-    // If there wasn't a result, move on.
-    if( ! results) {
-      return next();
-    }
 
-    if(isSanitize === undefined || isSanitize) {
-      obj.sanitize();
-    }
 
-    // Set the response object to be returned to the caller.
-    sender.setResponse(obj, req, res, next);
-  })
-}
 
-var getAll = function(Schema, isSanitize) {
-  return getAll[Schema, isSanitize] || (getAll[Schema, isSanitize] = function(req, res, next) {
-    // Get the object from the query result.
-    var objs = req.queryResult;
 
-    // If there wasn't a result, move on.
-    if( ! req.queryResult) {
-      return next();
-    }
 
-    // Sanitize the access token information before sending it back.
-    if(isSanitize === undefined || isSanitize) {
-      for(var i = 0; i < objs.length; i++) {
-        objs[i] = objs[i].sanitize();
-      }
-    }
 
-    // Set the response object to be returned to the caller.
-    sender.setResponse(objs, req, res, next);
-  });
-}
 
-var create = function(Schema, isSanitize) {
-  return create[Schema, isSanitize] || (create[Schema, isSanitize] = function(req, res, next) {
-    var obj = new AccessToken();
-    obj.update(req.body, (req.user) ? req.user._id : undefined, function(err, obj) {  // Update the new user object with the values from the request body.  Also, if the person creating the new user is identified, send that along in the request.
-      if(err) next(err);
-
-      if(isSanitize === undefined || isSanitize) {
-        obj.sanitize();
-      }
-
-      sender.setResponse(obj, req, res, next);                                   // Handles the request by sending back the appropriate response, if we havn't already.
-    });
-  });
-}
-
-var update = function(Schema, isSanitize) {
-  return update[Schema, isSanitize] || (update[Schema, isSanitize] = function(req, res, next) {
-    var obj = req.queryResult;                                      // Get the acess token object queried from the url's userId paramter.
-    if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
-
-    obj.update(req.body, (req.user) ? req.user._id : undefined, function(err, obj) {  // Update the user object with the values from the request body.  Also, if the person updating the user is identified, send that along in the request.
-      if(err) next(err);
-
-      if(isSanitize === undefined || isSanitize) {
-        obj.sanitize();
-      }
-
-      sender.setResponse(obj, req, res, next);                       // Handles the request by sending back the appropriate response, if we havn't already.
-    });
-  });
-}
-
-var remove = function(Schema, isSanitize) {
-  return remove[Schema, isSanitize] || (remove[Schema, isSanitize] = function(req, res, next) {
-    var obj = req.queryResult;                                      // Get the user object queried from the url's userId paramter.
-    if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
-
-    obj.delete((req.user) ? req.user._id : undefined, function(err, obj, success) {  // Delete the user object and anything linked to it.  Also, if the person deleting the user is identified, send that along in the request.
-      if(err) return next(err);
-
-      sender.setResponse(user.sanitize(), req, res, next);                       // Handles the request by sending back the appropriate response, if we havn't already.   
-    });
-  });
-}
 
 
 var enableCrud = function(_app, _db, _config) {
@@ -304,6 +194,12 @@ var enableCrud = function(_app, _db, _config) {
   }
 } */
 
+
+
+/* ************************************************** *
+ * ******************** CRUD
+ * ************************************************** */
+
 var enableCrudOnAllSchemas = function(_app, _db, _config) {
   db = _db;
   app = _app;
@@ -316,6 +212,7 @@ var enableCrudOnAllSchemas = function(_app, _db, _config) {
     for(var key in db.models) {
       if(db.models.hasOwnProperty(key)) {
         enableSchemaCrud(key, defaultViewAuthMethod, defaultEditAuthMethod);
+        break;
       }
     }
   }
@@ -325,25 +222,221 @@ var enableSchemaCrud = function(schemaName, viewAuthMethod, editAuthMethod) {
   schema = db.model(schemaName);
   collectionName = schemaName.toLowerCase() + 's';
 
-  viewAuthMethod = (viewAuthMethod) ? viewAuthMethod : [];
-  editAuthMethod = (editAuthMethod) ? editAuthMethod : [];
+  viewAuthMethod = (! viewAuthMethod) ? viewAuthMethod : [];
+  editAuthMethod = (! editAuthMethod) ? editAuthMethod : [];
+
+  console.log(schema.schema);
 
   // Get an access token by ID.
-  app.get('/'+collectionName+'/:id.:format', viewAuthMethod, loadById(schema, "id"), get(schema));
+  app.get('/'+collectionName+'/:id.:format', viewAuthMethod, loadById(schema, "id"), getRoute(schema));
 
   // Get all access tokens.
-  app.get('/'+collectionName+'.:format', viewAuthMethod, load(schema, {}, { "sort": "creationDate"}), getAll(schema));
+  app.get('/'+collectionName+'.:format', viewAuthMethod, load(schema, {}, { "sort": "creationDate"}), getAllRoute(schema));
 
   // Update an access token.
-  app.post('/'+collectionName+'/:id.:format', editAuthMethod, update(schema));
+  app.post('/'+collectionName+'/:id.:format', editAuthMethod, loadById(schema, "id"), updateRoute(schema));
 
   // Create an access token.
-  app.post('/'+collectionName+'.:format', editAuthMethod, create(schema));
+  app.post('/'+collectionName+'.:format', editAuthMethod, createRoute(schema));
 
   // Delete an access token.
-  app.delete('/'+collectionName+'/:id.:format', editAuthMethod, remove(schema));
+  app.delete('/'+collectionName+'/:id.:format', editAuthMethod, loadById(schema, "id"), removeRoute(schema));
 
   log.i("CRUD enabled for the ".white +schemaName.cyan+" schema.".white, debug);
+}
+
+
+/* ************************************************** *
+ * ******************** CRUD - CREATE
+ * ************************************************** */
+
+var createRoute = function(Schema, isSanitize) {
+  return createRoute[Schema, isSanitize] || (createRoute[Schema, isSanitize] = function(req, res, next) {
+    var obj = new Schema();
+    obj.update(req.body, (req.user) ? req.user._id : undefined, function(err, obj) {  // Update the new user object with the values from the request body.  Also, if the person creating the new user is identified, send that along in the request.
+      if(err) next(err);
+
+      if(obj && isSanitize === undefined || isSanitize) {
+        obj.sanitize();
+      }
+
+      sender.setResponse(obj, req, res, next);                                   // Handles the request by sending back the appropriate response, if we havn't already.
+    });
+  });
+}
+
+ /* ************************************************** *
+ * ******************** CRUD - READ
+ * ************************************************** */
+
+var getRoute = function(Schema, isSanitize) {
+  return getRoute[Schema, isSanitize] || (getRoute[Schema, isSanitize] = function(req, res, next) {
+    // Get the object from the query result.
+    var obj = getQueryResult(req);
+
+    // If there wasn't a result, move on.
+    if( ! obj) {
+      return next();
+    }
+
+    if(isSanitize === undefined || isSanitize) {
+      obj.sanitize();
+    }
+
+    // Set the response object to be returned to the caller.
+    sender.setResponse(obj, req, res, next);
+  })
+}
+
+var getAllRoute = function(Schema, isSanitize) {
+  return getAllRoute[Schema, isSanitize] || (getAllRoute[Schema, isSanitize] = function(req, res, next) {
+    // Get the object from the query result.
+    var objs = req.queryResult;
+
+    // If there wasn't a result, move on.
+    if( ! req.queryResult) {
+      return next();
+    }
+
+    // Sanitize the access token information before sending it back.
+    if(isSanitize === undefined || isSanitize) {
+      for(var i = 0; i < objs.length; i++) {
+        objs[i] = objs[i].sanitize();
+      }
+    }
+
+    // Set the response object to be returned to the caller.
+    sender.setResponse(objs, req, res, next);
+  });
+}
+
+/* ************************************************** *
+ * ******************** CRUD - UPDATE
+ * ************************************************** */
+
+
+var update = function update(obj, currentObject, userId, isUpdated, next) {
+    var now   = Date.now(),
+        value = undefined;
+
+    // Check if any changes were made to the object.
+    // If there were not, then return, we are done here.
+    if( ! isUpdated) {
+      if(next !== undefined) {
+        return next(undefined, true);
+      }
+      return true;
+    }
+
+    // check for a valid update object.
+    if( ! obj) {
+      var err = new Error('Cannot update the schema object because the first parameter "obj" is not valid.')
+      err.status = 500;
+
+      // If a callback was supplied, then pass the error on.
+      if(next !== undefined) {
+        return next(err);
+      }
+      
+      // Otherwise just print the error.
+      return log.e(err);
+    }
+
+    // Update the last updated by attribute with the parameter object's
+    // information or the userId parameter.  If neither is present, then
+    // set the value to undefined because we don't know who updated it last.
+    value = sanitize.objectId(obj['lastUpdatedBy']);
+    currentObject['lastUpdatedBy'] = (value) ? value : sanitize.objectId(userId);
+    
+    // Update the last updated date and time with the parameter object's
+    // informaiton or the time this function was called.
+    value = sanitize.objectId(obj['lastUpdated']);
+    currentObject['lastUpdated'] = (value) ? value : now;
+
+    currentObject.save(function(err, currentObject) {
+
+      // If the current object was not returned,
+      // and there was no error, then create a generic error.
+      if(! currentObject && ! err) {
+        var err = new Error('There was a problem saving an updated object.');
+        err.status = 500;
+      }
+
+      // If there were any errors, then return them or log them.
+      if(err) {
+        if(next !== undefined) {
+          return next(err);
+        }
+        return log.e(err);
+      }
+
+      // Upon success, call the next function if we can.
+      if(next !== undefined) {
+        next(undefined, currentObject);
+      }
+    });
+  //});
+};
+
+
+
+
+var updateRoute = function(Schema, isSanitize) {
+  return updateRoute[Schema, isSanitize] || (updateRoute[Schema, isSanitize] = function(req, res, next) {
+    var obj = req.queryResult;                                      // Get the acess token object queried from the url's userId paramter.
+    if( ! req.queryResult) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
+
+    obj.update(req.body, (req.user) ? req.user._id : undefined, function(err, obj) {  // Update the user object with the values from the request body.  Also, if the person updating the user is identified, send that along in the request.
+      if(err) next(err);
+
+      if(isSanitize === undefined || isSanitize) {
+        obj.sanitize();
+      }
+
+      sender.setResponse(obj, req, res, next);                       // Handles the request by sending back the appropriate response, if we havn't already.
+    });
+  });
+}
+
+/* ************************************************** *
+ * ******************** CRUD - DELETE
+ * ************************************************** */
+
+/**
+ * Remove an schema object from the database.
+ */
+var remove = function(obj, userId, next) {
+  obj.remove(function(err) {
+    if(next) {
+      next(err);
+    } else if(err) {
+      log.e(err, debug);
+    }
+  });
+}
+
+/**
+ * Route that removes a schema object from the 
+ * database and returns the result to the caller.
+ */
+var removeRoute = function(Schema) {
+  return removeRoute[Schema] || (removeRoute[Schema] = function(req, res, next) {
+    var obj = getQueryResult(req);                                      // Get the user object queried from the url's userId paramter.
+    if( ! obj) return next();                            // If the user object is blank, then the requested user was not found and we cannot handle the request here, so move along.
+
+    var deleteCallback = function(err) {
+      if(err) {
+        return next(err);
+      }
+      sender.setResponse(sender.createSuccessObject(true), req, res, next);                       // Handles the request by sending back the appropriate response, if we havn't already.   
+    }
+
+    if( ! Schema.schema.methods["delete"]) {
+      remove(obj, (req.user) ? req.user._id : undefined, deleteCallback);
+    } else {
+      obj.delete((req.user) ? req.user._id : undefined, deleteCallback);
+    }
+  });
 }
 
 
@@ -356,14 +449,24 @@ Model.prototype.load = load;
 Model.prototype.update = update;
 Model.prototype.loadById = loadById;
 
-Model.prototype.get = get;
-Model.prototype.getAll = getAll;
-Model.prototype.create = create;
-Model.prototype.update = update;
-Model.prototype.remove = remove;
 
+// CRUD
 Model.prototype.enableCrud = enableCrud;
 Model.prototype.enableCrudOnAllSchemas = enableCrudOnAllSchemas; 
+
+// CRUD - Create 
+Model.prototype.createRoute = createRoute;
+
+// CRUD - Read
+Model.prototype.getRoute = getRoute;
+Model.prototype.getAllRoute = getAllRoute;
+
+// CRUD - UPDATE
+Model.prototype.updateRoute = updateRoute;
+
+// CRUD - Delete
+Model.prototype.removeRoute = removeRoute;
+Model.prototype.remove = remove;
 
 
 /* ************************************************** *

@@ -39,12 +39,12 @@ module.exports = function(app, db, config) {
    * ******************** Route Methods
    * ************************************************** */
 
-   /**
-    * Request a new access token
-    */
+  /**
+   * Request a new access token
+   */
   function requestAccessToken(req, res, next) {
 
     // TODO: Implement how one requests an access token.
-
   }
+  
 };

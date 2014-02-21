@@ -21,6 +21,7 @@ var fox      = require("foxjs"),
 
 module.exports = function(app, db, config) {
 
+
   /* ************************************************** *
    * ******************** Module Variables
    * ************************************************** */
@@ -192,35 +193,27 @@ module.exports = function(app, db, config) {
     this.update(obj, undefined, next);
   }
 
+
+  /* ************************************************** *
+   * ******************** CRUD Override Methods
+   * ************************************************** */
+   
+   /* Enabling CRUD will automatically take care of 
+    * update, and delete methods for the object. However 
+    * you can still add your own custom functionality 
+    * here, by overriding the default methods.
+    *
+    * In addition to overriding you can add more methods
+    * that CRUD will automatically use such as sanitize.
+    */
+
   /**
    * Remove the access token object from the database.
    */
-  AccessToken.methods.delete = function(next) {
-    var token = this;
-
-    token.remove(function(err, token) {
-      if(err && next !== undefined) return next(err, undefined, false);
-
-      if(next !== undefined)
-        return next(undefined, token, true);
-    });
-  }
-
-  /**
-   * Strip out secret information that should not be seen
-   * outside of this server.  This should be called before
-   * returning an access token object to a client.
-   */
-  AccessToken.methods.sanitize = function() {
-    var User = db.model('User');
-    var token = this;
-    token = token.toObject();
-
-    // Sanitize any possibly populated objects
-    token.user = (sanitize.objectId(token.user)) ? token.user : new User(token.user).sanitize();
-
-    delete token.__v;
-    return token;
+  AccessToken.methods.delete = function(userId, next) {
+    
+    // Default method for deleting an object.
+    model.remove(this, userId, next);
   }
 
   /**
@@ -281,29 +274,22 @@ module.exports = function(app, db, config) {
     model.update(obj, accessToken, userId, isUpdated, next);
   }
 
-
-  /* ************************************************** *
-   * ******************** Access Token Events
-   * ************************************************** */
-
   /**
-   * Executed before saving the object, checks to make sure
-   * the schema object is valid.
-   * Note:  This is executed after the schema model checks.
+   * Strip out secret information that should not be seen
+   * outside of this server.  This should be called before
+   * returning an access token object to a client.
    */
-  AccessToken.pre('save', function(next) {
-    //var accessToken = this;
+  AccessToken.methods.sanitize = function() {
+    var User = db.model('User');
+    var token = this;
+    token = token.toObject();
 
-    // If there isn't an access token already generated,
-    // then create one.
-    // TODO:  See if this is necessary.
-    //if(sanitize.string(accessToken.token) === undefined) {
-      //accessToken.tokenString = crypto.generateKeySync(24);
-      //accessToken.set('token', accessToken.tokenString);
-    //}
+    // Sanitize any possibly populated objects
+    token.user = (sanitize.objectId(token.user)) ? token.user : new User(token.user).sanitize();
 
-    return next();
-  });
+    delete token.__v;
+    return token;
+  }
 
 
   /* ************************************************** *
