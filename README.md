@@ -48,7 +48,7 @@ info:   Version                  0.1.0
 
 
 
-
+<a name="libraries" />
 # Libraries
 
 * [Access Token](#accessToken)
@@ -77,6 +77,7 @@ info:   Version                  0.1.0
 
 Simplifies encryption and decryption of data while also providing helper methods for common cryptography tasks.
 
+<a name="cryptographyMethods" />
 ### Methods
 * [Hash](#cryptographyHash)
 * [Hash Synchronous](#cryptographyHashSync)
@@ -84,6 +85,8 @@ Simplifies encryption and decryption of data while also providing helper methods
 * [Generate Key Synchronous](#cryptographyGenerateKeySync)
 * [Generate Hashed Key](#cryptographyGenerateHashedKey)
 * [Generate Hashed Key Synchronous](#cryptographyGenerateHashedKeySync)
+
+[Back to Libraries](#libraries)
 
 ---------------------------------------
 <a name="cryptographyHash" />
@@ -116,6 +119,8 @@ function setUserPassword(user, password, next) {
     });
 }
 ```
+[Back to Cryptography Methods](#cryptographyMethods)
+
 ---------------------------------------
 <a name="cryptographyHashSync" />
 ### hashSync(string, rounds)
@@ -146,6 +151,8 @@ function setUserPasswordSync(user, password) {
     return true;            // Return the result.
 }
 ```
+[Back to Cryptography Methods](#cryptographyMethods)
+
 ---------------------------------------
 <a name="cryptographyGenerateKey" />
 ### generateKey(keyLength, next)
@@ -175,6 +182,8 @@ function setUserResetPasswordToken(user, next) {
     });
 }
 ```
+[Back to Cryptography Methods](#cryptographyMethods)
+
 ---------------------------------------
 <a name="cryptographyGenerateKeySync" />
 ### generateKeySync(keyLength, next)
@@ -202,6 +211,8 @@ function setUserResetPasswordTokenSync(user) {
     return hash;            // Return the generated key.
 }
 ```
+[Back to Cryptography Methods](#cryptographyMethods)
+
 ---------------------------------------
 <a name="cryptographyGenerateHashedKey" />
 ### generateHashedKey(keyLength, next)
@@ -231,6 +242,8 @@ function setDefaultUserPassword(user, next) {
     });
 }
 ```
+[Back to Cryptography Methods](#cryptographyMethods)
+
 ---------------------------------------
 <a name="cryptographyGenerateHashedKeySync" />
 ### generateHashedKeySync(keyLength)
@@ -258,6 +271,8 @@ function setDefaultUserPassword(user) {
     return true;            // Return the result.
 }
 ```
+[Back to Cryptography Methods](#cryptographyMethods)
+
 ---------------------------------------
 
 
@@ -281,6 +296,7 @@ function setDefaultUserPassword(user) {
 
 Send JSON responses or errors in a unified format so they can be easily parsed by a requestor.  Additional methods, such as emailing, are also provided.
 
+<a name="sendMethods" />
 ### Methods
 * [Send](#sendSend)
 * [Send Error](#sendSendError)
@@ -292,6 +308,8 @@ Send JSON responses or errors in a unified format so they can be easily parsed b
 * [Get Response](#sendGetResponse)
 * [Set Request Handled](#sendSetRequestHandled)
 * [Get Request Handled](#sendSetRequestHandled)
+
+[Back to Libraries](#libraries)
 
 ---------------------------------------
 <a name="sendSend" />
@@ -318,6 +336,8 @@ function user(req, res, next) {
     sender.send(user, req, res, next);
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 <a name="sendSendError" />
 ### sendError(err, req, res, next)
@@ -344,6 +364,8 @@ function users(req, res, next) {
     sender.sendError(error, req, res, next);
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 <a name="sendCreateError" />
 ### createError(msg, status)
@@ -367,6 +389,8 @@ function users(req, res, next) {
     sender.sendError(error, req, res, next);
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 <a name="sendCreateAndSendError" />
 ### createAndSendError(msg, status, req, res, next)
@@ -390,6 +414,8 @@ function users(req, res, next) {
     sender.createAndSendError("Oh crap", 500, req, res, next);
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 <a name="sendCreateSuccessObject" />
 ### createSuccessObject(success)
@@ -412,6 +438,8 @@ function doIt(req, res, next) {
     sender.send(successObject, req, res, next);
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 <a name="sendCreateAndSendSuccessObject" />
 ### createAndSendSuccessObject(success, req, res, next)
@@ -434,6 +462,8 @@ function doIt(req, res, next) {
     sender.createAndSendSuccessObject(true, req, res, next);
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 <a name="sendSetResponse" />
 ### setResponse(obj, req, res, next)
@@ -474,6 +504,8 @@ function trackRequests(req, res, next) {
     sender.send(response, req, res, next);
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 <a name="sendGetResponse" />
 ### getResponse(obj, req, res, next)
@@ -514,6 +546,8 @@ function trackRequests(req, res, next) {
     sender.send(response, req, res, next);
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 <a name="sendSetRequestHandled" />
 ### setRequestHandled(req, isHandled)
@@ -554,6 +588,8 @@ function trackRequests(req, res, next) {
     next();
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 <a name="sendGetRequestHandled" />
 ### getRequestHandled(req)
@@ -596,6 +632,8 @@ function doSomethingElse(req, res, next) {
     next();
 }
 ```
+[Back to Send Methods](#sendMethods)
+
 ---------------------------------------
 
 
