@@ -290,6 +290,8 @@ Send JSON responses or errors in a unified format so they can be easily parsed b
 * [Create and Send Success Object](#sendCreateAndSendSuccessObject)
 * [Set Response](#sendSetResponse)
 * [Get Response](#sendGetResponse)
+* [Set Request Handled](#sendSetRequestHandled)
+* [Get Request Handled](#sendSetRequestHandled)
 
 ---------------------------------------
 <a name="sendSend" />
@@ -510,6 +512,88 @@ function trackRequests(req, res, next) {
     
     // Send the response to the requestor.
     sender.send(response, req, res, next);
+}
+```
+---------------------------------------
+<a name="sendSetRequestHandled" />
+### setRequestHandled(req, isHandled)
+
+Set a flag indicating that the request object has been handled by a route.  This is used as an indication to later routes that the request has been taken care of and there is no need for further action.  Use the getRequestHandled method to retrieve the isHandled flag in later routes.  The setRequestHandled method should not need to be used directly since the flag is handled for you internally in the send library.
+
+A request is considered handled when the response has been set using the setResponse() method or when a response has been sent using any of the send methods.
+
+__Arguments__
+* req - request object passed into the route method.
+* isHandled - boolean value indicating whether or not the request has been handled.
+* next - callback for the send method. (optional)
+
+__Example__
+```js
+var sender = fox.send;
+app.get('/users.:format', users);
+app.get('/users.:format', doSomethingElse);
+
+function users(req, res, next) {
+    // Do some stuff
+    // ...
+    console.log("Request has been handled!");
+    
+    sender.setRequestHandled(req, true, next);
+}
+
+function trackRequests(req, res, next) {
+    // Check if request has been handled in previous route.
+    if(sender.getRequestHandled(req)) {
+        return next();
+    }
+    
+    // Do something with unhandled request.
+    // ...
+    console.log("Request has been handled!");
+    
+    next();
+}
+```
+---------------------------------------
+<a name="sendGetRequestHandled" />
+### getRequestHandled(req)
+
+Get a flag indicating whether or not the request object has been handled by a previous route.  You can use this information to decided if further action on a request is required.  The request handled flag is controlled internally by the send library, so you should not need to manually set it.
+
+A request is considered handled when the response has been set using the setResponse() method or when a response has been sent using any of the send methods.
+
+__Arguments__
+* req - request object passed into the route method.
+
+__Return__
+
+Synchronously returns a boolean value of true or false.
+
+__Example__
+```js
+var sender = fox.send;
+app.get('/users.:format', users);
+app.get('/users.:format', doSomethingElse);
+
+function users(req, res, next) {
+    // Do some stuff
+    // ...
+    console.log("Request has been handled!");
+    
+    sender.setRequestHandled(req, true, next);
+}
+
+function doSomethingElse(req, res, next) {
+    // Check if request has been handled in previous route.
+    if(sender.getRequestHandled(req)) {
+        return next();
+    }
+    
+    // Do something with unhandled request.
+    // ...
+    console.log("Request has been handled!");
+    
+    next();
 }
 ```
 ---------------------------------------
