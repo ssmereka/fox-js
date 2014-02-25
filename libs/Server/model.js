@@ -229,7 +229,6 @@ var enableCrudOnAllSchemas = function(_app, _db, _config) {
   }
 }
 
-
 /**
  * Add routes for creating, reading, updateing, and deleting instances of
  * a schema object.  It also protects the routes using default authentication

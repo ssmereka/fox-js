@@ -211,7 +211,7 @@ module.exports = function(app, db, config) {
    * Remove the access token object from the database.
    */
   AccessToken.methods.delete = function(userId, next) {
-    console.log("Overriden delet");
+
     // Default method for deleting an object.
     model.remove(this, userId, next);
   }
