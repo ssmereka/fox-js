@@ -8,7 +8,9 @@
 
 module.exports = function(app, db, config) {
 
-  var Schema      = db.Schema,        // Mongoose schema object for MongoDB documents.
+  var fox         = require("foxjs"),
+      model       = fox.model,
+      Schema      = db.Schema,        // Mongoose schema object for MongoDB documents.
       ObjectId    = Schema.ObjectId;  // Object ID used in mongoose schemas
 
   /**
@@ -31,6 +33,18 @@ module.exports = function(app, db, config) {
     var key = this;
     return (key.usedCount < key.maxUse);
   }
+
+
+  /* ************************************************** *
+   * ******************** Plugins
+   * ************************************************** */
+
+  // Enable additional functionality through plugins
+  // you have written or 3rd party plugins.
+
+  // Add addition fields and methods to this schema to 
+  // create, read, update, and delete schema objects.
+  FadingKey.plugin(model.crudPlugin);
 
   db.model('FadingKey', FadingKey);           // Set the user role schema.
 };

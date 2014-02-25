@@ -47,6 +47,7 @@ module.exports = function(app, db, config) {
 
     // Send the error.
     sender.sendError(err, req, res, next);
+    req.isHandled = true;
 
     // If debug mode, print out the errors in the log.
     if(debug) {
@@ -66,6 +67,8 @@ module.exports = function(app, db, config) {
         log.e(err["stack"]);
       }
     }
+
+    
   }
 
   /**
@@ -73,6 +76,9 @@ module.exports = function(app, db, config) {
    * Place this method at the very end of the routes.
    */
   function handle404(req, res, next) {
-    sender.createAndSendError("Method or Request not found.", 404, req, res, next);
+    if(! req.isHandled) {
+      console.log("HANDLING POOP")
+      sender.createAndSendError("Method or Request not found.", 404, req, res, next);
+    }
   }
 };

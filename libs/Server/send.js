@@ -58,6 +58,7 @@ var handleConfig = function(config) {
  * to be later accessed in a different route.
  */
 var setResponse = function(obj, req, res, next) {
+  setRequestHandled(req, true);
   res.locals.response = obj;
   if(next) {
     next();
@@ -71,10 +72,20 @@ var getResponse = function(res) {
   return res.locals.response;
 }
 
+var setRequestHandled = function(req, handled) {
+  req.isHandled = true;
+}
+
+var isRequestHandled = function(req) {
+  return (req.isHandled) ? req.isHandled : false;
+}
+
 /**
  * Send a response object to the requestor.
  */
 var sendResponse = function(obj, req, res, next) {
+  setRequestHandled(req, true);
+
   // Format the object into a response object.
   obj = createResponseObject(undefined, obj);
 
@@ -117,6 +128,8 @@ var createError = function(errMessage, status) {
  * Send an error in a response object to the requestor.
  */
 var sendError = function(err, req, res, next) {
+  setRequestHandled(req, true);
+
   err = (err) ? err : new Error("Unknown error occurred.");
   err["status"] = (err["status"]) ? err["status"] : 500;
 
@@ -134,6 +147,7 @@ var sendError = function(err, req, res, next) {
   // Default to JSON.
   return res.send(obj, err.status);
 };
+
 
 /**
  * Create an object to show a request was successful.
@@ -320,6 +334,7 @@ function syntaxHighlight(json) {
 Send.prototype.send = sendResponse;
 Send.prototype.setResponse = setResponse;
 Send.prototype.getResponse = getResponse;
+Send.prototype.isRequestHandled = isRequestHandled;
 Send.prototype.sendResponse = sendResponse;
 Send.prototype.createAndSendError = createAndSendError;
 Send.prototype.createError = createError;

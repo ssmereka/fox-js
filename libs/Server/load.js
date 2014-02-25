@@ -585,7 +585,10 @@ var start = function start(config, next) {
     // Load and configure passport for authentication.
     passport(db);                                
 
-    fox.model.enableCrudOnAllSchemas(app, db, config);
+    // Enable CRUD routes for all schemas
+    if(config && config.schemas && config.schemas.crud && config.schemas.crud.enabled) {
+      fox.model.enableCrudOnAllSchemas(app, db, config);
+    }
 
     // Dynamically require all of our routes in the correct order.
     routes(function(err, success) {    

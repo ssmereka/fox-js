@@ -8,12 +8,16 @@ module.exports = function(app, db, config) {
   app.all('/*', sendResponse);
 
   function sendResponse(req, res, next) {
-    // If there is a response object, send it.
-    if(sender.getResponse(res)) {
-      return sender.sendResponse(sender.getResponse(res), req, res, next);
-    }
+    if(sender.isRequestHandled(req)) {
+      var response = sender.getResponse(res);
+      
+      if(response === undefined || response === null) {
+        return sender.createAndSendError("Response is undefined.", 500, req, res, next);
+      } 
 
-    // If there is not a response object, move on.
-    next();
+      sender.sendResponse(response, req, res, next);
+    } else {
+      next();
+    }
   }
 };

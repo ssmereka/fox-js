@@ -18,6 +18,7 @@ var AccessToken   = require("./Authentication/accessToken.js"),
     DateLibrary	  = require("./Utility/date.js"),     			  // Handle dates in javascript.
     Load    	  = require("./Server/load.js"),	  			  // Loading, configuring, and staring a server.
     Log     	  = require("./Utility/log.js"),      			  // Handles logging.
+    Merge         = require("./Utility/merge.js"),
     Message 	  = require("./Server/message.js"),   			  // 
     Model   	  = require("./Server/model.js"),     			  // 
     Request       = require("./Server/request.js"),
@@ -39,6 +40,7 @@ function Fox() {
 	// Require log and sender first, these are 
 	// commonly required by other modules.
 	this.log 			= new Log(this);
+	this.merge          = new Merge(this);
 	this.send 			= new Send(this);
 	
 	this.auth  = new Authentication(this);

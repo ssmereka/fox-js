@@ -211,7 +211,7 @@ module.exports = function(app, db, config) {
    * Remove the access token object from the database.
    */
   AccessToken.methods.delete = function(userId, next) {
-    
+    console.log("Overriden delet");
     // Default method for deleting an object.
     model.remove(this, userId, next);
   }
@@ -290,6 +290,17 @@ module.exports = function(app, db, config) {
     delete token.__v;
     return token;
   }
+
+  /* ************************************************** *
+   * ******************** Plugins
+   * ************************************************** */
+
+  // Enable additional functionality through plugins
+  // you have written or 3rd party plugins.
+
+  // Add addition fields and methods to this schema to 
+  // create, read, update, and delete schema objects.
+  AccessToken.plugin(model.crudPlugin);
 
 
   /* ************************************************** *
