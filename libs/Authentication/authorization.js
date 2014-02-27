@@ -202,7 +202,7 @@ var queryRoleByName = function(roleQueryName, next) {
  * users will be shown an error.
  */
 var allowAllRoles = function () {
-  return allowRoles[true] || (allowRoles[true] = function(req, res, next) {
+    return allowRoles || (allowRoles = function(req, res, next) {
     if(req.isAuthenticated()) {
       return next();
     }

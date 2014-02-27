@@ -12,7 +12,7 @@
 
 var fox,
     debug,
-
+    config,
     /***
      * Colors Module
      * Possible Colors: yellow, cyan, white, magenta, green, red, grey, blue, rainbow, zebra, random.
@@ -30,16 +30,23 @@ var fox,
  */
 var Log = function(_fox) {
   fox = _fox;
+  config = fox["config"];
   // Set default debug settings.
   debug = false;
   
-  handleConfigObject();
+  handleConfig(config);
 
   colors = require("colors");
 }
 
-var handleConfigObject = function() {
-  return false;
+/**
+ * Setup the send module based on options available in the
+ * configuration object.
+ */
+var handleConfig = function(config) {
+  if(config) {
+    debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
+  }
 }
 
 
@@ -163,6 +170,18 @@ var e = function(err, displayLog) {
   console.log(formatLog(err.message, err.status.toString()).red);
 };
 
+
+var t = function(where, string, displayLog) {
+  if(! isDisplayLog(displayLog) || string === undefined) {
+    return;
+  }
+
+  where = (where === undefined) ? "Unknown: " : where + ": ";
+
+  console.log(formatLog(where + string, "TRACE").grey)
+
+}
+
 /**
  * Log (Default): Display a message using the default console settings.
  */
@@ -184,6 +203,7 @@ Log.prototype.i = i;
 Log.prototype.s = s;
 Log.prototype.w = w;
 Log.prototype.e = e;
+Log.prototype.t = t;
 Log.prototype.log = log;
 
 

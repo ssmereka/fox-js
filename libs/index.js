@@ -35,7 +35,7 @@ var AccessToken   = require("./Authentication/accessToken.js"),
  * Initalize a new cryptography library object.
  */
 function Fox() {
-	this.config = Config;
+	this.config = Config.config();
 
 	// Require log and sender first, these are 
 	// commonly required by other modules.
@@ -53,6 +53,7 @@ function Fox() {
 	//this.crypto 	    = new Cryptography(this);
 	this.date 			= new DateLibrary(this);
 	this.message 		= new Message(this);
+
 	this.model 			= new Model(this);
 	//this.accessToken    = new AccessToken(this);
 	this.load 			= new Load(this);

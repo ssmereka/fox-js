@@ -10,15 +10,17 @@
  * ******************** Library Variables
  * ************************************************** */
 
- var fox,
-     log,
-     auth,
-     sanitize,
-     app,
-     db,
-     config,
-     merge,
-     debug = false;
+var app,
+    auth,
+    config,
+    db,
+    debug = false,
+    fox,
+    log,
+    merge,
+    sanitize,
+    trace = false,
+    traceHeader = "Model Library";
 
 
 /* ************************************************** *
@@ -35,25 +37,29 @@ var Model = function(_fox) {
   }
 
   // Load local libraries.
-  fox = _fox;
-  log = fox.log;
-  merge = fox.merge;
-  auth = fox.authentication;
+  fox     = _fox;
+  auth    = fox.authentication;
+  log     = fox.log;
+  merge   = fox.merge;
   
   // Load external modules.
   sanitize = require("sanitize-it");
 
   // Setup library based on config.
   handleConfig(fox["config"]);
+
+  log.t(traceHeader, "Created new instance.", trace);
 }
 
 /**
- * Setup the send module based on options available in the
- * configuration object.
+ * Setup the module based on the config object.
  */
 var handleConfig = function(config) {
   if(config) {
-    debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
   }
 }
 
@@ -62,12 +68,12 @@ var handleConfig = function(config) {
  * ******************** Private Methods
  * ************************************************** */
 
-
-function isFunction(functionToCheck) {
- var getType = {};
- return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
-}
-
+/**
+ * Sanitize an object by executing its sanitize() method.
+ * If the object is undefined, does not have a sanitize
+ * method, or isSanitized is false then the object will 
+ * be returned unaltered.
+ */
 var sanitizeObject = function(obj, isSanitized) {
   isSanitized = (isSanitized === undefined) ? true : isSanitized;
   if(isSanitized && obj && obj["sanitize"]) {
@@ -76,6 +82,13 @@ var sanitizeObject = function(obj, isSanitized) {
   return obj;
 }
 
+/**
+ * Sanitize an array by executing each object's 
+ * sanitize() method.  If an object is undefined, does 
+ * not have a sanitize method, or isSanitized is false 
+ * then the object be unaltered.  The entire array is 
+ * returned after each object is processed.
+ */
 var sanitizeObjects = function(arry, isSanitized, allOrNone) {
   isSanitized = (isSanitized === undefined) ? true : isSanitized;
   if(isSanitized && arry) {
@@ -90,51 +103,75 @@ var sanitizeObjects = function(arry, isSanitized, allOrNone) {
   return arry;
 }
 
+
 /* ************************************************** *
  * ******************** Private API
  * ************************************************** */
 
 /**
  * Set the query result so it can be used by later routes.
+ * @obj is the query result object.
+ * @req is the request object.
+ * @defaultValue is the value to assign to the query result
+ * if the obj parameter is invalid.
  */
-var setQueryResult = function(obj, req, defaultValue) {
+var setQueryResult = function(obj, req, defaultValue, next) {
   if(req) {
     req.queryResult = (obj === undefined) ? defaultValue : obj;
   } else {
     log.e("Cannot set query result, request object is null.");
   }
+  if(next) {
+    next();
+  }
 }
 
 /**
- * Get the query result from a previous lookup.
+ * Get the query result from a previous query.
+ * @req is the request object.
+ * @defaultValue is the value to return if the query result
+ * is undefined or invalid.
  */
 var getQueryResult = function(req, defaultValue) {
   return (req && req.queryResult !== undefined) ? req.queryResult : defaultValue;
 }
 
 
-var loadById = function(Schema, queryObject, populateFields, populateSelects, populateModels, populateConditions) {
-  return loadById[Schema, queryObject, populateFields, populateSelects, populateModels, populateConditions] = function(req, res, next) {
-    if(req.params[queryObject]) {
+/**
+ * Route method to query by ID for a schema object and store the result
+ * in the query result for use by later routes.
+ *
+ * @Schema is the schema objects to query.
+ * @param is the ID parameter name in the request.
+ * @populateFields is a list of fields to populate.
+ * @populateSelects is the mongoose populate selects parameter.
+ * @populateModels is the mongoose populate models parameter.
+ * @populateConditions is the mongoose populate conditions parameter.
+ */
+var loadById = function(Schema, param, populateFields, populateSelects, populateModels, populateConditions) {
+  return function(req, res, next) {
+    // Check if the parameter exists in the request.
+    if(req.params[param]) {
       
+      // Ensure that each undefined parameter is handled.
       populateFields     = (populateFields)     ? populateFields     : "";
       populateSelects    = (populateSelects)    ? populateSelects    : "";
       populateModels     = (populateModels)     ? populateModels     : "";
       populateConditions = (populateConditions) ? populateConditions : "";
 
-      Schema.findById(req.params[queryObject]).populate(populateFields, populateSelects, populateModels, populateConditions).exec(function(err, obj) {
+      // Search by ID
+      Schema.findById(req.params[param]).populate(populateFields, populateSelects, populateModels, populateConditions).exec(function(err, obj) {
         if(err) {
-          console.log(err);
           next(err);
-        } else if( ! obj){
-          log.w("Could not find schema object.  Query Object:", debug);
-          log.w("\t" + queryObject);
-        } else {
-          req.queryResult = obj;
         }
-        return next();
+        
+        log.t(traceHeader, "Loaded by id " + obj.toString(), trace);
+
+        // Set the query result and continue on.
+        setQueryResult(obj, req, undefined, next);
       });
     } else {
+      log.e("Route does not contain the parameter " + param);
       return next();
     }
   };
@@ -217,16 +254,336 @@ var enableCrudOnAllSchemas = function(_app, _db, _config) {
   app = _app;
   config = _config;
 
-  var defaultViewAuthMethod = auth.allowRolesOrHigher(auth.queryRoleByName(config.roles.defaultViewRole));
-  var defaultEditAuthMethod = auth.allowRolesOrHigher(auth.queryRoleByName(config.roles.defaultEditRole));
+/*
+  var authConfig = getCrudAuthConfig(config),
+      isAuthEnabled = (authConfig && authConfig["enabled"]);
 
   if(db && db.models) {
     for(var key in db.models) {
       if(db.models.hasOwnProperty(key)) {
-        enableCrudOnSchema(key, defaultViewAuthMethod, defaultEditAuthMethod);
+        enableCrudOnSchema(key, isAuthEnabled, config);
+      }
+    }
+  } */
+}
+
+
+function getCrudAuthConfig(config) {
+  if(config && config["crud"] && config.crud["auth"]) {
+    return config.crud.auth;
+  }
+  return {};
+}
+
+
+/**
+ * Create an authentication method to place along a 
+ * CRUD route.  This uses the configuration object to create
+ * the correct authentication route method.
+ * 
+ * @param methodType is a key word representing a CRUD method.
+ * Some acceptable values are create, read, readAll, delete, and update.
+ * @param schemaName is the schema the CRUD auth method will be in front of.
+ * @param authConfig is the authentication portion of the configuration object.
+ */
+function createAuthMethod(methodType, schemaName, authConfig) {
+  // Sanitize the schema name to be lowercase and defined.
+  schemaName = ( ! schemaName) ? "default" : schemaName.toLowerCase();
+  
+  // Method type must be defined to continue.
+  if( ! methodType ) {
+    log.e("Cannot create CRUD authentication method named '"+methodType+"' for schema '"+schemaName+"'");
+    return [];
+  }
+
+  // Make sure the config object is valid.
+  if( ! authConfig || ! authConfig["routeRoleAuth"]) {
+    log.e("Cannot create CRUD authentication method '"+methodType+"' for schema "+schemaName+" because the config object is missing.");
+    return [];
+  }
+
+  var method,     // Is the auth method to be returned.
+      roleNames,  // List of roles by name to pass into the auth method.
+      roles = [], // List of roles to pass into the auth method.
+      enabled;    // Boolean flag to check if auth is enabled along a route.
+
+  // Check for a schema specific configuration.
+  if(authConfig.routeRoleAuth[schemaName] && authConfig.routeRoleAuth[schemaName][methodType]) {
+    
+    // Check if authentication for the schema is enabled.
+    if(authConfig.routeRoleAuth[schemaName][methodType]["enabled"] === false) {
+      log.t(traceHeader, "CRUD "+methodType.cyan+" authentication for ".grey+schemaName.cyan+" is ".grey+"disabled".cyan+".".grey, trace);
+      return [];
+    } else {
+      enabled = true;
+    }
+
+    method = authConfig.routeRoleAuth[schemaName][methodType]["method"];
+    roleNames = authConfig.routeRoleAuth[schemaName][methodType]["roles"];
+  }
+
+  // Check for default.
+  if(authConfig.routeRoleAuth["default"] && authConfig.routeRoleAuth["default"][methodType]) {
+    // Check if authentication for the schema is enabled.
+    if(enabled === undefined && authConfig.routeRoleAuth["default"][methodType]["enabled"] === false) {
+      log.t(traceHeader, "CRUD "+methodType.cyan+" authentication for ".grey+schemaName.cyan+" is ".grey+"disabled".cyan+".".grey, trace);
+      return [];
+    } else {
+      enabled = true;
+    }
+
+    if(method === undefined || method === null) {
+      method = authConfig.routeRoleAuth["default"][methodType][method];
+    }
+
+    if(roleNames === undefined || roleNames === null) {
+      roleNames = authConfig.routeRoleAuth["default"][methodType]["roles"];
+    }
+  }
+
+  // Make sure roleNames is an array.
+  roleNames = ( ! roleNames) ? [] : roleNames;
+
+  // Create the list of roles from the list of role names.
+  for(var i = roleNames.length-1; i >=0; --i) {
+    role = auth.queryRoleByName(roleNames[i]);
+    if(role) {
+      roles.push(role);
+    }
+  }
+
+  method = (method === undefined || method === null) ? ">=" : method;
+
+  switch(method) {
+    default:
+    case ">=":
+      method = auth.allowRolesOrHigher(roles);
+      break;
+
+    case "!>=":
+      method = auth.denyRolesOrHigher(roles);
+      break;
+    
+    case "<=":
+      method = auth.allowRolesOrLower(roles);
+      break;
+    
+    case "!<=":
+      method = auth.denyRolesOrLower(roles);
+      break;
+
+    case "=":
+    case "==":
+      method = auth.allowRoles(roles);
+      break;
+
+    case "!=":
+      method = auth.denyRoles(roles);
+      break;
+
+    case ">":
+      method = auth.allowHigherRoles(roles);
+      break;
+
+    case "!>":
+      method = auth.denyHigherRoles(roles);
+      break;
+
+    case "!<":
+      method = auth.allowLowerRoles(roles);
+      break;
+
+    case "!<":
+      method = auth.denyLowerRoles(roles);
+      break;
+
+    case true:
+    case "true":
+      method = auth.allowAllRoles();
+      break;
+
+    case false:
+    case "false":
+      method = auth.denyAllRoles();
+      break;
+  }
+
+  log.t(traceHeader, "Created CRUD auth "+methodType.cyan+" method for ".grey+schemaName.cyan+" with roles: [ ".grey+roleNames.toString().cyan+" ]".grey, trace);
+
+  return (method) ? method : [];
+}
+
+
+function getCrudAuthRouteName() {
+  if(config && config["crud"] && config.crud["auth"]) {
+    return config.crud.auth.name;
+  }
+}
+
+var loadCrudAuth = function(app, db, config, next) {
+  var authConfig = getCrudAuthConfig(config);
+  if(! (authConfig && authConfig["enabled"])) {
+    if(next) {
+      next()
+    }
+    return;
+  }
+
+  if(db && db.models) {
+    for(var key in db.models) {
+      if(db.models.hasOwnProperty(key)) {
+        loadCrudAuthOnSchema(key, config);
       }
     }
   }
+
+  if(next) {
+    return next();
+  }
+}
+
+var loadCrudAuthOnSchema = function(schemaName, config, next) {
+  schema = db.model(schemaName);
+  
+  // Get the collection name from the schema name.
+  collectionName = schemaName.toLowerCase() + 's';
+
+  // Get the authentication configuration object from the config.
+  var authConfig = getCrudAuthConfig(config);
+
+  // Create our CRUD authenticaiton methods.
+  var createAuth = createAuthMethod("create", schemaName, authConfig),
+      readAuth = createAuthMethod("read", schemaName, authConfig),
+      updateAuth = createAuthMethod("update", schemaName, authConfig),
+      deleteAuth = createAuthMethod("remove", schemaName, authConfig),
+      readAllAuth = createAuthMethod("readAll", schemaName, authConfig);
+
+  // Get by ID.
+  app.get('/'+collectionName+'/:id.:format', readAuth);
+
+  // Get all
+  app.get('/'+collectionName+'.:format', readAllAuth);
+
+  // Update
+  app.post('/'+collectionName+'/:id.:format', updateAuth);
+
+  // Create
+  app.post('/'+collectionName+'.:format', createAuth);
+
+  // Delete
+  app.delete('/'+collectionName+'/:id.:format', deleteAuth);
+
+  log.d("\tCRUD Authentication enabled for the "+schemaName.cyan+" schema.".magenta, debug);
+
+  if(next) {
+    return next();
+  }
+}
+
+
+function getCrudQueryRouteName() {
+  if(config && config["crud"] && config.crud["queries"]) {
+    return config.crud.queries.name;
+  }
+}
+
+var loadCrudQuery = function(app, db, config, next) {
+  if(db && db.models) {
+    for(var key in db.models) {
+      if(db.models.hasOwnProperty(key)) {
+        loadCrudQueryOnSchema(key, config);
+      }
+    }
+  }
+
+  if(next) {
+    return next();
+  }
+}
+
+
+var loadCrudQueryOnSchema = function(schemaName, config, next) {
+  schema = db.model(schemaName);
+  
+  // Get the collection name from the schema name.
+  collectionName = schemaName.toLowerCase() + 's';
+
+  // Get by ID.
+  app.get('/'+collectionName+'/:id.:format', loadById(schema, "id"));
+
+  // Get all
+  app.get('/'+collectionName+'.:format', load(schema, {}));
+
+  // Update
+  app.post('/'+collectionName+'/:id.:format', loadById(schema, "id"));
+
+  // Delete
+  app.delete('/'+collectionName+'/:id.:format', loadById(schema, "id"));
+
+  log.d("\tCRUD Query enabled for the "+schemaName.cyan+" schema.".magenta, debug);
+
+  if(next) {
+    return next();
+  }
+}
+
+function getCrudMethodRouteName() {
+  if(config && config["crud"] && config.crud["methods"]) {
+    return config.crud.methods.name;
+  }
+}
+
+var loadCrudMethod = function(app, db, config, next) {
+  if(db && db.models) {
+    for(var key in db.models) {
+      if(db.models.hasOwnProperty(key)) {
+        loadCrudMethodOnSchema(key, config);
+      }
+    }
+  }
+
+  if(next) {
+    return next();
+  }
+}
+
+var loadCrudMethodOnSchema = function(schemaName, config, next) {
+  schema = db.model(schemaName);
+  
+  // Get the collection name from the schema name.
+  collectionName = schemaName.toLowerCase() + 's';
+
+  // Check if the sanitize method is available.
+  var isSanitized = (verifyModelHasCrudMethod(schema, "sanitize"));
+
+  // Get by ID.
+  app.get('/'+collectionName+'/:id.:format', getRoute(isSanitized));
+
+  // Get all
+  app.get('/'+collectionName+'.:format', getAllRoute(isSanitized));
+
+  // Update
+  if(verifyModelHasCrudMethod(schema, "update")) {
+    app.post('/'+collectionName+'/:id.:format', updateRoute(isSanitized));
+  } else {
+    log.e("Schema " + schemaName + " must implement the update method to enable the update CRUD route.");
+  }
+
+  // Create
+  if(verifyModelHasCrudMethod(schema, "update")) {
+    app.post('/'+collectionName+'.:format', createRoute(schema, isSanitized));
+  } else {
+    log.e("Schema " + schemaName + " must implement the update method to enable the create CRUD route.");
+  }
+
+  // Delete
+  if(verifyModelHasCrudMethod(schema, "delete")) {
+    app.delete('/'+collectionName+'/:id.:format', removeRoute);
+  } else {
+    log.e("Schema " + schemaName + " must implement the delete method to enable the delete CRUD route.");
+  }
+
+  log.d("\tCRUD Method enabled for the "+schemaName.cyan+" schema.".magenta, debug);
 }
 
 /**
@@ -234,45 +591,53 @@ var enableCrudOnAllSchemas = function(_app, _db, _config) {
  * a schema object.  It also protects the routes using default authentication
  * settings found in the config.
  */
-var enableCrudOnSchema = function(schemaName, viewAuthMethod, editAuthMethod) {
+var enableCrudOnSchema = function(schemaName, isAuthEnabled, config) {
   schema = db.model(schemaName);
-
+  
+  // Get the collection name from the schema name.
   collectionName = schemaName.toLowerCase() + 's';
-
-  viewAuthMethod = (! viewAuthMethod) ? viewAuthMethod : [];
-  editAuthMethod = (! editAuthMethod) ? editAuthMethod : [];
 
   // Check if the sanitize method is available.
   var isSanitized = (verifyModelHasCrudMethod(schema, "sanitize"));
 
+  // Get the authentication configuration object from the config.
+  var authConfig = getCrudAuthConfig(config);
+
+  // Create our CRUD authenticaiton methods.
+  var createAuth = createAuthMethod("create", schemaName, authConfig),
+      readAuth = createAuthMethod("read", schemaName, authConfig),
+      updateAuth = createAuthMethod("update", schemaName, authConfig),
+      deleteAuth = createAuthMethod("remove", schemaName, authConfig),
+      readAllAuth = createAuthMethod("readAll", schemaName, authConfig);
+
   // Get by ID.
-  app.get('/'+collectionName+'/:id.:format', viewAuthMethod, loadById(schema, "id"), getRoute(isSanitized));
+  app.get('/'+collectionName+'/:id.:format', readAuth, loadById(schema, "id"), getRoute(isSanitized));
 
   // Get all
-  app.get('/'+collectionName+'.:format', viewAuthMethod, load(schema, {}), getAllRoute(isSanitized));  //{ "sort": "creationDate"}
+  app.get('/'+collectionName+'.:format', readAllAuth, load(schema, {}), getAllRoute(isSanitized));  //{ "sort": "creationDate"}
 
   // Update
   if(verifyModelHasCrudMethod(schema, "update")) {
-    app.post('/'+collectionName+'/:id.:format', editAuthMethod, loadById(schema, "id"), updateRoute(isSanitized));
+    app.post('/'+collectionName+'/:id.:format', updateAuth, loadById(schema, "id"), updateRoute(isSanitized));
   } else {
     log.e("Schema " + schemaName + " must implement the update method to enable the update CRUD route.");
   }
 
   // Create
   if(verifyModelHasCrudMethod(schema, "update")) {
-    app.post('/'+collectionName+'.:format', editAuthMethod, createRoute(schema, isSanitized));
+    app.post('/'+collectionName+'.:format', createAuth, createRoute(schema, isSanitized));
   } else {
     log.e("Schema " + schemaName + " must implement the update method to enable the create CRUD route.");
   }
 
   // Delete
   if(verifyModelHasCrudMethod(schema, "delete")) {
-    app.delete('/'+collectionName+'/:id.:format', editAuthMethod, loadById(schema, "id"), removeRoute);
+    app.delete('/'+collectionName+'/:id.:format', deleteAuth, loadById(schema, "id"), removeRoute);
   } else {
     log.e("Schema " + schemaName + " must implement the delete method to enable the delete CRUD route.");
   }
 
-  log.i("CRUD enabled for the ".white +schemaName.cyan+" schema.".white, debug);
+  log.d("\tCRUD enabled for the "+schemaName.cyan+" schema.".magenta, debug);
 }
 
 /**
@@ -323,7 +688,7 @@ var verifyModelHasCrudMethod = function(Schema, method, next) {
     if(next) {
       return next(err)
     }
-    log.e(err, debug);
+    log.w(err, debug);
     return false;
   } else if(next) {
     next();
@@ -645,6 +1010,10 @@ var remove = function(obj, userId, next) {
  * ************************************************** */
 
 // Expose the public methods available.
+
+Model.prototype.setQueryResult = setQueryResult;
+Model.prototype.getQueryResult = getQueryResult;
+
 Model.prototype.load = load;
 Model.prototype.update = update;
 Model.prototype.loadById = loadById;
@@ -671,7 +1040,13 @@ Model.prototype.remove = remove;
 Model.prototype.removeRoute = removeRoute;
 Model.prototype.createRemoveMethod = createRemoveMethod;
 
+Model.prototype.loadCrudQuery = loadCrudQuery;
+Model.prototype.loadCrudAuth = loadCrudAuth;
+Model.prototype.loadCrudMethod = loadCrudMethod;
 
+Model.prototype.getCrudAuthRouteName = getCrudAuthRouteName;
+Model.prototype.getCrudQueryRouteName = getCrudQueryRouteName;
+Model.prototype.getCrudMethodRouteName = getCrudMethodRouteName;
 
 /* ************************************************** *
  * ******************** Export the Public API

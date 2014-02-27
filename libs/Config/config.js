@@ -103,6 +103,14 @@ var allConfig = {
   protocol: 'https',
   debug: false,
 
+
+  // Private configs for the internal libraries.
+  system: {
+    debug: false,
+    trace: false
+  },
+
+
   title: 'Fox',
 
   mongodb: {
@@ -124,7 +132,7 @@ var allConfig = {
   express: {                                                   // Express object holds configuration settings for all things express.
     sessionKey: 'CCCQ9V6Tg6RVFfFK5BjBm3JjCFy4FI0TJOD21dk'      // The session key is used to keep the express sessions secure, keep this private.
   },
-  debugSystem: true,                                           // Show additional system level debug information.
+  systemDebug: true,                                           // Show additional system level debug information.
   dirname: serverDirectory + "/app/",                          // Server application directory.
   installKey: SERVER_INSTALL_KEY,                              // Server install key, a private key used to activate the installation of the server. (Keep it secret, keep it safe)
   paths: {                                                     // The paths object contains information about where different files and folders are located on the disk.
@@ -146,6 +154,74 @@ var allConfig = {
   roles: {
     defaultEditRole: "admin",
     defaultViewRole: "admin"
+  },
+  
+  // CRUD, when enabled, automatically adds routes and 
+  // methods required for CRUD operations on mongoose schemas.
+  crud: {
+    enabled: true,                      // Enable automatic CRUD method creation.  
+
+    auth: {                             // Authentication
+      enabled: true,
+      name: "crud-auth",                // Name in routes array
+      ignoreHandledRequests: true,      // If request is already handled, do not perform authentication.
+      routeRoleAuth: {                 
+        "default": {
+          create: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          read: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          readAll: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          update: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          updateAll: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          remove: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          removeAll: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          }
+        }
+      }
+    },
+
+    methods: {                          // Route methods
+      name: "crud-methods",             // Name in routes array
+      ignoreHandledRequests: true       // If request is already handled, do not perform create, update, read, or delete.
+    },
+
+    queries: {                          // Queries to preload data required in CRUD route methods.
+      name: "crud-queries",             // Name in routes array
+      ignoreHandledRequests: true,      // If request is already handled, do not perform a query.
+      overridePreviousQueries: false    // If a query as already been performed, do not perform a query.
+    },
+
+    schemaWhitelist: [                  // List of schema names where CRUD will be enabled, all others will be disabled.
+    ],
+
+    schemaBlacklist: [                  // List of schema names where CRUD will be disabled, even if whitelisted.
+    ]
   },
   schemas: {
     crud: {

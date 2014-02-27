@@ -11,7 +11,7 @@
  * ************************************************** */
 
 var app, config, configModule, debug, db, log, express,
-    expressValidator, fs, mongoose, MongoStore, fox, accessToken;
+    expressValidator, fs, merge, model, mongoose, MongoStore, fox, accessToken, trace;
 
 
 /* ************************************************** *
@@ -21,8 +21,24 @@ var app, config, configModule, debug, db, log, express,
 var Load = function(_fox) {
   fox = _fox;
   log = fox.log;
+  merge = fox.merge;
+  model = fox.model;
   accessToken = fox.accessToken;
-  debug = fox.config.debugSystem;  
+  debug = false;
+  trace = false;
+  handleConfig(fox.config);
+}
+
+/**
+ * Setup the module based on the config object.
+ */
+var handleConfig = function(config) {
+  if(config) {
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
+  }
 }
 
 
@@ -30,75 +46,42 @@ var Load = function(_fox) {
  * ******************** Private Methods
  * ************************************************** */
 
-/* Merge Objects
- * Combine two object's attributes giving priority
- * to the first object's (obj1) attribute values.
- */
-var mergeObjects = function (obj1, obj2) {
-  for(var key in obj2) {
-    if(obj1[key] === undefined)
-      obj1[key] = obj2[key];
-  }
-  return obj1;
-}
-
-/**
- * Merge two objects attributes into a single object.
- * This will do a deep merge, meaning that if both objects 
- * contain an attribute that is also an object, then they 
- * will be merged as well.  This will give all priorty to
- * the first object, meaning if both objects have the same 
- * attribute, the first object's value will be preserved
- * while the second-object's value is not.
- */
-var deepMergeObjects = function(obj1, obj2) {
-  var result = {};
-
-  // Loop through all the attributes in the first object.
-  for(var key in obj1) {
-    
-    // If an attribute is also an object and also not an array.
-    if(obj1.hasOwnProperty(key) && obj1[key] !== null && typeof obj1[key] === 'object' && ! obj1[key] instanceof Array) {     
-      
-      // And obj2's attribute with the same key is also an object.
-      if(obj2.hasOwnProperty(key) && obj2[key] !== null && typeof obj2[key] === 'object') {
-        // recurse and merge those objects as well.
-        result[key] = deepMergeObjects(obj1[key], obj2[key]);
-      } else {
-        // Otherwise store the object in the result.
-        result[key] = obj1[key];
-      }
-    } else {
-      // If the attribute is not an object, store it in the results.
-      result[key] = obj1[key];
-    }
-  }
-
-  // Loop through and add all the attributes in object 2 that
-  // are not already in object 1.
-  for(i in obj2) {
-
-    // If the attribute is already in the result, skip it.
-    if(i in result) {
-      continue;
-    }
-
-    // Add the new attribute to the result object.
-    result[i] = obj2[i];
-  }
-
-  return result;
-}
-
-
 
 /**
  * Load and initalize modules, libraries, and global variables
  * that are used in this loading module.  This includes loading
  * the configuration object.
  */
-var modules = function(_config) {
+var modules = function(_config, next) {
   
+  loadConfig(_config, function(err, loadedConfig) {
+
+    // Make sure we loaded a config object before we try to use it.
+    if(loadedConfig === undefined) {
+      return next(new Error("Could not load a valid config object."));
+    }
+
+    config = loadedConfig;
+
+                                          
+    express          = require("express");           // Express will handle our sessions and routes at a low level.
+    expressValidator = require("express-validator"); // Express validator will assist express.
+    fs               = require('fs');                // Initialize the file system module.
+    
+    // Load Mongo DB related modules, if we are using Mongo DB.
+    if(config.mongodb.enabled) {
+      mongoose = require('mongoose'),
+      MongoStore = require('connect-mongo')(express);
+    }
+
+    // If in debug mode, notify the user it was turned on.
+    log.d("System level debug mode activated", debug);
+
+    return next(undefined, config);
+  });
+};
+
+var loadConfig = function(_config, next) {
   // Load the config module.  This holds a default configuration object
   // and functions used to help configure the server.
   configModule = require("../Config/config.js");
@@ -114,42 +97,13 @@ var modules = function(_config) {
   // the default config object with the config parameter.  The merge 
   // will give the config parameter priority.
   if(_config !== undefined && _config != null && typeof _config === 'object') {
-    config = mergeObjects(_config, configModule.config())
+    config = merge.deepPriorityMergeSync(_config, configModule.config());
+    next(undefined, config);
   } else {
     config = configModule.config();
+    next(undefined, mergedConfig);
   }
-
-  // Make sure we loaded a config object before we try to use it.
-  if(config === undefined) {
-    console.log("Could not load a valid config object.");
-    return false;
-  }
-
-  //fox              = require("./");
-  // Load external modules and libs.
-                                            // Initialize our local debug variable
-  //express          = require(config.paths.nodeModulesFolder + "express");           // Express will handle our sessions and routes at a low level.
-  //expressValidator = require(config.paths.nodeModulesFolder + "express-validator"); // Express validator will assist express.
-  express          = require("express");           // Express will handle our sessions and routes at a low level.
-  expressValidator = require("express-validator"); // Express validator will assist express.
-  fs               = require('fs');                                                 // Initialize the file system module.
-  //log              = require(config.paths.serverLibFolder + "log.js")(config);      // Load the logging lib.
-  //log              = fox.log;      // Load the logging lib.
-    
-  // Load Mongo DB related modules, if we are using Mongo DB.
-  if(config.mongodb.enabled) {
-    //mongoose = require(config.paths.nodeModulesFolder + 'mongoose'),
-    //MongoStore = require(config.paths.nodeModulesFolder + 'connect-mongo')(express);
-
-    mongoose = require('mongoose'),
-    MongoStore = require('connect-mongo')(express);
-  }
-
-  // If in debug mode, notify the user it was turned on.
-  log.d("System level debug mode activated", debug);
-
-  return true;
-};
+}
 
 /**
  * Setup and connect to the database configured in the
@@ -382,6 +336,9 @@ var isFileInvalid = function(file) {
  */
 var requireTypesInFolder = function(types, folder, next) {
   var files = {};
+  var crudAuthRouteName = model.getCrudAuthRouteName(),
+      crudQueryRouteName = model.getCrudQueryRouteName(),
+      crudMethodRouteName = model.getCrudMethodRouteName();
   
   // Initialize the files object.
   for(var i = 0; i < types.length; i++) {
@@ -411,9 +368,17 @@ var requireTypesInFolder = function(types, folder, next) {
     // If successful, require all the files in the correct order.
     log.d("File Paths to Require: ", debug);
     for(var key in files) {
-      files[key].forEach(function(file) {
-        requireFile(file);
-      });
+      if(types[key] === crudAuthRouteName) {
+        model.loadCrudAuth(app, db, config);
+      } else if(types[key] === crudQueryRouteName) {
+        model.loadCrudQuery(app, db, config);
+      } else if(types[key] === crudMethodRouteName) {
+        model.loadCrudMethod(app, db, config);
+      } else {
+        files[key].forEach(function(file) {
+          requireFile(file);
+        });
+      }
     }
     
     next(undefined, true);
@@ -465,57 +430,61 @@ function requireFile(path) {
 var application = function appFunction(_config, next) {
   // Load and initalize some of our external modules, libraries, and global variables.
   // This includes loading our configuration object.
-  if( ! modules(_config)) {
-    return next(new Error("An error occured while loading modules."));
-  }
-
-  // Create and return an application object created by express.
-  // We use module.exports as opposed to exports so that we can use
-  // the "app" object as a function.  (Reference: http://goo.gl/6yzmKc)
-  app = module.exports = express(); 
-
-  // Handle configuration and setup for different server enviorment modes. (Such as local, development, and production).
-  var success = configModule.configureEnviorment(express, app);
-  if(! success) {
-    return next(new Error("Could not load config environment"));
-  }
-
-  // Setup express.
-  app.use(express.cookieParser());  // Setup express: enable cookies.
-
-  // For connect 3.0, body parser call changed.
-  // app.use(express.bodyParser());    // Setup express: enable body parsing.
-  app.use(express.json());
-  app.use(express.urlencoded());
-
-  //app.use(expressValidator);        // Setup express validator.
-
-  // Configure and connect to the database.
-  database(function(err, _db) {
+  modules(_config, function(err, config) {
     if(err) {
-      return next(err);
-    } else if(! _db) {
-      return next(new Error('Could not load or connect to database.'));
+      next(err);
+    } else if( ! config) {
+      return next(new Error("An error occured while loading modules."));
+    }
+    
+    // Create and return an application object created by express.
+    // We use module.exports as opposed to exports so that we can use
+    // the "app" object as a function.  (Reference: http://goo.gl/6yzmKc)
+    app = module.exports = express(); 
+
+    // Handle configuration and setup for different server enviorment modes. (Such as local, development, and production).
+    var success = configModule.configureEnviorment(express, app);
+    if(! success) {
+      return next(new Error("Could not load config environment"));
     }
 
-    // Set our modules global database variable.
-    db = _db;
+    // Setup express.
+    app.use(express.cookieParser());  // Setup express: enable cookies.
 
-    // Load the database modules.
-    requireTypesInFolder(["model"], config.paths.serverAppFolder, function(err, success) {
+    // For connect 3.0, body parser call changed.
+    // app.use(express.bodyParser());    // Setup express: enable body parsing.
+    app.use(express.json());
+    app.use(express.urlencoded());
+
+    //app.use(expressValidator);        // Setup express validator.
+
+    // Configure and connect to the database.
+    database(function(err, _db) {
       if(err) {
         return next(err);
-      } else if( ! success) {
-        return next(new Error("Could not load models."));
+      } else if(! _db) {
+        return next(new Error('Could not load or connect to database.'));
       }
 
-      // Load and initalize libraries that require some time to laod.
-      loadlibs(function(err, success) {
-        if(err || ! success) {
-          return next(err || new Error("An error occured while trying to preload some libraries."));
+      // Set our modules global database variable.
+      db = _db;
+
+      // Load the database modules.
+      requireTypesInFolder(["model"], config.paths.serverAppFolder, function(err, success) {
+        if(err) {
+          return next(err);
+        } else if( ! success) {
+          return next(new Error("Could not load models."));
         }
-        
-        next(err, app, config, db);   // Return the app, config, and database objects.
+
+        // Load and initalize libraries that require some time to laod.
+        loadlibs(function(err, success) {
+          if(err || ! success) {
+            return next(err || new Error("An error occured while trying to preload some libraries."));
+          }
+          
+          next(err, app, config, db);   // Return the app, config, and database objects.
+        });
       });
     });
   });
@@ -567,7 +536,7 @@ var routes = function routes(next) {
   // Setup our view engine and directory.
   //configureViews();
 
-  // Require all the files of the speficed type, in the correct order.
+  // Require all the files of the specified type, in the correct order.
   requireTypesInFolder(config.routes, config.paths.serverAppFolder, function(err, success) {
     next(err, success);
   });
@@ -586,7 +555,7 @@ var start = function start(config, next) {
     passport(db);                                
 
     // Enable CRUD routes for all schemas
-    if(config && config.schemas && config.schemas.crud && config.schemas.crud.enabled) {
+    if(config && config["crud"] && config.crud["enabled"]) {
       fox.model.enableCrudOnAllSchemas(app, db, config);
     }
 

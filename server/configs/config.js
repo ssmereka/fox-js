@@ -17,6 +17,39 @@ var config = {
     tokenLifeInDays: 10
   },
 
+  // Create, read, update, and delete routes and methods can be automatically
+  // generated for each schema model.  This allows you to configure how the 
+  // routes behave, authentication, and other settings.
+  crud: {
+    enabled: true,                            // Enable or Disable creation of the CRUD methods and routes.
+    auth: {                                   // Authentication for each module's routes can be controlled.
+      routeRoleAuth: {                        // Role based authentication
+        
+        "user": {                             // User schema model specific settings.
+          read: {                             // Getting a single user object settings.
+            enabled: true,                    // Enable authentication
+            method: ">=",                     // Allow roles with permissions equal to or greater than the roles specified.
+            roles: [ "admin", "self" ],       // Allow roles admin and the user themselves to read the single user object.
+          },
+          update: {                           // Updating a single user object settings.
+            enabled: true,                    // Enable authentication for updates.
+            method: ">=",                     // Allow roles with permissions equal to or greater than the roles specified.
+            roles: [ "admin", "self" ],       // Allow roles admin and the user themselves to update the single user object.
+          }
+        },
+
+        "default": {                          // Default settings for all schema models.
+          read: {
+            enabled: false
+          },
+          readAll: {
+            enabled: false,
+          }
+        }
+      }
+    }
+  },
+
   // When enabled additional system level debug information shown.
   debugSystem: true,
 
@@ -42,15 +75,13 @@ var config = {
   // An example routes value is: [ "controller", "error" ]
   // which loads all the controllers and finally an error handler.
   routes: [ 
-    
-    // Load all non-static controllers.
-    "controller", 
-    
-    //
-    "response", 
-    
-    // Lastly load error handler(s) to catch any unhandled requests.
-    "error"
+    "crud-auth",          // Authentication for all CRUD routes.
+    "crud-queries",       // Query for schema object(s) on CRUD routes.
+    "crud-methods",       // Set response and perform CRUD methods on all CRUD routes.
+    "controller",         // Load all non-static controllers.
+    "tracker",            // Handle tracking requests and responses. 
+    "response",           // Handle returning non-error respones to a requestor.
+    "error"               // Lastly load error handler(s) to send errors and catch any unhandled requests.
   ]
 }
 
