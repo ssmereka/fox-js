@@ -208,7 +208,7 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationAllowHigherRoles" />
-### allowHigherRoles()
+### allowHigherRoles(roles)
 
 __Arguments__
 
@@ -221,7 +221,7 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationAllowLowerRoles" />
-### allowLowerRoles()
+### allowLowerRoles(roles)
 
 __Arguments__
 
@@ -273,7 +273,7 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationDenyAllRoles" />
-### denyAllRoles()
+### denyAllRoles(roles)
 
 __Arguments__
 
