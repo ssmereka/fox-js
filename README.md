@@ -182,9 +182,11 @@ module.exports = function(app, db, config) {
 
 ---------------------------------------
 <a name="authorizationAllowRolesOrHigher" />
-### allowRoles()
+### allowRolesOrHigher(roles)
 
 __Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -193,9 +195,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationAllowRolesOrLower" />
-### allowRoles()
+### allowRolesOrLower(roles)
 
 __Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -204,9 +208,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationAllowHigherRoles" />
-### allowRoles()
+### allowHigherRoles()
 
 __Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -215,9 +221,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationAllowLowerRoles" />
-### allowRoles()
+### allowLowerRoles()
 
 __Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -226,9 +234,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationAllowKeys" />
-### allowRoles()
+### allowKeys(keys)
 
 __Arguments__
+
+* keys is an array, or object, of fading key schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -237,9 +247,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationAllowKeysOnce" />
-### allowRoles()
+### allowKeysOnce(keys)
 
 __Arguments__
+
+* keys is an array, or object, of fading key schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -248,9 +260,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationDenyRoles" />
-### allowRoles()
+### denyRoles(roles)
 
 __Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are not authorized to proceed.
 
 __Example__
 ```js
@@ -259,9 +273,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationDenyAllRoles" />
-### allowRoles()
+### denyAllRoles()
 
 __Arguments__
+
+No arguments accepted.
 
 __Example__
 ```js
@@ -270,9 +286,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationDenyRolesOrHigher" />
-### allowRoles()
+### denyRolesOrHigher(roles)
 
 __Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -281,9 +299,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationDenyRolesOrLower" />
-### allowRoles()
+### denyRolesOrLower(roles)
 
 __Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -292,9 +312,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationDenyHigherRoles" />
-### allowRoles()
+### denyHigherRoles(roles)
 
 __Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -303,9 +325,11 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationDenyLowerRoles" />
-### allowRoles()
+### denyLowerRoles(roles)
 
 __Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are evaluated to allow or deny access to users.
 
 __Example__
 ```js
@@ -314,7 +338,7 @@ __Example__
 
 ---------------------------------------
 <a name="authorizationRefreshCachedRoles" />
-### allowRoles()
+### refreshCachedRoles()
 
 __Arguments__
 
