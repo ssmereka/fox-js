@@ -69,6 +69,263 @@ info:   Version                  0.1.0
 <a name="authorization" />
 ## Authorization
 
+<a name="authorizationMethods" />
+### Methods
+* [Allow Roles](#authorizationAllowRoles)
+* [Allow All Roles](#authorizationAllowAllRoles)
+* [Allow Roles or Higher](#authorizationAllowRolesOrHigher)
+* [Allow Roles or Lower](#authorizationAllowRolesOrLower)
+* [Allow Higher Roles](#authorizationAllowHigherRoles)
+* [Allow Lower Roles](#authorizationAllowLowerRoles)
+* [Allow Keys](#authorizationAllowKeys)
+* [Allow Keys Once](#authorizationAllowKeysOnce)
+* [Deny Roles](#authorizationDenyRoles)
+* [Deny All Roles](#authorizationDenyAllRoles)
+* [Deny Roles or Higher](#authorizationDenyRolesOrHigher)
+* [Deny Roles or Lower](#authorizationDenyRolesOrLower)
+* [Deny Higher Roles](#authorizationDenyHigherRoles)
+* [Deny Lower Roles](#authorizationDenyLowerRoles)
+* [Refresh Cached Roles](#authorizationRefreshCachedRoles)
+
+[Back to Libraries](#libraries)
+
+---------------------------------------
+<a name="authorizationAllowRoles" />
+### allowRoles(roles)
+
+Creates a route method allowing only users with specific user roles to perform further actions.  If a user does not have a role listed in the roles list, then they will receive a permission denied error.
+
+A route method should be placed in an express route where it accepts paramters for request, response, and next.
+
+__Arguments__
+
+* roles is an array, or object, of user role schema object(s) that are authorized to proceed.
+
+__Example__
+```js
+module.exports = function(app, db, config) {
+    var fox = require("foxjs"),     // Require foxjs module.
+        sender = fox.send,          // Grab the send library.
+        auth = fox.auth;            // Grab the authorization library.
+        
+    var Users = db.model("Users");  // Grab the user model
+    
+    // Lookup the admin role by query name.
+    var adminRole = auth.queryRoleByName("admin");
+
+    // Add a route where an authenticated admin user can lookup all the users.
+    app.get("/users.json", auth.allowRoles(adminRole), users);
+
+    // Users route method to return all users.
+    function users(req, res, next) {
+        // Because of allowAllRoles() only authenticated admin users can reach this method.
+    
+        // Query for all users.
+        Users.find({}, function(err, users) {
+            // Pass errors along...
+            if(err) {
+                return next(err);
+            }
+                
+            // Send the result to the caller.
+            sender.send(users, req, res, next);
+        });
+    }
+}
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationAllowAllRoles" />
+### allowAllRoles()
+
+Creates a route method that allows all authenticated users to proceed.  An unauthenticated user will receive a permission denied error.
+
+A route method should be placed in an express route where it accepts paramters for request, response, and next.
+
+__Arguments__
+
+No arguments accepted.
+
+__Example__
+```js
+module.exports = function(app, db, config) {
+    var fox = require("foxjs"),     // Require foxjs module.
+        sender = fox.send,          // Grab the send library.
+        auth = fox.auth;            // Grab the authorization library.
+
+    // Grab the user model
+    var Users = db.model("Users");
+
+    // Add a route where an authenticated user can lookup all the users.
+    app.get("/users.json", auth.allowAllRoles(), users);
+
+    // Users route method to return all users.
+    function users(req, res, next) {
+        // Because of allowRoles() only authenticated users can reach this method.
+    
+        // Query for all users.
+        Users.find({}, function(err, users) {
+            // Pass errors along...
+            if(err) {
+                return next(err);
+            }
+                
+            // Send the result to the caller.
+            sender.send(users, req, res, next);
+        });
+    }
+}
+
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationAllowRolesOrHigher" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationAllowRolesOrLower" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationAllowHigherRoles" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationAllowLowerRoles" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationAllowKeys" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationAllowKeysOnce" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationDenyRoles" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationDenyAllRoles" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationDenyRolesOrHigher" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationDenyRolesOrLower" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationDenyHigherRoles" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationDenyLowerRoles" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+<a name="authorizationRefreshCachedRoles" />
+### allowRoles()
+
+__Arguments__
+
+__Example__
+```js
+```
+[Back to Authorization Methods](#authorizationMethods)
+
+---------------------------------------
+
+
 <a name="config" />
 ## Config
 
