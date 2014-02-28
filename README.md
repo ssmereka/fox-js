@@ -1,23 +1,57 @@
-# Fox JS [![Build Status](https://secure.travis-ci.org/ssmereka/fox-js.png)](http://travis-ci.org/ssmereka/fox-js)
+# Fox JS 
 
 Light-framework and boilerplate code to quickly build scalable web apps using javascript.  The backend is a standalone node server with authenticaiton, users, and anything else all API's need.  The frontend is a standalone angular framework already setup to communicate with the backend.
 
-## Getting Started
+**Current Status:** In Development.
+
+# Getting Started
 
 1. Install fox-js
 
-    sudo npm -g install foxjs
+    `sudo npm -g install foxjs`
 
-2. Create a new project
+2. Create and start a new project.
 
-    fox new "My Project Name"
+   `fox new "My Project Name"`
+    
+Your server is now started and you can start coding.  As you save changes the server will automatically restart!
 
-3. Start the server in local mode and start coding!  No need to restart the server, changes will be live after saving a file.
+<a name="cliIndex" />
+## Command Line Interface
+* [Commands]()
+* [Enviorment Modes]()
+* [Options]()
 
-    fox start -l
+<a name="libraryIndex" />
+## Server Libraries
+
+* [Access Token](#libraryAccessToken) - API authentication tokens
+* [Authorization](#libraryAuthorization) - Authorization authenticated users with user roles.
+* [Config](#libraryConfig) - Methods to help configure the server.
+* [Cryptography](#libraryCryptography) - Portable crypto methods for keeping data safe.
+* [Date](#libraryDate) - Utility method for working with javascript dates.
+* [Load](#libraryLoad) - Load models and controllers in the correct order and start your server.
+* [Log](#libraryLog) - Utility to help log messages.
+* [Message](#libraryMessage) - Handle control messages sent to your server from the command line or other.
+* [Model](#libraryModel) - Utility and helper methods to make working with schema models easier.
+* [Send](#librarySend) - Respond to a request in a uniform way.  Also helper methods for sending things, like email.
 
 
-## Fox CLI
+<a name="configIndex" />
+## Server Config
+
+* [CRUD](#configCrud) - Auto generated create, read, update, and delete methods
+    * [Authorization](#configCrudAuth) - Auth for generated crud methods.
+    * [Query](#configCrudQuery) - Query lookups for generated crud methods.
+    * [Method](#configCrudMethod) - Schema methods for generated crud methods.
+* [Express](#configExpress)
+* [Paths](#configPaths)
+* [Mongo DB](#configMongoDb)
+* [Routes](#configRoutes)
+* [System](#configSystem)
+
+<a name="cli" />
+# Command Line Interface
 
 You can control your server using the command line interface.  After fox is installed, you can type fox to show a list of commands.
 ```bash
@@ -43,108 +77,196 @@ info: Info:
 info:   Author                   Scott Smereka
 info:   Version                  0.1.0
 ```
+[Back to Index](#cliIndex)
 
-## Configuration
+<a name="config" />
+# Config
 
-<a name="configSections" />
-### Sections
-* [CRUD](#configCrud)
-* [Express](#configExpress)
-* [Paths](#configPaths)
-* [Mongo DB](#configMongoDb)
-* [Routes](#configRoutes)
-* [System](#configSystem)
+// TODO: Description of config file.
 
 <a name="configCrud" />
-### CRUD Config
+## CRUD Config
 
-CRUD (create, read, update, and delete) routes can be automagically created for any schema model defined in your server.  Each route has 3 parts:  an authorization, query, and method.  
+Create, read, update, and delete routes can be automagically created for any schema model defined by your server.  Each route can contain authorization, a query, and a schema method or operation.  Each route can be individually configured or you can just leave it with the default settings.  The position of the route, when the route will be executed, can also be configured.  The generation of CRUD routes should save you the hassel of laying a bunch of ground work before you can get started with your real project needs.  The next few sections explain all the ways you can configure the CRUD routes to your liking.
 
-#### Authorization
-authorization ensures only specific users have access to the CRUD routes.  You can assign 
+<a name="configCrudAuth" />
+### Authorization
+Authorization ensures only specific users have access to the CRUD routes that are created.  Like all configurations a default configuration exists and can be overriden.  Authorization can be based on a user's role, simply whether or not the user is logged in, or turned off completely.
 
-### Query
+The default config object can be found [here](https://github.com/ssmereka/fox-js/blob/master/libs/Config/config.js).
 
+#### Authorization Properties
+Description of the first level of auth configurable properties.
 
-### Method
-
+| Property Name | Description | Value Type |
+| --- | --- | --- |
+| enabled | Enable/disable all authorization for generated CRUD methods. | boolean |
+| ignoreHandledRequests | When enabled, forces the authorization routes to ignore requests that have already been handled by previous routes. | boolean |
+| name | A string used to place the authorization route in the routes array.  This allows you to place the authorization step where ever you want it in your chain of routes. | string |
+| routeRoleAuth | An object to configure authorization based on the schema and its methods. | Object |
 
 ```js
- crud: {
-    enabled: true,                      // Enable automatic CRUD method creation.  
-
-    auth: {                             // Authentication
-      enabled: true,
-      name: "crud-auth",                // Name in routes array
-      ignoreHandledRequests: true,      // If request is already handled, do not perform authentication.
-      routeRoleAuth: {                 
-        "default": {
-          create: {
-            enabled: true,
-            method: ">=",
-            roles: [ "admin" ],
-          },
-          read: {
-            enabled: true,
-            method: ">=",
-            roles: [ "admin" ],
-          },
-          readAll: {
-            enabled: true,
-            method: ">=",
-            roles: [ "admin" ],
-          },
-          update: {
-            enabled: true,
-            method: ">=",
-            roles: [ "admin" ],
-          },
-          updateAll: {
-            enabled: true,
-            method: ">=",
-            roles: [ "admin" ],
-          },
-          remove: {
-            enabled: true,
-            method: ">=",
-            roles: [ "admin" ],
-          },
-          removeAll: {
-            enabled: true,
-            method: ">=",
-            roles: [ "admin" ],
-          }
+crud: {
+    auth: {
+        enabled: true,
+        ignoreHandledRequests: true,
+        name: "crud-auth",
+        routeRoleAuth: {
+            // TODO:  Place non-default authorization configs here...
         }
-      }
-    },
+    }
+}
 ```
-[Back to Config Sections](#configSections)
 
----------------------------------------
+##### Route Role Authorization Properties
+You can configure authorization for each schema and for each schema method.  For example, you can configure the user schema "read" and "update" routes to be more permissive than its other routes.  Each property of the routeRoleAuth object has the name of a schema as the key and an object as its value.  Each property listed gives the named schema special authorization settings.  An exception to this rule is the word "default" whose configurations are applied to all schemas without special authorization settings.  The object value contains properties for each different type of method such as read, update, create, etc.
+
+| routeRoleAuth Properties | Description | Value Type |
+| --- | --- | --- |
+| schemaName | An all lowercase name that matches a schema object defined by the server. | Object |
+| "default" | A special case where all configurations are applied by default to all schemas who do not have special cases listed in the config object. | Object |
+
+The property key/value pairs in the schemaName object identify authorization rules for each CRUD method.  Each method that you define overrides the default method for that schema type.  For example if you only provide read and update configurations, then create, delete, readAll, and etc. are not affected.  Here is a list of possible property values.
+
+| schemaName Properties | Description | Value Type |
+| --- | --- | --- |
+| read | Reading a single object of a single schema type.  For example getting a user by ID. | Object |
+| readAll | Reading multiple objects of a single schema type.  For example getting all users. | Object |
+| create | Create a single object of a single schema type. For example creating a new user. | Object |
+| update | Update a single object of a single schema type.  For example updating a user by ID. | Object |
+| updateAll | Update all object of a single schema type.  For example updating all users with newly generated api tokens. | Object |
+| remove | Remove a single object of a single schema type.  For example removing a user by ID from the database. | Object |
+| removeAll | Remove all objects of a single schema type.  For example removing all users from the database. | Object |
+
+```js
+crud: {
+    auth: {
+        routeRoleAuth: {
+            "user": {
+                read: {
+                    // TODO: Define more permissive read options.
+                },
+                update: {
+                    // TODO: Define more permissive update options.
+                }
+            },
+            "default": {
+                create:     { /* TODO: Define default options here */ },
+                remove:     { /* TODO: Define default options here */ },
+                removeAll:  { /* TODO: Define default options here */ },
+                read:       { /* TODO: Define default options here */ },
+                readAll:    { /* TODO: Define default options here */ },
+                update:     { /* TODO: Define default options here */ },
+                udpateAll:  { /* TODO: Define default options here */ }
+            },
+        }
+    }
+}
+```
+
+The value of every schema method property is another object that defines the authorization rules for that method.
+
+| Method Properties | Description | Value Type |
+| --- | --- | --- |
+| enabled | Turn on/off authorization for a schema's method. | Boolean |
+| method | Describes how to authorize a request based on a user's role. See the table below. | String |
+| roles | The roles that are evaluated by the authorization method. |
+
+**Method**
+There are several methods to authorize a request.  Each method takes in and evaluates the roles property value.
+| Method Options | Description |
+| --- | --- |
+| ">" | Roles greater than the lowest role list are authorized. |
+| ">=" | Roles greater than or equal to the lowest role listed are authorized. |
+| "!>=" | Roles less than the lowest role are authorized. |
+| "<" | Roles less than the highest role are authorized. |
+| "<=" | Roles less than or equal to the highest role are authorized. |
+| "!<=" | Roles greater than the highest role are authorized. |
+| "==" | Roles equal to any of the roles are authorized. |
+| "!=" | Roles not equal to any of the roles are authorized. |
+
+```js
+crud: {
+    auth: {
+        enabled: true,
+        ignoreHandledRequests: true,
+        name: "crud-auth",
+        routeRoleAuth: {
+            "user": {
+                read: {
+                    enabled: true,
+                    method: ">=",
+                    roles: [ "admin", "self" ]
+                },
+                update: {
+                    enabled: true,
+                    method: ">=",
+                    roles: [ "admin", "self" ]
+                }
+            },
+            "default": {
+                create: {
+                    enabled: true,
+                    method: ">=",
+                    roles: [ "admin" ]
+                },
+                remove: {
+                    enabled: true,
+                    method: ">=",
+                    roles: [ "admin" ]
+                },
+                removeAll: {
+                    enabled: true,
+                    method: ">=",
+                    roles: [ "admin" ]
+                },
+                read: {
+                    enabled: true,
+                    method: ">=",
+                    roles: [ "admin" ]
+                },
+                readAll: {
+                    enabled: true,
+                    method: ">=",
+                    roles: [ "admin" ]
+                },
+                update: {
+                    enabled: true,
+                    method: ">=",
+                    roles: [ "admin" ]
+                }
+                udpateAll: {
+                    enabled: true,
+                    method: ">=",
+                    roles: [ "admin" ]
+                }
+            },
+        }
+    }
+}
+```
+
+[Back to Config Index](#configIndex)
+
+<a name="configCrudQuery" />
+### Query
+
+[Back to Config Index](#configIndex)
+
+<a name="configCrudMethod" />
+### Method
+
+[Back to Config Index](#configIndex)
 
 
-<a name="libraries" />
-# Libraries
 
-* [Access Token](#accessToken)
-* [Authorization](#authorization)
-* [Config](#config)
-* [Cryptography](#cryptography)
-* [Date](#date)
-* [Load](#load)
-* [Log](#log)
-* [Message](#message)
-* [Model](#model)
-* [Send](#send)
-
-
-<a name="accessToken" />
+<a name="libraryAccessToken" />
 ## Access Token
 
-<a name="authorization" />
+<a name="libraryAuthorization" />
 ## Authorization
 
-<a name="authorizationMethods" />
+<a name="AuthorizationMethods" />
 ### Methods
 * [Allow Roles](#authorizationAllowRoles)
 * [Allow All Roles](#authorizationAllowAllRoles)
@@ -162,7 +284,7 @@ authorization ensures only specific users have access to the CRUD routes.  You c
 * [Deny Lower Roles](#authorizationDenyLowerRoles)
 * [Refresh Cached Roles](#authorizationRefreshCachedRoles)
 
-[Back to Libraries](#libraries)
+[Back to Libraries](#libraryIndex)
 
 ---------------------------------------
 <a name="authorizationAllowRoles" />
@@ -425,10 +547,12 @@ __Example__
 ---------------------------------------
 
 
-<a name="config" />
+<a name="libraryConfig" />
 ## Config
 
-<a name="cryptography" />
+[Back to Libraries](#libraryIndex)
+
+<a name="libraryCryptography" />
 ## Cryptography
 
 Simplifies encryption and decryption of data while also providing helper methods for common cryptography tasks.
@@ -442,7 +566,7 @@ Simplifies encryption and decryption of data while also providing helper methods
 * [Generate Hashed Key](#cryptographyGenerateHashedKey)
 * [Generate Hashed Key Synchronous](#cryptographyGenerateHashedKeySync)
 
-[Back to Libraries](#libraries)
+[Back to Libraries](#libraryIndex)
 
 ---------------------------------------
 <a name="cryptographyHash" />
@@ -632,22 +756,22 @@ function setDefaultUserPassword(user) {
 ---------------------------------------
 
 
-<a name="date" />
+<a name="libraryDate" />
 ## Date
 
-<a name="load" />
+<a name="libraryLoad" />
 ## Load
 
-<a name="log" />
+<a name="libraryLog" />
 ## Log
 
-<a name="message" />
+<a name="libraryMessage" />
 ## Message
 
-<a name="model" />
+<a name="libraryModel" />
 ## Model
 
-<a name="send" />
+<a name="librarySend" />
 ## Send
 
 Send JSON responses or errors in a unified format so they can be easily parsed by a requestor.  Additional methods, such as emailing, are also provided.
@@ -665,7 +789,7 @@ Send JSON responses or errors in a unified format so they can be easily parsed b
 * [Set Request Handled](#sendSetRequestHandled)
 * [Get Request Handled](#sendSetRequestHandled)
 
-[Back to Libraries](#libraries)
+[Back to Libraries](#libraryIndex)
 
 ---------------------------------------
 <a name="sendSend" />
