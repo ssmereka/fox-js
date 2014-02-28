@@ -46,6 +46,81 @@ info:   Version                  0.1.0
 
 ## Configuration
 
+<a name="configSections" />
+### Sections
+* [CRUD](#configCrud)
+* [Express](#configExpress)
+* [Paths](#configPaths)
+* [Mongo DB](#configMongoDb)
+* [Routes](#configRoutes)
+* [System](#configSystem)
+
+<a name="configCrud" />
+### CRUD Config
+
+CRUD (create, read, update, and delete) routes can be automagically created for any schema model defined in your server.  Each route has 3 parts:  an authorization, query, and method.  
+
+#### Authorization
+authorization ensures only specific users have access to the CRUD routes.  You can assign 
+
+### Query
+
+
+### Method
+
+
+```js
+ crud: {
+    enabled: true,                      // Enable automatic CRUD method creation.  
+
+    auth: {                             // Authentication
+      enabled: true,
+      name: "crud-auth",                // Name in routes array
+      ignoreHandledRequests: true,      // If request is already handled, do not perform authentication.
+      routeRoleAuth: {                 
+        "default": {
+          create: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          read: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          readAll: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          update: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          updateAll: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          remove: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          },
+          removeAll: {
+            enabled: true,
+            method: ">=",
+            roles: [ "admin" ],
+          }
+        }
+      }
+    },
+```
+[Back to Config Sections](#configSections)
+
+---------------------------------------
 
 
 <a name="libraries" />
