@@ -10,10 +10,11 @@
  * ******************** Library Variables
  * ************************************************** */
 
-var debug,
+var debug = false,
     fox,
     log,
     sanitize,
+    trace = false,
     url;
 
 
@@ -26,26 +27,32 @@ var debug,
  * Handles initalization of the library.
  */
 var Request = function(_fox) {
+  // Handle parameters.
   if(! _fox) {
     return console.log("Error loading foxjs module.");
   }
-
   fox = _fox;
+
+  // Load internal modules.
   log = fox.log;
-  debug = false;
-  
+
+  // Load external modules.
   sanitize = require("sanitize-it");
   url = require("url");
+
+  // Configure request instance.
   handleConfig(fox["config"]);
 }
 
 /**
- * Setup the send module based on options available in the
- * configuration object.
+ * Setup the module based on the config object.
  */
 var handleConfig = function(config) {
   if(config) {
-    debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
   }
 }
 

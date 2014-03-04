@@ -213,12 +213,6 @@ var load = function load(Schema, queryObject, opts) {
 };
 
 
-
-
-
-
-
-
 var enableCrud = function(_app, _db, _config) {
   app = (_app) ? _app : app;
   db = (_db) ? _db : db;
@@ -357,54 +351,54 @@ function createAuthMethod(methodType, schemaName, authConfig) {
   switch(method) {
     default:
     case ">=":
-      method = auth.allowRolesOrHigher(roles);
+      method = auth.allowRolesOrHigher(roles, authConfig["ignoreHandledRequests"]);
       break;
 
     case "!>=":
-      method = auth.denyRolesOrHigher(roles);
+      method = auth.denyRolesOrHigher(roles, authConfig["ignoreHandledRequests"]);
       break;
     
     case "<=":
-      method = auth.allowRolesOrLower(roles);
+      method = auth.allowRolesOrLower(roles, authConfig["ignoreHandledRequests"]);
       break;
     
     case "!<=":
-      method = auth.denyRolesOrLower(roles);
+      method = auth.denyRolesOrLower(roles, authConfig["ignoreHandledRequests"]);
       break;
 
     case "=":
     case "==":
-      method = auth.allowRoles(roles);
+      method = auth.allowRoles(roles, authConfig["ignoreHandledRequests"]);
       break;
 
     case "!=":
-      method = auth.denyRoles(roles);
+      method = auth.denyRoles(roles, authConfig["ignoreHandledRequests"]);
       break;
 
     case ">":
-      method = auth.allowHigherRoles(roles);
+      method = auth.allowHigherRoles(roles, authConfig["ignoreHandledRequests"]);
       break;
 
     case "!>":
-      method = auth.denyHigherRoles(roles);
+      method = auth.denyHigherRoles(roles, authConfig["ignoreHandledRequests"]);
       break;
 
     case "!<":
-      method = auth.allowLowerRoles(roles);
+      method = auth.allowLowerRoles(roles, authConfig["ignoreHandledRequests"]);
       break;
 
     case "!<":
-      method = auth.denyLowerRoles(roles);
+      method = auth.denyLowerRoles(roles, authConfig["ignoreHandledRequests"]);
       break;
 
     case true:
     case "true":
-      method = auth.allowAllRoles();
+      method = auth.allowAllRoles(authConfig["ignoreHandledRequests"]);
       break;
 
     case false:
     case "false":
-      method = auth.denyAllRoles();
+      method = auth.denyAllRoles(authConfig["ignoreHandledRequests"]);
       break;
   }
 

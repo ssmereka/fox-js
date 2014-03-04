@@ -11,8 +11,10 @@
  * ******************** Library Variables
  * ************************************************** */
 
- var fox,
-     log;
+var debug = false,
+    fox,
+    log,
+    trace = false;
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
@@ -23,8 +25,26 @@
  * Handles initalization of the message library.
  */
 var Message = function(_fox) {
+  // Handle parameters
   fox = _fox;
+
+  // Load internal modules.
   log = fox.log;
+
+  // Configure message instance.
+  handleConfig(fox["config"]);
+}
+
+/**
+ * Setup the module based on the config object.
+ */
+var handleConfig = function(config) {
+  if(config) {
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
+  }
 }
 
 

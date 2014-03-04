@@ -11,10 +11,11 @@
  * ******************** Library Variables
  * ************************************************** */
 
-var debug,
+var debug = false,
     fox,
     log,
-    sanitize;
+    sanitize,
+    trace = false;
 
 
 /* ************************************************** *
@@ -26,25 +27,31 @@ var debug,
  * Handles initalization of the send library.
  */
 var Send = function(_fox) {
+  // Handle parameters
   if(! _fox) {
     return console.log("Error loading foxjs module.");
   }
-
   fox = _fox;
-  log = fox.log;
-  debug = false;
   
+  // Load internal modules.
+  log = fox.log;
+  
+  // Load external modules.
   sanitize = require("sanitize-it");
+
+  // Configure send instance.
   handleConfig(fox["config"]);
 }
 
 /**
- * Setup the send module based on options available in the
- * configuration object.
+ * Setup the module based on the config object.
  */
 var handleConfig = function(config) {
   if(config) {
-    debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
   }
 }
 
@@ -334,6 +341,7 @@ function syntaxHighlight(json) {
 Send.prototype.send = sendResponse;
 Send.prototype.setResponse = setResponse;
 Send.prototype.getResponse = getResponse;
+Send.prototype.setRequestHandled = setRequestHandled;
 Send.prototype.isRequestHandled = isRequestHandled;
 Send.prototype.sendResponse = sendResponse;
 Send.prototype.createAndSendError = createAndSendError;

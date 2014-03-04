@@ -1,4 +1,4 @@
-// ~>Library
+// ~> Library
 // ~A Scott Smereka
 
 /* Cryptography
@@ -13,13 +13,14 @@
  * ******************** Library Variables
  * ************************************************** */
  
-var bcrypt,       // Used to hash strings and things.
-    crypto,       // Used to generate random keys
-    fox,          //
-    log,          // Handles logging.
-    debug,        // Display additional logs when enabled.
-    hexKeyLength, // Default length of generated hex keys.
-    saltRounds;   // Default number of rounds to hash data for.
+var bcrypt,             // Used to hash strings and things.
+    crypto,             // Used to generate random keys
+    debug = false,      // Display additional logs when enabled.
+    fox,                // Instance of the fox module.
+    hexKeyLength = 24,  // Default length of generated hex keys.
+    log,                // Handles logging.
+    saltRounds = 10,    // Default number of rounds to hash data for.
+    trace = false;      // Displays trace or flow-related log messages when enabled.
 
 
 /* ************************************************** *
@@ -31,41 +32,36 @@ var bcrypt,       // Used to hash strings and things.
  * Initalize a new cryptography library object.
  */
 var Cryptography = function(_fox) {
-  // Default debug settings.
-  debug = false;
-
-  // Default salt rounds to 10.
-  saltRounds = 10;
-
-  // Default hex key length
-  hexKeyLength = 24;
-
-  //handleConfigObject(config);
+  // Handle parameters
   fox = _fox;
+
+  // Load internal modules
   log = fox.log;
+
+  // Load external modules
   bcrypt = require("bcrypt");
   crypto = require("crypto");
+
+  // Configure the cryptography instance.
+  handleConfig(fox["config"]);
 }
 
 /**
- * Handle initalizing the cryptography class from a configuration object.
- * If the configuration object is invalid or undefined, nothing will change.
+ * Setup the module based on the config object.
  */
-var handleConfigObject = function(config) {
-  // Check for a valid config object.
-  if( ! config) {
-    return false;
-  }
+var handleConfig = function(config) {
+  if(config) {
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
 
-  // Set the debug value.
-  debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
-
-  // Set cryptography specific settings.
-  if(config["cryptography"]) {
-    saltRounds = (config.cryptography["defaultSaltRounds"]) ? config.cryptography["defaultSaltRounds"] : saltRounds;
-    hexKeyLength = (config.cryptography["defaultHexKeyLength"]) ? config.cryptography["defaultHexKeyLength"] : hexKeyLength;
+    // Set cryptography specific settings.
+    if(config["cryptography"]) {
+      saltRounds = (config.cryptography["defaultSaltRounds"]) ? config.cryptography["defaultSaltRounds"] : saltRounds;
+      hexKeyLength = (config.cryptography["defaultHexKeyLength"]) ? config.cryptography["defaultHexKeyLength"] : hexKeyLength;
+    }
   }
-  return true;
 }
 
 

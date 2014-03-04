@@ -10,8 +10,22 @@
  * ******************** Library Variables
  * ************************************************** */
 
-var app, config, configModule, debug, db, log, express,
-    expressValidator, fs, merge, model, mongoose, MongoStore, fox, accessToken, trace;
+var accessToken,
+    app, 
+    config, 
+    configModule, 
+    debug = false, 
+    db,
+    fox,
+    log, 
+    express,
+    expressValidator, 
+    fs, 
+    merge, 
+    model, 
+    mongoose, 
+    MongoStore, 
+    trace = false;
 
 
 /* ************************************************** *
@@ -19,13 +33,19 @@ var app, config, configModule, debug, db, log, express,
  * ************************************************** */
 
 var Load = function(_fox) {
+  // Handle parameters
   fox = _fox;
+
+  // Load internal modules
   log = fox.log;
   merge = fox.merge;
   model = fox.model;
   accessToken = fox.accessToken;
-  debug = false;
-  trace = false;
+
+  // Load external modules
+  //...
+
+  // Configure the load instance.
   handleConfig(fox.config);
 }
 

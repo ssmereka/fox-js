@@ -10,15 +10,16 @@
  * ******************** Library Variables
  * ************************************************** */
 
-var fox,
-    debug,
-    config,
+var config,
     /***
      * Colors Module
      * Possible Colors: yellow, cyan, white, magenta, green, red, grey, blue, rainbow, zebra, random.
      * Possible Styles: bold, italic, underline, inverse.
      */
-    colors;
+    colors,
+    debug = false,
+    fox,
+    trace = false;
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
@@ -29,23 +30,28 @@ var fox,
  * Initalize a new logging library object.
  */
 var Log = function(_fox) {
+  // Handle parameters
   fox = _fox;
-  config = fox["config"];
-  // Set default debug settings.
-  debug = false;
-  
-  handleConfig(config);
 
+  // Load interal modules.
+  config = fox["config"];
+
+  // Load external modules.
   colors = require("colors");
+  
+  // Configure log instance.
+  handleConfig(config);
 }
 
 /**
- * Setup the send module based on options available in the
- * configuration object.
+ * Setup the module based on the config object.
  */
 var handleConfig = function(config) {
   if(config) {
-    debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
   }
 }
 

@@ -223,14 +223,6 @@ var allConfig = {
     schemaBlacklist: [                  // List of schema names where CRUD will be disabled, even if whitelisted.
     ]
   },
-  schemas: {
-    crud: {
-      enabled: true,
-      includeAllByDefault: true,
-      ignoreSchemas: [],
-      includeSchemas: [], 
-    }
-  },
   email_host: server_email_host,
   email_address: server_email_address,
   email_password: server_email_password,

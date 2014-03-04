@@ -14,6 +14,7 @@ var AccessTokenModel,     // Model for access tokens
     auth,                 // Authentication module.
     BearerStrategy,       // Passport strategy for bearer tokens.
     debug = false,        // Debug flag for this module.
+    trace = false,
     db,                   // Database connection.
     fox,                  // Fox module reference.
     log,                  // Logging module reference.
@@ -38,19 +39,19 @@ var AccessToken = function(_fox) {
   fox = _fox;
   log = fox.log;
 
-  handleConfigObject(fox["config"]);
+  handleConfig(fox["config"]);
 }
 
 /**
- * Handle initalizing the access token module from a fox configuration object.
- * If the configuration object is invalid or undefined, nothing will change.
+ * Setup the module based on the config object.
  */
-function handleConfigObject(config) {
-  if( ! config) {
-    return;
+var handleConfig = function(config) {
+  if(config) {
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
   }
-
-  debug = (config["systemDebug"]) ? config["systemDebug"] : debug;
 }
 
 

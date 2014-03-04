@@ -10,18 +10,40 @@
  * ******************** Library Variables
  * ************************************************** */
 
-var fox,
+var debug = false,
+    fox,
     log,
-    sanitize;
+    sanitize,
+    trace = false;
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
  * ************************************************** */
 
 var Merge = function(_fox) {
+  // Handle parameters.
   fox = _fox;
+
+  // Load internal modules.
   log = fox.log;
+
+  // Load external modules.
   sanitize = require("sanitize-it");
+
+  // Configure merge instance.
+  handleConfig(fox["config"]);
+}
+
+/**
+ * Setup the module based on the config object.
+ */
+var handleConfig = function(config) {
+  if(config) {
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
+  }
 }
 
 

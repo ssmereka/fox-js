@@ -50,8 +50,11 @@ var config = {
     }
   },
 
-  // When enabled additional system level debug information shown.
-  debugSystem: true,
+  // Private configs for the internal libraries.
+  system: {
+    debug: false,
+    trace: false
+  },
 
   // Server application root directory.
   dirname: serverDirectory + "/app/",

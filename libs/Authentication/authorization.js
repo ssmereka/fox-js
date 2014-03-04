@@ -9,17 +9,19 @@
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
-var fox,
-    sanitize,       // Used to check or sanitize a variable for use.
-    sender,         // 
-    log,            // Handles logging.
-    debug,          // Display additional logs when enabled.
-    allRoles = [],       //
-    allRoleObject,  //
-    selfRoleObject,
-    url,
-    db,
-    auth; // 
+
+var allRoles = [],    //
+    allRoleObject,    //
+    auth,             //
+    debug = false,    // Display additional logs when enabled.
+    db,               //
+    fox,              //
+    log,              // Handles logging.
+    sanitize,         // Used to check or sanitize a variable for use.
+    selfRoleObject,   //
+    sender,           // 
+    trace = false,    //
+    url;              //
 
 
 /* ************************************************** *
@@ -31,14 +33,32 @@ var fox,
  * Initalize a new authorization library object.
  */
 var Authorization = function(_fox, _auth) {
+  // Handle parameters
   fox = _fox;
   auth = _auth;
-  allRoles = [];
-  sanitize = require("sanitize-it");
-  debug    = (debug === undefined) ? false : debug;
+  
+  // Load internal modules.
   log      = fox.log;
   sender   = fox.send;
+
+  // Load external modules.
   url = require("url");
+  sanitize = require("sanitize-it");
+
+  // Configure authorization
+  handleConfig(fox["config"]);
+}
+
+/**
+ * Setup the module based on the config object.
+ */
+var handleConfig = function(config) {
+  if(config) {
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
+  }
 }
 
 
@@ -50,8 +70,12 @@ var permissionDeniedText = "You do not have permission to perform that action.";
  * Check for any reasons why the user would be unauthorized or
  * authorized before we start checking roles.
  */
-var checkRolePreconditions = function(roles, req, res, next) {
+var checkRolePreconditions = function(roles, ignoreHandledRequests, req, res, next) {
   //console.log("Role Checker, are you authenticated " + req.isAuthenticated());
+
+  if(ignoreHandledRequests && sender.isRequestHandled(req)) {
+    return next(undefined, undefined, true);
+  }
 
   auth.accessToken.allow(req, res, function(err) {
     if(err) {
@@ -201,13 +225,13 @@ var queryRoleByName = function(roleQueryName, next) {
  * Only allow logged in users to continue on.  All non-authenticated
  * users will be shown an error.
  */
-var allowAllRoles = function () {
-    return allowRoles || (allowRoles = function(req, res, next) {
+var allowAllRoles = function (ignoreHandledRequests) {
+  return function(req, res, next) {
     if(req.isAuthenticated()) {
       return next();
     }
     return sender.createAndSendError(permissionDeniedText, 403, req, res, next);
-  });
+  };
 };
 
 /**
@@ -217,10 +241,10 @@ var allowAllRoles = function () {
  * Note: Special roles 'all' and 'self' will all all user to proceed
  * if they meet the special conditions.
  */
-var allowRoles = function(roles) {
-  return allowRoles[roles] || (allowRoles[roles] = function(req, res, next) {
+var allowRoles = function(roles, ignoreHandledRequests) {
+  return function(req, res, next) {
     // Check all preconditions for user role comparisons.
-    checkRolePreconditions(roles, req, res, function(err, roles, override) {
+    checkRolePreconditions(roles, ignoreHandledRequests, req, res, function(err, roles, override) {
       if(err) {
         return next(err, req, res, next);
       }
@@ -250,7 +274,7 @@ var allowRoles = function(roles) {
       log.d("Permission denied, user does not contain an allowed role.", debug);
       sender.createAndSendError(permissionDeniedText, 403, req, res, next);
     });
-  });
+  };
 };
 
 
@@ -262,10 +286,10 @@ var allowRoles = function(roles) {
  * Note: Special roles 'all' and 'self' will all all user to proceed
  * if they meet the special conditions.
  */
-function allowRolesOrHigher(roles) {
-  return allowRolesOrHigher[roles] || (allowRolesOrHigher[roles] = function(req, res, next) {
+function allowRolesOrHigher(roles, ignoreHandledRequests) {
+  return function(req, res, next) {
     // Check all preconditions for user role comparisons.
-    checkRolePreconditions(roles, req, res, function(err, roles, override) {
+    checkRolePreconditions(roles, ignoreHandledRequests, req, res, function(err, roles, override) {
       if(err) {
         return next(err, req, res, next);
       }
@@ -298,7 +322,7 @@ function allowRolesOrHigher(roles) {
       log.d("Permission denied, user does not contain an allowed role.", debug);
       sender.createAndSendError(permissionDeniedText, 403, req, res, next);
     });
-  });
+  };
 }
 
 
@@ -310,10 +334,10 @@ function allowRolesOrHigher(roles) {
  * Note: Special roles 'all' and 'self' will all all user to proceed
  * if they meet the special conditions.
  */
-function allowRolesOrLower(roles) {
-  return allowRolesOrLower[roles] || (allowRolesOrLower[roles] = function(req, res, next) {
+function allowRolesOrLower(roles, ignoreHandledRequests) {
+  return function(req, res, next) {
     // Check all preconditions for user role comparisons.
-    checkRolePreconditions(roles, req, res, function(err, roles, override) {
+    checkRolePreconditions(roles, ignoreHandledRequests, req, res, function(err, roles, override) {
       if(err) {
         return next(err, req, res, next);
       }
@@ -346,11 +370,15 @@ function allowRolesOrLower(roles) {
       log.d("Permission denied, user does not contain an allowed role.", debug);
       sender.createAndSendError(permissionDeniedText, 403, req, res, next);
     });
-  });
+  };
 }
 
-function allowKeys(keys) {
-  return allowKeys[keys] || (allowKeys[keys] = function(req, res, next) {
+function allowKeys(keys, ignoreHandledRequests) {
+  return function(req, res, next) {
+    if(ignoreHandledRequests && sender.isRequestHandled(req)) {
+      return next();
+    }
+
     var token,
         queryString = url.parse(req.url, true).query;
 
@@ -373,11 +401,15 @@ function allowKeys(keys) {
     // User does not have an authorized key.
     log.d("Permission denied, user does not have a valid key.", debug);
     sender.createAndSendError(permissionDeniedText, 403, req, res, next);
-  });
+  };
 }
 
-function allowKeysOnce(keys) {
-  return allowKeysOnce[keys] || (allowKeys[keys] = function(req, res, next) {
+function allowKeysOnce(keys, ignoreHandledRequests) {
+  return function(req, res, next) {
+    if(ignoreHandledRequests && sender.isRequestHandled(req)) {
+      return next();
+    }
+
     var token,
         queryString = url.parse(req.url, true).query;
 
@@ -418,25 +450,24 @@ function allowKeysOnce(keys) {
       key.use();
       return next();
     });
-  });
+  };
 }
 
-var denyAllRoles = function() {
+var denyAllRoles = function(ignoreHandledRequests) {
 
 };
 
-var denyRoles = function() {
+var denyRoles = function(roles, ignoreHandledRequests) {
 
 };
 
-var denyRolesOrHigher = function() {
+var denyRolesOrHigher = function(roles, ignoreHandledRequests) {
 
 };
 
-var denyRolesOrLower = function() {
+var denyRolesOrLower = function(roles, ignoreHandledRequests) {
 
 };
-
 
 var refreshCachedRoles = function(_db, next) {
   db = _db
