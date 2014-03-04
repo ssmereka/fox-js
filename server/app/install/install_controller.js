@@ -200,7 +200,7 @@ module.exports = function(app, db, config) {
    * Add access tokens for each user to the database.
    */
   function addAccessTokensToDatabase(next) {
-    console.log("Add access tokens?");
+
     User.find({}, function(err, users) {
       if(err) {
         if(next) {
@@ -208,8 +208,7 @@ module.exports = function(app, db, config) {
         }
         log.e(err, debug);
       }
-      console.log("users");
-      console.log(users);
+
       for(var i = 0; i < users.length; i++) {
         users[i].createAccessToken(function(err) {
           if(err) {
