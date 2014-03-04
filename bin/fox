@@ -183,6 +183,13 @@ if(argv.v || argv.verbose || argv.debug) {
 if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
 
+  var next = undefined;
+  if(argv.i) {
+    next = function() {
+      process.send("true");
+    };
+  }
+
   // Check for a controller type.
   var controllerType = (fox.config["controller"]) ? fox.config["controller"] : undefined;
 
@@ -200,7 +207,7 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
   } else if (controllerType === 'nodemon') {
     if( ! isDaemonEnabled()) {
       // Start the server using nodemon daemon.
-      startNodemanServer(fox.config);
+      startNodemanServer(fox.config, next);
     } else {
       // TODO: Add ability to start nodemon using a daemon and cluster.
       if(isClusterEnabled()) {
@@ -347,16 +354,47 @@ function startNodemanServer(config, next) {
 
   // Create a child process running nodemon and pipe 
   // the output and error streams to our current terminal.
-  var child = executeCommand("nodemon", args, opts);
+  //var child = executeCommand("nodemon", args, opts);
+
+  var isNextCalled = (next) ? false : true;
+
+  var child = childProcess.spawn("nodemon", args, opts);
+  child.stdout.on('data', function(data) {
+    if( ! isNextCalled) {
+      if(data.toString().toLowerCase().indexOf("listening on port") != -1) {
+        next();
+        isNextCalled = true;
+      }
+    }
+
+    process.stdout.write("" + data);
+  });
+  child.stderr.on('data', function(data) {
+    process.stderr.write("" + data);
+  });
+  child.on('close', function(code) {
+  });
+  littleChildren.push(child);
+
+
+
+
+  
 
   // Send all terminal input into the child process 
   // running nodemon.
-  process.stdin.on('data', function(data) {
+/*  process.stdin.on('data', function(data) {
     child.stdin.write(data);
-  });
+  }); */
 
   // Add child proccess to list of all children processes
-  littleChildren.push(child);
+  //littleChildren.push(child);
+
+  /*setTimeout(function() {
+    if(next) {
+      return next();
+    }
+  }, 3000); */
 }
 
 /**
@@ -364,6 +402,7 @@ function startNodemanServer(config, next) {
  * perform any clustering that is needed.
  */
 function startPm2Server(config, next) {
+  console.log("Start PM2 Server")
   // Arguments for staring the server using pm2.
   var args = [
     "start",
@@ -384,6 +423,7 @@ function startPm2Server(config, next) {
     env: env
   };
 
+  console.log("Get list of pm2 processes.");
   // Get list of current pm2 servers.
   var jlistProcess = executeCommandForResult("pm2", ["jlist"], { cwd: '.' }, function(err, jlist) {
     if(err) {
@@ -393,9 +433,13 @@ function startPm2Server(config, next) {
       fox.log.error(err);
       exit();
     }
+
+    console.log("Got my list!");
     
     // Convert the list to an array.
     jlist = (jlist) ? JSON.parse(jlist) : undefined;
+
+    console.log(jlist);
 
     // Check if the server is already running.
     if(jlist !== undefined && jlist instanceof Array && jlist.length > 0) {
@@ -409,6 +453,7 @@ function startPm2Server(config, next) {
       }
     }
 
+    console.log("Server is not running... go for it.!");
     var startProcess = executeCommand("pm2", args, opts, next);
   });
 }
@@ -572,7 +617,7 @@ function createNewServer(name) {
 
     // Starting server
     fox.log.info("2. Starting server...");
-    childProcess.exec("fox start -l", function(err, stdout, stderr) {
+    fork(fox.config["foxBinPath"]+"/fox", ["start", "-l"], { cwd: '.' }, function(err) {
       if(err) {
         return fox.log.error(err);
       }
@@ -587,6 +632,14 @@ function createNewServer(name) {
         fox.log.info("0. "+name+" created and started successfully.");
       });
     });
+  });
+}
+
+function fork(module, args, options, next) {
+  args.push("-i");
+  var child = childProcess.fork(module, args, options);
+  child.on('message', function(msg) {
+    next();
   });
 }
 
@@ -681,7 +734,7 @@ function printHelp() {
 
   fox.log.info("Info:")
   printColumns("Author", "Scott Smereka");
-  printColumns("Version", "0.0.12");
+  printColumns("Version", "0.0.15");
   exit();
 }
 
@@ -696,6 +749,12 @@ function printColumns(left, right) {
   var n = 25 - left.length;
   fox.log.info("  " + left + Array(n+1).join(" ") + right);
 }
+
+
+function getNodeVersion() {
+  //TODO:
+}
+
 
 /**
  * Finds the absolute path to the server application's
