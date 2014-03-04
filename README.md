@@ -174,6 +174,7 @@ The value of every schema method property is another object that defines the aut
 
 **Method**
 There are several methods to authorize a request.  Each method takes in and evaluates the roles property value.
+
 | Method Options | Description |
 | --- | --- |
 | ">" | Roles greater than the lowest role list are authorized. |
