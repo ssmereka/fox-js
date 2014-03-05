@@ -36,6 +36,8 @@ var wrench = require('wrench');
 
 var request = require('request');
 
+var async = require('async')
+
 //**************************************************
 //******************** Node.JS Core Modules
 //**************************************************
@@ -71,6 +73,8 @@ var fs = require('fs');
  */
 var childProcess = require('child_process');
 
+
+var nodemon = require('nodemon');
 
 //**************************************************
 //******************** Setup Fox & Globals
@@ -207,7 +211,7 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
   } else if (controllerType === 'nodemon') {
     if( ! isDaemonEnabled()) {
       // Start the server using nodemon daemon.
-      startNodemanServer(fox.config, next);
+      startNodemonServer(fox.config, next);
     } else {
       // TODO: Add ability to start nodemon using a daemon and cluster.
       if(isClusterEnabled()) {
@@ -328,6 +332,60 @@ function startServer(config, next) {
   // Add the child process to our list of children.
   littleChildren.push(child);
 }
+
+
+function startNodemonServer(config, next) {
+
+  // Setup the nodemon configuration object.
+  var nodemonConfig = {
+    
+    // Node server location.
+    "script": config["serverPath"],
+    
+    // Restart command.
+    "restartable":"rs",
+
+    // Ignore these files when watching.
+    "ignore": [
+      ".git",
+      "node_modules/**/node_modules"
+    ],
+
+    "verbose": true,
+    
+    "execMap": {
+      "py": 'python',
+      "rb": 'ruby'
+    },
+    
+    // Watch these files/folders for changes.
+    "watch" : [
+      config["serverPath"],
+      path.resolve(fox.config["serverPath"], "../configs")
+    ],
+
+    // Node enviorment (local, development, production)
+    "env": {
+      "NODE_ENV": config.environment
+    },
+    "ext": "js json",
+    stdin: true,
+    stdout: true
+  };
+
+  // Start the server
+  nodemon(nodemonConfig);
+
+  // Listen for events.
+  nodemon.on('start', function() {
+
+  }).on('quit', function() {
+
+  }).on('restart', function(files) {
+
+  });
+}
+
 
 /**
  * Start the server using nodeman allowing the server
@@ -755,6 +813,10 @@ function getNodeVersion() {
   //TODO:
 }
 
+function installNodemon() {
+
+}
+
 
 /**
  * Finds the absolute path to the server application's
@@ -850,25 +912,42 @@ function getNumberOfWorkers(config) {
  * Kill all child processes gracefully, then 
  * proceed with exiting or the callback.
  */
-function killChildren(signal, end, index) {
-  // Default to the front of the child list.
-  index = (index === undefined) ? 0 : index;
-  // Default to sending a SIGINT.
+function killChildren(index, signal, end) {
+  // Ensure signal is valid or defaults to SIGINT.
   signal = (signal === undefined) ? "SIGINT" : signal;
 
+  // Ensure callback is valid or defaults to exit.
+  end = (end === undefined) ? function() { exit(); } : end;
+
+  // Ensure index is valid, or defaults to first child.
+  index = ( ! index || index >= littleChildren.length || index < 0) ? 0 : index;
+  
+  var tasks = [];
+
+  for(var i = index; i < littleChildren.length; i++) {
+    tasks.push(killChildFunction(littleChildren[i], signal));
+  }
+
+  async.parallel(tasks, function(err, results) {
+    end();
+  });
+
   // Check if killing the last child in the list.
-  if(index === littleChildren.length-1) {
-    // Default to ending the main process if a callback
-    // is not provided.
-    end = (end) ? end : function() { exit(); };
-    
+  /*if(index === littleChildren.length-1) {   
     // Kill the child and make a call to the callback.
     killChild(littleChildren[index], signal, end);
   } else {
     // Kill the child process and move on to the next child in the list.
     killChild(littleChildren[index], signal, killChildren(signal, end, ++index));
-  }
+  } */
 }
+
+
+function killChildFunction(child, signal) {
+  return function(next) {
+    killChild(child, signal, next);
+  }
+};
 
 /**
  * Kill a child process sending the requrested
