@@ -76,11 +76,17 @@ var childProcess = require('child_process');
 
 var nodemon = require('nodemon');
 
+
+var CLI = require('./cli.js');
+
+
+
 //**************************************************
 //******************** Setup Fox & Globals
 //**************************************************
 
 var fox = {};
+
 
 // Load the fox logger.
 fox.log = tryRequire('fox_log.js');
@@ -141,6 +147,10 @@ fox.config["cluster"]["workers"] = getNumberOfWorkers(fox.config);
 // List of child processes.
 var littleChildren = [];
 
+var PackageDotJson = require('../package.json');
+
+fox.package = PackageDotJson;
+fox.cli = new CLI(fox);
 
 //**************************************************
 //******************** Handle Messages
@@ -174,7 +184,8 @@ var isArgvHandled = false;
 
 // Help - Print fox usage.
 if( ! argv._[0] || (_.contains(['help', 'h'], argv._[0]))) {
-  printHelp();
+  fox.cli.printHelp();
+  //printHelp();
   exit();
 } 
 
