@@ -831,7 +831,7 @@ function printHelp() {
 
   fox.log.info("Info:")
   printColumns("Author", "Scott Smereka");
-  printColumns("Version", "0.0.17");
+  printColumns("Version", "0.0.18");
   exit();
 }
 
