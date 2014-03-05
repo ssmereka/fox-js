@@ -188,11 +188,6 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
   isArgvHandled = true;
 
   var next = undefined;
-  if(argv.i) {
-    next = function() {
-      process.send("true");
-    };
-  }
 
   // Check for a controller type.
   var controllerType = (fox.config["controller"]) ? fox.config["controller"] : undefined;
@@ -210,8 +205,12 @@ if(argv._[0] && _.contains(['start'], argv._[0])) {
     }
   } else if (controllerType === 'nodemon') {
     if( ! isDaemonEnabled()) {
-      // Start the server using nodemon daemon.
-      startNodemonServer(fox.config, next);
+      if(argv.i) {
+        startNodemonServerAndInstall(fox.config, next);
+      } else {
+        // Start the server using nodemon daemon.
+        startNodemonServer(fox.config, next);
+      }
     } else {
       // TODO: Add ability to start nodemon using a daemon and cluster.
       if(isClusterEnabled()) {
@@ -334,7 +333,14 @@ function startServer(config, next) {
 }
 
 
+// OMG what is he doing
+// NO ... No ... NO NO NO!
+// STOP !
+// THE CODE IS TERRIBLE!
+
 function startNodemonServer(config, next) {
+  // Track if next has already been called.
+  var isNextCalled = (next === undefined) ? true : false;
 
   // Setup the nodemon configuration object.
   var nodemonConfig = {
@@ -370,11 +376,32 @@ function startNodemonServer(config, next) {
     },
     "ext": "js json",
     stdin: true,
-    stdout: true
+    stdout: (config["isInstall"] === true) ? false : true
   };
 
   // Start the server
   nodemon(nodemonConfig);
+
+
+  var stdoutFn;
+  var catchedOutput = "";
+  if(config["isInstall"] === true) {
+    stdoutFn = function(data) {
+      catchedOutput += data.toString();
+      //str = data.toString();
+      //str = str.substring(0, str.length-1);
+      //console.log(str);
+
+      if( ! isNextCalled) {
+        if(data.toString().toLowerCase().indexOf("listening on port") != -1) {
+          next(undefined, catchedOutput.substring(0, catchedOutput.length-1));
+        }
+      }
+    };
+  } else {
+    stdoutFn = function(data){};
+  }
+
 
   // Listen for events.
   nodemon.on('start', function() {
@@ -383,9 +410,31 @@ function startNodemonServer(config, next) {
 
   }).on('restart', function(files) {
 
-  });
+  }).on('log', function(log) {
+    //console.log(log);
+  }).on('stdout', stdoutFn);
 }
 
+// HOLY SHIT IT GETS WORSE@!!!! FUCK ME!
+
+function startNodemonServerAndInstall(config, next) {
+  config["isInstall"] = true;
+  startNodemonServer(config, function(err, output) {
+    // Install server database.
+    fox.log.info("1. Initalizing database...")
+    installServer(generateInstallKey(), function(err){
+      if(err) {
+        fox.log.error(err);
+        fox.log.error("0. Install Failure!");
+        //nodemon.emit('quit');
+        return exit();
+      }
+      //TODO:  Output this to log file.
+      fox.log.info("0. Success!");
+      console.log(output);
+    });
+  });
+}
 
 /**
  * Start the server using nodeman allowing the server
@@ -679,16 +728,6 @@ function createNewServer(name) {
       if(err) {
         return fox.log.error(err);
       }
-
-      // Install server database.
-      fox.log.info("1. Initalizing database...")
-      installServer(generateInstallKey(), function(err){
-        if(err) {
-          return fox.log.error(err);
-        }
-        //TODO:  Output this to log file.
-        fox.log.info("0. "+name+" created and started successfully.");
-      });
     });
   });
 }
@@ -792,7 +831,7 @@ function printHelp() {
 
   fox.log.info("Info:")
   printColumns("Author", "Scott Smereka");
-  printColumns("Version", "0.0.15");
+  printColumns("Version", "0.0.16");
   exit();
 }
 

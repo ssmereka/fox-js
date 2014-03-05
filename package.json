@@ -1,7 +1,7 @@
 {
   "name": "foxjs",
   "author": "Scott Smereka",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "",
   "homepage": "",
   "keywords": [
@@ -37,7 +37,7 @@
     "winston": "x.x.x",
     "passport-http-bearer": "x.x.x",
     "request": "~2.33.0",
-    "nodemon": "^1.0.15",
+    "nodemon": "^1.0.16",
     "async": "^0.2.10"
   }
 }
