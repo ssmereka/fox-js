@@ -10,11 +10,18 @@
  * ******************** Library Variables
  * ************************************************** */
 
+var Node = required("./node.js"),
+    Nodemon = required("./nodemon.js"),
+    Pm2 = required("./pm2.js");
+
 var argv,
     config,
     debug = false,
     fox,
     log,
+    node,
+    nodemon,
+    pm2,
     trace = false;
 
 /* ************************************************** *
@@ -27,6 +34,11 @@ var Server = function(_fox) {
 
   // Load internal modules.
   log = fox.log;
+
+  node = new Node(_fox);
+  nodemon = new Node(_fox);
+  pm2 = new Pm2(_fox);
+
 
   loadExternalModules();
 
@@ -60,23 +72,24 @@ var start = function(config, next) {
 
   switch(_config["controller"]) {
     case "node":
-      startWithNode(config, next);
+      node.start(config, next);
       break;
 
     case "nodemon":
-      startWithNodemon(config, next);
+      nodemon.start(config, next);
       break;
 
     case "pm2":
+      pm2.start(config, next);
       break;
+
     case "fox":
       break;
+
     default:
       log.error("The controller type of '" + controllerType +"' in the config is unrecognized.");
       break;
   }
-
-
 }
 
 
@@ -91,53 +104,6 @@ var isLogIndicationServerStarted = function(str) {
 }
 
 
-/**
- * Start the server normally using the "node" command.
- * If next is defined, it will be called once the server
- * has been started.
- */
-var startWithNode = function(config, next) {
-  var onStdOutput,
-      isNextCalled = false;
-
-  // If next is not defined, create a method to print errors.
-  // Otherwise create a method to call next after the server
-  // has started successfully.
-  if( ! next) {
-    next = defaultNextMethod;
-  } else {
-    onStdOutput = function(data) {
-      if( ! isNextCalled) {
-        if(data && isLogIndicationServerStarted(data.toString())) {
-          next();
-          isNextCalled = true;
-        }
-      }
-    };
-  }
-  
-  if( ! config) {
-    next(new Error("startWithNode:  Config object required."));
-  }
-
-  // Setup the arguments required to start the node server.
-  var args = [
-    config.serverPath
-  ];
-
-  // Add our node enviorment.
-  var env = process.env;
-  env["NODE_ENV"] = config.environment;
-
-  // Setup our options to be sent to node.
-  var opts = {
-    cwd: '.',
-    env: env
-  };
-
-  // Create a child process that runs the sever using node.
-  var child = fox.fork("node", args, opts, undefined, onStdOutput);
-}
 
 
 /**

@@ -15,7 +15,8 @@ var argv,
     debug = false,
     fox,
     log,
-    trace = false;
+    trace = false,
+    _;
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
@@ -32,7 +33,9 @@ var Cli = function(_fox) {
   // Load internal modules.
   log = fox.log;
 
-  loadExternalModules();
+  // Load external modules.
+  argv = require('optimist').argv;
+  _ = require('lodash');
 
   // Configure message instance.
   handleConfig(fox["config"]);
@@ -51,16 +54,13 @@ var handleConfig = function(_config) {
   }
 }
 
-
-function loadExternalModules() {
-  /***
-   * Optimist 
-   * @description A library for command option parsing.
-   * @repo https://github.com/substack/node-optimist
-   * @license MIT/X11
-   */
-  argv = require('optimist').argv;
+//
+var updateFoxInstance = function(_fox) {
+  if(fox) {
+    fox = _fox
+  }
 }
+
 
 
 /* ************************************************** *
@@ -120,8 +120,41 @@ var getFoxAuthor = function() {
   return (fox.package["author"]) ? fox.package["author"] : "Scott Smereka";
 }
 
+/**
+ * Set the default configuration object based on the 
+ * user's CLI input.  Return that updated config object
+ * in a callback method.
+ */
+var handleConfigCli = function(_config, next) {
+  if( ! _config) {
+    var err = new Error("Configuration object is not defined.");
+  }
+
+  next = (next) ? next : function(err) { if(err) { log.error(err); }};
+
+  if(isCreateCommand()) {
+    _config.setDefaultConfig(_config.consts.local, next);
+    return;
+  }
+
+  // Environment Mode - set the current operating enviorment mode.
+  if(argv.n || argv.node) {
+    _config.setDefaultConfig(_config.consts.node, next);
+  } else if(argv.l || argv.local) {
+    _config.setDefaultConfig(_config.consts.local, next);
+  } else if(argv.d || argv.dev || argv.development) {
+    _config.setDefaultConfig(_config.consts.development, next);
+  } else if(argv.p || argv.prod || argv.production) {
+    _config.setDefaultConfig(_config.consts.production, next);
+  } else {
+    _config.setDefaultConfig(undefined, next);
+  }
+}
+
 
 var handleCli = function(argv, _config, next) {
+  var isCommandHandled = false;
+
   // Ensure a next callback parameter exists.
   next = (next) ? next : function(err) {
     if(err) {
@@ -149,19 +182,6 @@ var handleCli = function(argv, _config, next) {
     return next();
   }
 
-  // Start the server
-  if(isStartServerCommand()) {
-    fox.server.start(_config, function(err) {
-      if( ! isInitalizeFlagSet) {
-        return next(err);
-      }
-
-      fox.initalize(_config, function(err) {
-        return next(err);
-      });
-    });
-  }
-
   // Stop the server.
   if(isStopServerCommand()) {
     return fox.server.stop(_config, next);
@@ -174,6 +194,7 @@ var handleCli = function(argv, _config, next) {
 
   // Create a new server.
   if(isCreateCommand()) {
+
     return fox.server.create(argv._[1], _config, next);
   }
 
@@ -182,63 +203,102 @@ var handleCli = function(argv, _config, next) {
     return fox.server.logs(_config, next);
   }
 
-  // If we reached here, the command was not handled.
-  log.error("Command contains invalid arguments.");
+  // Start the server.
+  if(isStartServerCommand()) {
+    if(isInitalizeFlagSet()) {
+      fox.server.install(_config, function(err) {
+        if(next) {
+          next(err);
+        }
+      });
+    } else {
+      fox.server.start(_config);
+      if(next) {
+        return next();
+      }
+    }
+  } else {
+    // If we reached here, the command was not handled.
+    log.error("Command contains invalid arguments.");
+  }
+
+
+
+/*
+  if(isStartServerCommand()) {
+    if(isInitalizeFlagSet(_config)) {
+      fox.server.start(_config, function(err) {
+        fox.server.install(_config, function(err) {
+          if(next) {
+            return next(err);
+          }
+        });
+      });
+    } else {
+      fox.server.start(_config);
+      if(next) {
+        return next();
+      }
+    }
+  } else {
+    // If we reached here, the command was not handled.
+    log.error("Command contains invalid arguments.");
+  } */
 }
 
 /**
  * Returns true if the debug flag is set on the cli.
  */
-var isDebugFlagSet = function(argv) {
+var isDebugFlagSet = function() {
   return (argv.v || argv.verbose || argv.debug);
 }
 
 /**
  * Returns true if the help flag is set on the cli.
  */
-var isPrintHelpFlagSet = function(argv) {
+var isPrintHelpFlagSet = function() {
   return ( (argv.h || argv.help) || (argv._[0] && (_.contains(['help', 'h'], argv._[0]))) );
 }
 
 /**
  * Returns true if the initalizae flag is set on the cli.
  */
-var isInitalizeFlagSet = function(argv) {
-  return (argv.i);
+var isInitalizeFlagSet = function() {
+  return (argv.i !== undefined) ? argv.i : false;
 }
 
 /**
  * Returns true if the start server command is sent via the cli.
  */
-var isStartServerCommand = function(argv) {
+var isStartServerCommand = function() {
   return (argv._[0] && _.contains(['start'], argv._[0]));
 }
 
 /**
  * Returns true if the stop server command is sent via the cli.
  */
-var isStopServerCommand = function(argv) {
+var isStopServerCommand = function() {
   return (argv._[0] && _.contains(['stop'], argv._[0]));
 }
 
 /**
  * Returns true if the restart server command is sent via the cli.
  */
-var isRestartServerCommand = function(argv) {
+var isRestartServerCommand = function() {
   return (argv._[0] && _.contains(['restart'], argv._[0]));
 }
 
 /**
  * Returns true if the create server command is sent via the cli.
  */
-var isCreateCommand = function(argv) {
+var isCreateCommand = function() {
   return (argv._[0] && _.contains(['new'], argv._[0]));
 }
 
 /**
  * Returns true if the show logs command is sent via the cli.
  */
-var isShowLogsCommand = function(argv) {
+var isShowLogsCommand = function() {
   return (argv._[0] && _.contains(['log', 'logs'], argv._[0]));
 }
 
@@ -250,6 +310,8 @@ var isShowLogsCommand = function(argv) {
 // Expose the public methods available.
 Cli.prototype.printHelp = printHelp;
 Cli.prototype.handleCli = handleCli;
+Cli.prototype.updateFoxInstance = updateFoxInstance;
+Cli.prototype.handleConfigCli = handleConfigCli;
 
 
 /* ************************************************** *

@@ -1,56 +1,56 @@
-// ~> Index
-// ~A Scott Smereka
 
-/* Fox
- * Framework for simplifying node server development
- * and taking a server into production.
+
+/***
+ * Child Process
+ * @stability 3 - Stable
+ * @description Handle child processes in node.js
+ * @website http://nodejs.org/api/child_process.html
  */
+var childProcess = require('child_process');
 
+var async = require('async')
 
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
-var Cli    = require("./cli.js"),
-    Log    = require("./fox_log.js"),
-    Server = require("./server.js");
 
-var fox;
+var debug = false,
+    fox,
+    trace = false;
 
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
  * ************************************************** */
 
-function Fox() {
-  this.config = Config.config();
+var Worker = function(_fox) {
+  // Handle parameters
+  fox = _fox;
+  fox.littleChildren = [];
 
-  this.log      = new Log(this);
+  // Load external modules.
+  argv = require('optimist').argv;
+  request = require('request');
 
-  this.execute = execute;
-  this.littleChildren = [];
-  this.addChild = addChild;
-  this.removeChild = removeChild;
-  
-  this.server   = new Server(this);
-  this.cli      = new Cli(this);
+  // Configure message instance.
+  handleConfig(fox["config"]);
+}
 
-  fox = this;
-};
-
-
-var getInstance = function() {
-  if(fox === undefined) {
-    //console.log("Returning new instance of fox.");
-    return new Fox();
-  } else {
-    //console.log("Returning current instance of fox.");
-    return fox;
+/**
+ * Setup the module based on the config object.
+ */
+var handleConfig = function(config) {
+  if(config) {
+    if(config["system"]) {
+      debug = (config.system["debug"]) ? config.system["debug"] : debug;
+      trace = (config.system["trace"]) ? config.system["trace"] : trace;
+    }
   }
 }
 
 
 /* ************************************************** *
- * ******************** Public API
+ * ******************** Private API
  * ************************************************** */
 
 /**
@@ -74,7 +74,7 @@ var fork = function(command, args, options, end, onStdout, onStderr, onMessage) 
   // Define what to do when a child is closed.
   child.on('close', function(code) {
     if(end) {
-      end(err, code);
+      end(undefined, code);
     }
 
     // Remove the child from the list of children processes.
@@ -87,6 +87,14 @@ var fork = function(command, args, options, end, onStdout, onStderr, onMessage) 
   return child;
 }
 
+var execute = function(cmd, end) {
+  var child = childProcess.exec(cmd, function(err, stdout, stderr) {
+    if(end) {
+      end(err, stdout, stderr);
+    }
+  });
+}
+
 
 /**
  * Execute a command in a child process.
@@ -97,19 +105,19 @@ var fork = function(command, args, options, end, onStdout, onStderr, onMessage) 
  * the current processes' stdout and stderr.
  * @param end is a callback function called when the child is killed.
  */
-var execute = function(command, args, options, showStd, end) {
+var spawn = function(command, args, options, showStd, end) {
   // Default to showing the stderr and stdout.
   showStd = (showStd === undefined) ? true : showStd;
 
   var child = childProcess.spawn(command, args, options);
-  
+
   var stdout = "",
       stderr = "";
 
   // Handle child process standard out.
   child.stdout.on('data', function(data) {
     if(data) {
-      stdout += data;
+      stdout += data.toString();
       if(showStd) {
         process.stdout.write("" + data);
       }
@@ -119,7 +127,7 @@ var execute = function(command, args, options, showStd, end) {
   // Handle child process standard error.
   child.stderr.on('data', function(data) {
     if(data) {
-      stderr += data;
+      stderr += data.toString();
       if(showStd) {
         process.stderr.write("" + data);
       }
@@ -129,13 +137,13 @@ var execute = function(command, args, options, showStd, end) {
   // Define what to do when a child is closed.
   child.on('close', function(code) {
     if(end) {
-      end(err, code, stdout, stderr);
+      end(undefined, code, stdout, stderr);
     }
 
     // Remove the child from the list of children processes.
     removeChild(this);
   });
-  
+
   // Add the child to the list of children processes.
   addChild(child);
 
@@ -173,17 +181,83 @@ var removeChild = function(child, _fox) {
     return log.error("Cannot remove child from empty list of children.");
   }
 
-  _fox.littleChildren.remove(child);
+  var index = _fox.littleChildren.indexOf(child);
+  if(index > -1) {
+  	_fox.littleChildren.splice(index, 1);
+  }
 }
 
+/**
+ * Kill all child processes gracefully, then 
+ * proceed with exiting or the callback.
+ */
+var killChildren = function(index, signal, end) {
+  var littleChildren = fox.littleChildren;
+  // Ensure signal is valid or defaults to SIGINT.
+  signal = (signal === undefined) ? "SIGINT" : signal;
+
+  // Ensure callback is valid or defaults to exit.
+  end = (end === undefined) ? function() { fox.exit(); } : end;
+
+  // Ensure index is valid, or defaults to first child.
+  index = ( ! index || index >= littleChildren.length || index < 0) ? 0 : index;
+  
+  var tasks = [];
+
+  for(var i = index; i < littleChildren.length; i++) {
+    tasks.push(killChildFunction(littleChildren[i], signal));
+  }
+
+  async.parallel(tasks, function(err, results) {
+    end();
+  });
+}
+
+function killChildFunction(child, signal) {
+  return function(next) {
+    killChild(child, signal, next);
+  }
+};
+
+/**
+ * Kill a child process sending the requrested
+ * signal.  Once the child is killed, it make a 
+ * call to the callback.
+ */
+function killChild(child, signal, next) {
+  // Event so child makes a call to the next
+  // callback after closing.
+  child.once('close', function(code) {
+    if(next) {
+      next();
+    }
+  });
+
+  // Kill the child process with the specified signal.
+  process.kill(child.pid, signal);
+}
+
+
+
+/* ************************************************** *
+ * ******************** Public API
+ * ************************************************** */
+
+// Expose the public methods available.
+Worker.prototype.fork = fork;
+Worker.prototype.execute = spawn;
+Worker.prototype.addChild = addChild;
+Worker.prototype.removeChild = removeChild;
+Worker.prototype.killChildren = killChildren;
+Worker.prototype.killChildFunction = killChildFunction;
 
 
 /* ************************************************** *
  * ******************** Export the Public API
  * ************************************************** */
 
-// Export singleton of Fox to anyone who "requires" it.
-exports = module.exports = getInstance();
+// Reveal the method called when required in other files. 
+exports = module.exports = Worker;
 
 // Reveal the public API.
-exports.Fox = Fox;
+exports = Worker;
