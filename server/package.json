@@ -23,6 +23,7 @@
     "mongoose":             "3.6.x",
     "passport":             "0.1.x",    
     "passport-local":       "0.1.x",
+    "passport-http-bearer": "x.x.x",
     "sanitize-it":          "x.x.x",
     "validator":            "1.5.1"
   },

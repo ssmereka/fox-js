@@ -43,6 +43,7 @@ var Worker = function(_fox) {
   // Load external modules.
   argv = require('optimist').argv;
   request = require('request');
+  async = require('async');
 
   updateFoxReference(_fox);
 }
