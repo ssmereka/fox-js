@@ -1,4 +1,3 @@
-// ~> Bin
 // ~A Scott Smereka
 
 /* Node
@@ -9,6 +8,7 @@
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
+
 var debug = false,
     fox,
     log,
@@ -18,15 +18,12 @@ var debug = false,
  * ******************** Constructor & Initalization
  * ************************************************** */
 
+/**
+ * Constructor for node object that setups the instance
+ * based on the fox instance and configuration.
+ */
 var Node = function(_fox) {
-  // Handle parameters
-  fox = _fox;
-
-  // Load internal modules.
-  log = fox.log;
-
-  // Configure message instance.
-  handleConfig(fox["config"]);
+  updateFoxReference(_fox);
 }
 
 /**
@@ -40,6 +37,25 @@ var handleConfig = function(config) {
     }
   }
 }
+
+/**
+ * Update this instance's reference to the fox object.
+ */
+var updateFoxReference = function(_fox, next) {
+  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
+
+  if( ! _fox) {
+    next(new Error("Node Controller Module: Cannot update fox with an invalid fox object."));
+  }
+
+  fox = _fox;
+  log = fox.log;
+
+  handleConfig(fox["config"]);
+
+  next();
+}
+
 
 /* ************************************************** *
  * ******************** Private API
@@ -70,8 +86,9 @@ var start = function(config, next) {
     };
   }
   
+  // Ensure there is a configuration object.
   if( ! config) {
-    next(new Error("startWithNode:  Config object required."));
+    return next(new Error("startWithNode:  Config object required."));
   }
 
   // Setup the arguments required to start the node server.
@@ -99,6 +116,7 @@ var start = function(config, next) {
  * ************************************************** */
 
 Node.prototype.start = start;
+Node.prototype.updateFoxReference = updateFoxReference;
 
 
 /* ************************************************** *

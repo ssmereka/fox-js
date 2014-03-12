@@ -1,4 +1,14 @@
+// ~A Scott Smereka
 
+/* Worker
+ * Creation and management of child processes and task
+ * is done by this module.
+ */
+
+
+/* ************************************************** *
+ * ******************** Node.js Core Modules
+ * ************************************************** */
 
 /***
  * Child Process
@@ -8,32 +18,33 @@
  */
 var childProcess = require('child_process');
 
-var async = require('async')
 
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
 
-var debug = false,
-    fox,
-    trace = false;
+// Local variables
+var debug = false,        // Flag to display debug logs.
+    fox,                  // Reference to fox instance.
+    trace = false;        // Flag to display trace logs.
 
+// External modules
+var async;
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
  * ************************************************** */
 
+/**
+ * Constructor for worker, handles initalizing the 
+ * worker instance using fox and its config object.
+ */
 var Worker = function(_fox) {
-  // Handle parameters
-  fox = _fox;
-  fox.littleChildren = [];
-
   // Load external modules.
   argv = require('optimist').argv;
   request = require('request');
 
-  // Configure message instance.
-  handleConfig(fox["config"]);
+  updateFoxReference(_fox);
 }
 
 /**
@@ -48,13 +59,37 @@ var handleConfig = function(config) {
   }
 }
 
+/**
+ * Update this instance's reference to the fox object.
+ */
+var updateFoxReference = function(_fox, next) {
+  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
+
+  if( ! _fox) {
+    next(new Error("Node Controller Module: Cannot update fox with an invalid fox object."));
+  }
+
+  fox = _fox;
+  log = fox.log;
+
+  if(fox.littleChildren === undefined) {
+    fox.littleChildren = [];
+  }
+
+  handleConfig(fox["config"]);
+
+  next();
+}
+
 
 /* ************************************************** *
  * ******************** Private API
  * ************************************************** */
 
 /**
- *
+ * Creates a child process using node's fork command.  
+ * Also handles keeping track of the child process
+ * so it can be gracefully killed if needed.
  */
 var fork = function(command, args, options, end, onStdout, onStderr, onMessage) {
   var child = childProcess.fork(command, args, options);
@@ -87,17 +122,32 @@ var fork = function(command, args, options, end, onStdout, onStderr, onMessage) 
   return child;
 }
 
+/**
+ * Creates a child process using node's execute command.
+ * Also handles keeping track of the child process
+ * so it can be gracefully killed if needed.
+ */
 var execute = function(cmd, end) {
   var child = childProcess.exec(cmd, function(err, stdout, stderr) {
     if(end) {
       end(err, stdout, stderr);
     }
+
+    // Remove the child from the list of children processes.
+    removeChild(this);
   });
+
+  // Add the child to the list of children processes.
+  addChild(child);
+
+  return child;
 }
 
 
 /**
- * Execute a command in a child process.
+ * Creates a child process using node's spawn command.
+ * Also handles keeping track of the child process so it 
+ * can be gracefully killed if needed.
  * @param command is the command to be executed by the child's process.
  * @param args are the args to be sent to the child's command.
  * @param options are the options to be sent to the child's command.
@@ -188,8 +238,9 @@ var removeChild = function(child, _fox) {
 }
 
 /**
- * Kill all child processes gracefully, then 
- * proceed with exiting or the callback.
+ * Kill all child processes gracefully, then proceed
+ * with the callback.  If the callback is not defined,
+ * fox will exit.
  */
 var killChildren = function(index, signal, end) {
   var littleChildren = fox.littleChildren;
@@ -213,6 +264,9 @@ var killChildren = function(index, signal, end) {
   });
 }
 
+/**
+ * Create a function to kill a child process.
+ */
 function killChildFunction(child, signal) {
   return function(next) {
     killChild(child, signal, next);
@@ -234,9 +288,10 @@ function killChild(child, signal, next) {
   });
 
   // Kill the child process with the specified signal.
-  process.kill(child.pid, signal);
+  if(child && child.pid && signal) {
+    process.kill(child.pid, signal);
+  }
 }
-
 
 
 /* ************************************************** *
@@ -250,6 +305,7 @@ Worker.prototype.addChild = addChild;
 Worker.prototype.removeChild = removeChild;
 Worker.prototype.killChildren = killChildren;
 Worker.prototype.killChildFunction = killChildFunction;
+Worker.prototype.updateFoxReference = updateFoxReference;
 
 
 /* ************************************************** *

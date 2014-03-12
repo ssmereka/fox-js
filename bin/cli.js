@@ -27,18 +27,11 @@ var argv,
  * Handles initalization of the message library.
  */
 var Cli = function(_fox) {
-  // Handle parameters
-  fox = _fox;
-
-  // Load internal modules.
-  log = fox.log;
-
   // Load external modules.
   argv = require('optimist').argv;
   _ = require('lodash');
 
-  // Configure message instance.
-  handleConfig(fox["config"]);
+  updateFoxReference(_fox);
 }
 
 /**
@@ -54,13 +47,23 @@ var handleConfig = function(_config) {
   }
 }
 
-//
-var updateFoxInstance = function(_fox) {
-  if(fox) {
-    fox = _fox
-  }
-}
+/**
+ * Update this instance's reference to the fox object.
+ */
+var updateFoxReference = function(_fox, next) {
+  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
 
+  if( ! _fox) {
+    next(new Error("Node Controller Module: Cannot update fox with an invalid fox object."));
+  }
+
+  fox = _fox;
+  log = fox.log;
+
+  handleConfig(fox["config"]);
+
+  next();
+}
 
 
 /* ************************************************** *
@@ -117,7 +120,7 @@ var getFoxVersion = function() {
  * Get this module's author from the package.json.
  */
 var getFoxAuthor = function() {
-  return (fox.package["author"]) ? fox.package["author"] : "Scott Smereka";
+  return (fox.package["author"]) ? fox.package["author"].toString() : "Scott Smereka";
 }
 
 /**
@@ -152,7 +155,10 @@ var handleConfigCli = function(_config, next) {
 }
 
 
-var handleCli = function(argv, _config, next) {
+/**
+ * Handle and act on any command line input.
+ */
+var handleCli = function(_config, next) {
   var isCommandHandled = false;
 
   // Ensure a next callback parameter exists.
@@ -192,9 +198,18 @@ var handleCli = function(argv, _config, next) {
     return fox.server.restart(_config, next);
   }
 
+  // Reload the server.
+  if(isReloadServerCommand()) {
+    return fox.server.reload(_config, next);
+  }
+
+  // Clear any server data, such as logs.
+  if(isClearServerCommand()) {
+    return fox.server.clear(_config, next);
+  }
+
   // Create a new server.
   if(isCreateCommand()) {
-
     return fox.server.create(argv._[1], _config, next);
   }
 
@@ -221,29 +236,6 @@ var handleCli = function(argv, _config, next) {
     // If we reached here, the command was not handled.
     log.error("Command contains invalid arguments.");
   }
-
-
-
-/*
-  if(isStartServerCommand()) {
-    if(isInitalizeFlagSet(_config)) {
-      fox.server.start(_config, function(err) {
-        fox.server.install(_config, function(err) {
-          if(next) {
-            return next(err);
-          }
-        });
-      });
-    } else {
-      fox.server.start(_config);
-      if(next) {
-        return next();
-      }
-    }
-  } else {
-    // If we reached here, the command was not handled.
-    log.error("Command contains invalid arguments.");
-  } */
 }
 
 /**
@@ -289,10 +281,24 @@ var isRestartServerCommand = function() {
 }
 
 /**
+ * Returns true if the reload server command is sent via the cli.
+ */
+var isReloadServerCommand = function() {
+  return (argv._[0] && _.contains(['reload'], argv._[0]));
+}
+
+/**
  * Returns true if the create server command is sent via the cli.
  */
 var isCreateCommand = function() {
   return (argv._[0] && _.contains(['new'], argv._[0]));
+}
+
+/**
+ * Returns true if the clear server command is sent via the cli.
+ */
+var isClearServerCommand = function() {
+  return (argv._[0] && _.contains(['clear'], argv._[0]));
 }
 
 /**
@@ -310,7 +316,7 @@ var isShowLogsCommand = function() {
 // Expose the public methods available.
 Cli.prototype.printHelp = printHelp;
 Cli.prototype.handleCli = handleCli;
-Cli.prototype.updateFoxInstance = updateFoxInstance;
+Cli.prototype.updateFoxReference = updateFoxReference;
 Cli.prototype.handleConfigCli = handleConfigCli;
 
 

@@ -1,4 +1,3 @@
-// ~>Config
 // ~A Scott Smereka
 
 /* Config
@@ -6,12 +5,14 @@
  * to setup a server.
  */
 
+
 /* ************************************************** *
- * ******************** External Modules
+ * ******************** Node Modules
  * ************************************************** */
 
 /***
  * Path
+ * @stability 3 - Stable
  * @description Handles tranforming file paths.
  * @website http://nodejs.org/api/path.html
  */
@@ -30,8 +31,14 @@ var fs = require('fs');
  * ******************** Internal Modules & Variables
  * ************************************************** */
 
-// Current configuration object.
-var config;
+var config,             // Current config.
+    configInstance,     // Current Config object instance
+    log,
+    type;               // Type of the current config.
+
+//TODO: Make it so there is a single configuration instance
+//      instead of a config and configInstance object that
+//      may just reference the same damn thing.
 
 
 /* ************************************************** *
@@ -48,7 +55,7 @@ var Config = function(type) {
 
   // Constant variables.
   this.consts = {
-    fox:'fox',
+    fox: 'fox',
     node: 'node',
     local: 'local',
     development: 'development',
@@ -62,22 +69,7 @@ var Config = function(type) {
   // Get a default configuration object based on the type.
   setDefaultConfig(type);
 
-  // Absolute path to the fox bin directory.
-  this["foxBinPath"] = path.resolve(__dirname, "../");
-
-  // Absolute path to the fox module root directory.
-  this["foxPath"] = path.resolve(this.foxBinPath, "../");
-
-  // Absolute path to the fox server boiler plate directory.
-  this["foxServerPath"] = path.normalize(this.foxPath + "/server");
-
-  // Absolute path to the current user directory.
-  this["userPath"] = process.cwd();
-
-  // Find the path to the current server's directory.
-  this["serverPath"] = getServerPathSync(this);
-
-  config = this;
+  config = updateConfigPaths(config);
 }
 
 
@@ -111,8 +103,9 @@ var updateConfigPaths = function(_config) {
  * @param type denotes which default config object to use
  * as a basis for the current config object.
  */
-var setDefaultConfig = function(type, next) {
-  var configObj = getDefaultConfig(type);
+var setDefaultConfig = function(_type, next) {
+  type = _type;
+  var configObj = getDefaultConfig(_type);
 
   // Make sure there is a cluster configuration object.
   configObj["cluster"] = (configObj["cluster"]) ? configObj["cluster"] : {};
@@ -396,8 +389,28 @@ Config.prototype.updateConfigPaths = updateConfigPaths;
  * ******************** Export the Public API
  * ************************************************** */
 
+var getConfigInstance = function(_type, _log) {
+  
+  // Handle log parameter.
+  log = (_log) ? _log : log;
+  if( ! log) {
+    console.log("Config Error:  A valid Log instance is required to initalize Config.");
+    return undefined;
+  }
+
+  if(configInstance) {
+    if(_type !== type) {
+      log.warn("Returning current config with type '"+type+"'' instead of type '"+_type+"'");
+    }
+    return configInstance;
+  }
+
+  configInstance = new Config(_type);
+  return configInstance;
+}
+
 // Reveal the method called when required in other files. 
-exports = module.exports = Config;
+exports = module.exports = getConfigInstance;
 
 // Reveal the public API.
-exports = Config;
+exports = getConfigInstance;

@@ -1,8 +1,16 @@
-/* Fox Log
- * Handle the display of logs and information across 
- * one or more transports.  Such as console, files, 
- * databases, etc.
+#!/usr/bin/env node
+
+// ~A Scott Smereka
+
+/* Log
+ * Handle the display of logs across one or more
+ * transports.  Such as console, files, databases, etc.
  */
+
+
+/* ************************************************** *
+ * ******************** External Libraries
+ * ************************************************** */
 
 /***
  * Winston 
@@ -10,6 +18,11 @@
  * @repo https://github.com/flatiron/winston
  */
 var winston = require('winston');
+
+
+/* ************************************************** *
+ * ******************** Private API
+ * ************************************************** */
 
 // Define a custom log levels and colors.
 var logLevels = {
@@ -45,5 +58,9 @@ var logger = new(winston.Logger)({
 	}) ]
 });
 
+
+/* ************************************************** *
+ * ******************** Public API
+ * ************************************************** */
 
 module.exports = logger;

@@ -1,4 +1,3 @@
-// ~> Bin
 // ~A Scott Smereka
 
 /* Pm2
@@ -9,24 +8,22 @@
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
-var debug = false,
-    fox,
-    log,
-    trace = false;
+
+var debug = false,        // Flag to show debug logs.
+    fox,                  // Reference to fox instance.
+    log,                  // Reference to fox log instance.
+    trace = false;        // Flag to show trace logs.
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
  * ************************************************** */
 
+/**
+ * Constructor for PM2, initalizes the instance based 
+ * on the fox instance and configuration.
+ */
 var Pm2 = function(_fox) {
-  // Handle parameters
-  fox = _fox;
-
-  // Load internal modules.
-  log = fox.log;
-
-  // Configure message instance.
-  handleConfig(fox["config"]);
+  updateFoxReference(_fox);
 }
 
 /**
@@ -40,6 +37,25 @@ var handleConfig = function(config) {
     }
   }
 }
+
+/**
+ * Update this instance's reference to the fox object.
+ */
+var updateFoxReference = function(_fox, next) {
+  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
+
+  if( ! _fox) {
+    next(new Error("Node Controller Module: Cannot update fox with an invalid fox object."));
+  }
+
+  fox = _fox;
+  log = fox.log;
+
+  handleConfig(fox["config"]);
+
+  next();
+}
+
 
 /* ************************************************** *
  * ******************** Private API
@@ -70,7 +86,7 @@ var start = function(config, next) {
     env: env
   };
 
-  // Get list of current pm2 servers.
+  // Check if pm2 server already running, Get list of current pm2 servers.
   var jlistProcess = fox.worker.execute("pm2", ["jlist"], { cwd: '.' }, false, function(err, code, jlist, stderr) {
     if(err) {
       if(next) {
@@ -95,6 +111,7 @@ var start = function(config, next) {
       }
     }
 
+    // Server is not running, so start it.
     var startProcess = fox.worker.execute("pm2", args, opts, true, next);
   });
 }
@@ -111,7 +128,6 @@ var stop = function(config, next) {
   };
   var stopProcess = fox.worker.execute("pm2", ["stop", config.name], opts, true, next);
 }
-
 
 /**
  * Gracefully restart the server in daemon mode.
@@ -131,34 +147,24 @@ var restart = function(config, next) {
   var restartProcess = executeCommand("pm2", ["gracefulReload", config.name], opts, next);
 }
 
+/**
+ * Show the pm2 server logs.
+ */
 var logs = function(config, next) {
   var opts = {
     cwd: '.'
-    //env: process.env
   };
+
   var logsProcess = fox.worker.execute("pm2", ["logs"], opts, true, next);
 }
 
 
-function showServerLogs(config, next) {
-  // Create the options used to reload the server using pm2.
-  var opts = {
-    cwd: '.',
-    env: process.env
-  };
-
-  var startProcess = executeCommand("pm2", ["logs"], opts, function(code) {
-    if(next) {
-      next();
-    }
-  });
-}
-
 /**
- * Clear all logs.
+ * Clear all server logs.
  */
 function clearServerLogs(config, next) {
   fox.log.info("Clearing server logs...");
+
   // Add the enviorment mode to the current enviorment.
   var env = process.env;
   env["NODE_ENV"] = config.environment;
@@ -170,7 +176,8 @@ function clearServerLogs(config, next) {
   };
 
   // Flush the logs from pm2
-  var flushProcess = executeCommand("pm2", ["flush"], opts, next);
+  //var flushProcess = executeCommand("pm2", ["flush"], opts, next);
+  var flushProcess = fox.worker.execute("pm2", ["flush"], opts, true, next);
 }
 
 /**
@@ -188,21 +195,20 @@ function deleteServersFromPm2(config, next) {
   };
 
   // Delete the named servers with from pm2.
-  var deleteProcess = executeCommand("pm2", ["delete", config.name], opts, next);
+  //var deleteProcess = executeCommand("pm2", ["delete", config.name], opts, next);
+  var deleteProcess = fox.worker.execute("pm2", ["delete", config.name], opts, true, next);
 }
 
 /**
  * Clear and remove all current tracking of the server.
  */
-function clearServer(config, next) {
-  stopServer(config, function(err) {
+var clear = function(config, next) {
+  stop(config, function(err) {
     clearServerLogs(config, function(err) {
       deleteServersFromPm2(config, next);
     });
   });
 }
-
-
 
 /**
  * Reload the server with zero down time.
@@ -210,7 +216,7 @@ function clearServer(config, next) {
  * each worker one by one.
  * Note:  This will not do a gracefull shutdown.
  */
-function restartServerZeroDowntime(config, next) {
+var reload = function(config, next) {
   // Add the enviorment mode to the current enviorment.
   var env = process.env;
   env["NODE_ENV"] = config.environment;
@@ -222,7 +228,7 @@ function restartServerZeroDowntime(config, next) {
   };
 
   // Reload the named servers with zero down time..
-  var reloadProcess = executeCommand("pm2", ["reload", config.name], opts, next);
+  var reloadProcess = fox.worker.execute("pm2", ["reload", config.name], opts, true, next);
 }
 
 
@@ -233,8 +239,10 @@ function restartServerZeroDowntime(config, next) {
 Pm2.prototype.start = start;
 Pm2.prototype.stop = stop;
 Pm2.prototype.restart = restart;
+Pm2.prototype.reload = reload;
 Pm2.prototype.logs = logs;
-
+Pm2.prototype.clear = clear;
+Pm2.prototype.updateFoxReference = updateFoxReference;
 
 /* ************************************************** *
  * ******************** Export the Public API

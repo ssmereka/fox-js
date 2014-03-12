@@ -7,52 +7,6 @@
  * the fox framework.
  */
 
-//**************************************************
-//******************** 3rd Party Modules
-//**************************************************
-
-/***
- * Optimist 
- * @description A library for command option parsing.
- * @repo https://github.com/substack/node-optimist
- * @license MIT/X11
- */
-var argv = require('optimist').argv;
-
-/***
- * Lo-Dash 
- * @description A utility library for consitency, customization, and performance.
- * @repo https://github.com/lodash/lodash
- * @license MIT
- */
-var _ = require('lodash');
-
-/***
- * Wrench
- * @description A utility library for recursive file operations in node.js.
- * @repo https://github.com/ryanmcgrath/wrench-js
- * @license MIT
- */
-var wrench = require('wrench');
-
-var request = require('request');
-
-var async = require('async')
-
-//**************************************************
-//******************** Node.JS Core Modules
-//**************************************************
-
-/***
- * Utility
- * @stability 4 - API Frozen
- * @description Utility functions in node.js core.
- * @website http://nodejs.org/api/util.html
- */
-var util = require('util');
-
-
-
 
 /* ************************************************** *
  * ******************** Library Variables & Modules
@@ -61,13 +15,17 @@ var util = require('util');
 // Local Modules
 var Cli     = require("./cli.js"),
     Config  = require("./config/config.js"),
-    Log     = require("./fox_log.js"),
+    Log     = require("./log.js"),
     Package = require('../package.json'),
-    Server  = require("./server/server.js"),
+    Server  = require("./server/"),
     Worker  = require("./worker.js");
 
 var fox;
 
+
+/* ************************************************** *
+ * ******************** Event Handlers
+ * ************************************************** */
 
 /**
  * Handle exit from terminal.
@@ -90,7 +48,6 @@ process.once("SIGINT", function() {
 });
 
 
-
 /* ************************************************** *
  * ******************** Fox Main Method
  * ************************************************** */
@@ -107,10 +64,10 @@ var foxInstance = new Fox(function(err) {
   }
 
   // Handle commandline input.
-  fox.cli.handleCli(argv, fox.config, function(err) {
+  fox.cli.handleCli(fox.config, function(err) {
     if(err) {
       fox.log.error(err["message"] || err);
-      exit();
+      fox.exit();
     }
   });
 });
@@ -120,90 +77,58 @@ var foxInstance = new Fox(function(err) {
  * ******************** Constructor & Initalization
  * ************************************************** */
 
+/**
+ * Fox constructor to initalize this module and other sub 
+ * modules.
+ */
 function Fox(next) {
   fox = {};
+
   // Load the fox logger.
   fox.log = Log;
 
-
+  // Ensure next is defined.
+  next = (next) ? next : function(err) { fox.log.error(err["message"] || err) };
 
   var cli = new Cli(fox);
   // Load configuration object based off cli input.
-  cli.handleConfigCli(new Config(), function(err, _config) {
+  cli.handleConfigCli(Config(undefined, fox.log), function(err, _config) {
     if(err) {
-      if(next) {
-        return next(err);
-      }
-      fox.log.error(err);
+      return next(err);
+    }
+
+    // Handle undefined config.
+    if( ! _config) {
+      return next(new Error("Config is invalid."));
     }
 
     // After we are finished creating our config object, store it.
     fox.config = _config;
 
-    // Add fox public API methods.
-    //fox.execute = execute;
-    //fox.addChild = addChild;
-    //fox.removeChild = removeChild;
-
     // Create a list of child processes.
-    fox.littleChildren = [];
+    //fox.littleChildren = [];
+
+    // Add an exit method.
     fox.exit = function(code) {
       code = (code) ? code : 1;
       process.exit(code);
     };
 
+    // Add the worker module.
     fox.worker = new Worker(fox);
 
-    fox.tryRequire = tryRequire;
+    // Add the package.json object
     fox.package = (Package !== undefined) ? Package : {};
 
+    // Add the server module.
     fox.server   = new Server(fox);
     
     // Update the fox instance stored in the CLI module.
-    cli.updateFoxInstance(fox);
+    cli.updateFoxReference(fox);
+
+    // Add cli module.
     fox.cli = cli;
     
-    if(next) {
-      next();
-    } 
+    next();
   });
 };
-
-
-/* ************************************************** *
- * ******************** Private API
- * ************************************************** */
-
-/**
- * Attempts to require a file by name synchronously.  This
- * method will do a small, but smart search for the file 
- * and require it.  If the file is not found, then undefined 
- * is returned.
- */
-var tryRequire = function(file) {
-  if( ! file) {
-    return undefined;
-  }
-
-  file = (file.charAt(0) != '/') ? '/' + file : file;
-  var currentDirectory = "." + file;
-  var binDirectory = path.resolve(__dirname, file);
-
-  if(fs.existsSync(currentDirectory)) {
-    return require(currentDirectory);
-  } else if(fs.existsSync(binDirectory)) {
-    return require(binDirectory);
-  } else {
-    return require(currentDirectory);
-  }
-}
-
-
-
-/**
- * Exit this script with success or a specific error code.
- */
-var exit = function(code) {
-  code = (code) ? code : 1;
-  process.exit(code);
-}

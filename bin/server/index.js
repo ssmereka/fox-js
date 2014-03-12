@@ -1,49 +1,75 @@
-// ~> Bin
 // ~A Scott Smereka
 
-/* Command Line Interface
- * Interact with fox using the command line.
+/* Server
+ * Create and manage server instances using this 
+ * modules methods and the fox configuration object.
  */
+
+
+/* ************************************************** *
+ * ******************** Node.js Core Modules
+ * ************************************************** */
+
+/***
+ * Path
+ * @stability 3 - Stable
+ * @description Handles tranforming file paths.
+ * @website http://nodejs.org/api/path.html
+ */
+var path = require('path');
+
+/***
+ * FS
+ * @stability 3 - Stable
+ * @description access the file system
+ * @website http://nodejs.org/api/fs.html
+ */
+var fs = require('fs');
 
 
 /* ************************************************** *
  * ******************** Library Variables
  * ************************************************** */
 
-var Node = required("./node.js"),
-    Nodemon = required("./nodemon.js"),
-    Pm2 = required("./pm2.js");
+// Local variables
+var config,               // Reference to fox server config.
+    debug = false,        // Flag to show debug logs.
+    fox,                  // Reference to current fox instance.
+    node,                 // Instance of node controller object.
+    nodemon,              // Instance of nodemon controller object.
+    log,                  // Reference to fox log object.
+    pm2,                  // Instance of pm2 controller object.
+    trace = false;        // Flag to show trace logs.
+    
+// Load local modules.
+var Nodemon = require("./nodemon.js"),
+    Node = require("./node.js"),
+    Pm2 = require("./pm2.js");
 
-var argv,
-    config,
-    debug = false,
-    fox,
-    log,
-    node,
-    nodemon,
-    pm2,
-    trace = false;
+// External modules.
+var async,
+    argv,                 // Optimist argv module.
+    request,              // Request module.
+    wrench;               // Wrench module.
+
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
  * ************************************************** */
 
+/**
+ * Constructor to create the server object and load 
+ * any other local modules that are required to manage
+ * the server instance(s).
+ */
 var Server = function(_fox) {
-  // Handle parameters
-  fox = _fox;
+  // Load external modules.
+  async = require('async');
+  argv = require('optimist').argv;
+  request = require('request');
+  wrench = require('wrench');
 
-  // Load internal modules.
-  log = fox.log;
-
-  node = new Node(_fox);
-  nodemon = new Node(_fox);
-  pm2 = new Pm2(_fox);
-
-
-  loadExternalModules();
-
-  // Configure message instance.
-  handleConfig(fox["config"]);
+  updateFoxReference(_fox);
 }
 
 /**
@@ -59,31 +85,86 @@ var handleConfig = function(_config) {
   }
 }
 
-function loadExternalModules() {
+/**
+ * Update this instances reference to the fox object.  Also update
+ * any other modules initalized by this module.
+ */
+var updateFoxReference = function(_fox, next) {
+  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
 
+  if( ! _fox) {
+    next(new Error("Server Module: Cannot update fox with an invalid fox object."));
+  }
+
+  fox = _fox;
+  log = fox.log;
+
+  handleConfig(fox["config"]);
+
+  var tasks = [];
+
+  if( ! node) {
+    node = new Node(_fox);
+  } else {
+    tasks.push(updateObjectReferenceFn(node, _fox));
+  }
+
+  if( ! nodemon) {
+    nodemon = new Nodemon(_fox);
+  } else {
+    tasks.push(updateObjectReferenceFn(nodemon, _fox));
+  }
+
+  if( ! pm2) {
+    pm2 = new Pm2(_fox);
+  } else {
+    tasks.push(updateObjectReferenceFn(pm2, _fox));
+  }
+  
+  if(tasks.length > 0) {
+    async.parallel(tasks, function(err, results) {
+      next(err);
+    });
+  } else {
+    next();
+  }
 }
+
+/**
+ * Creates and returns a function to update an object's
+ * refrence to fox.
+ */
+function updateObjectReferenceFn(obj, _fox) {
+  return function(next) {
+    obj.updateFoxReference(_fox, next);
+  }
+};
+
 
 /* ************************************************** *
  * ******************** Private API
  * ************************************************** */
 
-var start = function(config, next) {
-  //return startWithNode(config, next);
-
+/**
+ * Start the server using a controller and conditions 
+ * defiend in the config object.
+ **/
+var start = function(_config, next) {
   switch(_config["controller"]) {
     case "node":
-      node.start(config, next);
+      node.start(_config, next);
       break;
 
     case "nodemon":
-      nodemon.start(config, next);
+      nodemon.start(_config, next);
       break;
 
     case "pm2":
       pm2.start(config, next);
       break;
-
+    
     case "fox":
+      log.info("Not implemented.");
       break;
 
     default:
@@ -92,117 +173,162 @@ var start = function(config, next) {
   }
 }
 
-
-var defaultNextMethod = function(err) {
-  if(err) {
-    log.error(err);
-  }
-}
-
-var isLogIndicationServerStarted = function(str) {
-  return (str.indexOf("Listening on port") != -1);
-}
-
-
-
-
 /**
- * Start the server using nodemon.  This will deamonize the 
- * process and perform automatic restarts when files change.
+ * Stop the server using a controller and conditions
+ * defiend by the configuration object.
  */
-function startWithNodemon(config, next) {
-  var onStdOutput,
-      isNextCalled = false;
+var stop = function(_config, next) {
+  switch(_config["controller"]) {
+    case "node":
+      node.stop(_config, next);
+      break;
 
-  // If next is not defined, create a method to print errors.
-  // Otherwise create a method to call next after the server
-  // has started successfully.
-  if( ! next) {
-    next = defaultNextMethod;
-  } else {
-    onStdOutput = function(data) {
-      if( ! isNextCalled) {
-        if(data && isLogIndicationServerStarted(data.toString())) {
-          next();
-          isNextCalled = true;
-        }
-      }
-    };
+    case "nodemon":
+      nodemon.stop(_config, next);
+      break;
+
+    case "pm2":
+      pm2.stop(config, next);
+      break;
+
+    case "fox":
+      log.info("Not implemented.");
+      break;
+
+    default:
+      log.error("The controller type of '" + controllerType +"' in the config is unrecognized.");
+      break;
   }
-
-  // Setup the nodemon configuration object.
-  var nodemonConfig = {
-    // Node server index location.
-    "script": config["serverPath"],
-    
-    // Restart command.
-    "restartable":"rs",
-
-    // Ignore these files when watching for changes.
-    "ignore": [
-      ".git",
-      "node_modules/**/node_modules"
-    ],
-
-    // Turn off verbose log messages.
-    "verbose": false,
-    
-    /*    
-    "execMap": {
-      "py": 'python',
-      "rb": 'ruby'
-    }, */
-    
-    // Watch these files/folders for changes.
-    "watch" : [
-      config["serverPath"],
-      path.resolve(fox.config["serverPath"], "../configs")
-    ],
-
-    // Node enviorment (local, development, production)
-    "env": {
-      "NODE_ENV": config.environment
-    },
-
-    // Not sure.. but default settings.
-    "ext": "js json",
-
-    // Hook up the standard input to the processes' stdin.
-    stdin: true,
-
-    // Hook up the standard output to the processes' stdout.
-    // If a custom stdout method is defined, then we will 
-    // hook up the stdout to that method instead.
-    stdout: ( ! onStdOutput) ? true : false
-  };
-
-  // Start the server using nodemon.
-  nodemon(nodemonConfig);
-
-  // Listen for events.
-  nodemon.on('start', function() {
-  }).on('quit', function() {
-  }).on('restart', function(files) {
-  }).on('log', function(log) {
-  }).on('stdout', (onStdOutput) ? onStdOutput : function(data) {});
 }
 
+/**
+ * Restart the server as gracefully as possible using 
+ * a controller and conditions defiend by the 
+ * configuration object.
+ */
+var restart = function(_config, next) {
+  switch(_config["controller"]) {
+    case "node":
+      node.restart(_config, next);
+      break;
 
+    case "nodemon":
+      nodemon.restart(_config, next);
+      break;
 
+    case "pm2":
+      pm2.restart(config, next);
+      break;
 
+    case "fox":
+      log.info("Not implemented.");
+      break;
+
+    default:
+      log.error("The controller type of '" + controllerType +"' in the config is unrecognized.");
+      break;
+  }
+}
 
 /**
- * Create a new server.
+ * Reload the server using zero downtime techniques.
+ */
+var reload = function(_config, next) {
+  switch(_config["controller"]) {
+    case "node":
+      log.info("Not implemented.");
+      break;
+
+    case "nodemon":
+      log.info("Not implemented.");
+      break;
+
+    case "pm2":
+      pm2.reload(_config, next);
+      break;
+
+    case "fox":
+      log.info("Not implemented.");    
+      break;
+
+    default:
+      log.error("The controller type of '" + controllerType +"' in the config is unrecognized.");
+      break;
+  }
+}
+
+/**
+ * Clear the server's temp information, such as logs.
+ */
+var clear = function(_config, next) {
+  switch(_config["controller"]) {
+    case "node":
+      log.info("Not implemented.");
+      break;
+
+    case "nodemon":
+      log.info("Not implemented.");
+      break;
+
+    case "pm2":
+      pm2.clear(_config, next);
+      break;
+
+    case "fox":
+      log.info("Not implemented.");    
+      break;
+
+    default:
+      log.error("The controller type of '" + controllerType +"' in the config is unrecognized.");
+      break;
+  }
+}
+
+/**
+ * Display the server's logs using a controller and 
+ * conditions defiend by the configuration object.
+ */
+var logs = function(_config, next) {
+  switch(_config["controller"]) {
+    case "node":
+      log.info("Not implemented.");
+      break;
+
+    case "nodemon":
+      log.info("Not implemented.");
+      break;
+
+    case "pm2":
+      pm2.logs(_config, next);
+      break;
+
+    case "fox":
+      log.info("Not implemented.");    
+      break;
+
+    default:
+      log.error("The controller type of '" + controllerType +"' in the config is unrecognized.");
+      break;
+  }
+}
+
+/**
+ * Create a new server, initalize the database, and 
+ * start the server.
  */
 var create = function(name, _config, next) {
+  // Ensure the next function is defined.
   if( ! next) {
-    next = defaultNextMethod;
+    next = function(err) { if(err) {log.error(err);} };
   }
 
+  // If a config object was not defined, used the local one.
   _config = (_config) ? _config : config;
 
+  // Ensure the server has a name.
   name = (name === undefined) ? "server" : name;
 
+  // Find the new server's path.
   var newServerPath = path.normalize(_config.userPath + "/" + name);
 
   // Check if the new server location is taken
@@ -215,7 +341,7 @@ var create = function(name, _config, next) {
 
     // Check for index file at current directory
     if(fs.existsSync(path.resolve(newServerPath, "../index.js"))) {
-      return next(new Error("Server already exists at " + path.resolve(newServerPath, "../index.js"));
+      return next(new Error("Server already exists at " + path.resolve(newServerPath, "../index.js")));
     }
 
     var serverSplitPath = _config.serverPath.replace(_config.userPath, "").split(path.sep);
@@ -225,7 +351,8 @@ var create = function(name, _config, next) {
     }
   }
 
-  log.info("5. Creating " + name + "...");
+  // Copy the server boilerplate to the new server location.
+  log.info("3. Creating " + name + "...");
   wrench.copyDirSyncRecursive(_config.foxServerPath, newServerPath, {
     forceDelete: true, 
     preserveFiles: true, 
@@ -233,14 +360,62 @@ var create = function(name, _config, next) {
     excludeHiddenUnix: true
   });
 
-  log.info("4. Configuring...");
-  // TODO: this...
+  // Install the server's dependencies using npm install.
+  log.info("2. Installing npm modules...");
+  fox.worker.execute("npm", ["--prefix", newServerPath, "install"], {}, false, function(err, code, stdout, stderr) {
 
-  log.info("3. Installing modules...");
-  fox.execute("npm --prefix " + newServerPath + " install", function(err, stdout, stderr) {
+    // Update the config object with the new server's paths.
+    _config = fox.config.updateConfigPaths(_config);
 
-    log.info("2. Starting server...");
-    fox.fork(_config["foxBinPath"]+"/fox", ["start", "-l", "-i"], { cwd: '.' }, next);
+    // Run install on the server, initalizing the database and performing 
+    // any other tasks defined by the server boilerplate.
+    // This will also start the server.
+    install(_config, next);
+  });
+}
+
+/**
+ * Run instalization on the server which should setup the database
+ * and anything else required by the server.  This will also run the 
+ * server and restart the server once installed.
+ */
+var install = function(_config, next) {
+  fox.log.info("1. Setting up the database...");
+
+  // Ensure there is a next function.
+  next = (next) ? next : function(err) { log.error(err); };
+
+  // Start the server
+  start(_config, function(err, output) {
+    if(err) {
+      return next(err);
+    }
+
+    // TODO: Generate / get an install key.
+    var installKey = "IOlQ9V6Tg6RVL7DSJFL248723Bm3JjCF34FI0TJOVPvRzz";
+
+    // Execute the install command.
+    request.post("http://localhost:3001/install.json?access_token="+installKey, {}, function(err, r, body) {
+      if(err) {
+        return next(err)
+      }
+
+      // Check the body for an error.
+      body = (body) ? JSON.parse(body) : {};
+      if(body["error"]) {
+        nodemon.stop();
+        return next("("+body["status"]+") "+body["error"]);
+      }
+
+      // Stop the server
+      nodemon.stop();
+      fox.log.info("0. Success!");
+
+      // Finally relaunch the server, install complete.
+      fox.worker.fork(_config["foxBinPath"]+"/fox", ["start", "-l"], { cwd: '.' }, function(err) {
+        return next(err);
+      }); 
+    });
   });
 }
 
@@ -251,10 +426,13 @@ var create = function(name, _config, next) {
 
 // Expose the public methods available.
 Server.prototype.start = start;
-Server.prototype.startWithNode = startWithNode;
-Server.prototype.startWithNodemon = startWithNodemon;
-
+Server.prototype.stop = stop;
+Server.prototype.restart = restart;
+Server.prototype.reload = reload;
+Server.prototype.install = install;
 Server.prototype.create = create;
+Server.prototype.logs = logs;
+Server.prototype.clear = clear;
 
 
 /* ************************************************** *

@@ -1,4 +1,3 @@
-// ~> Bin
 // ~A Scott Smereka
 
 /* Nodemon
@@ -7,11 +6,12 @@
 
 
 /* ************************************************** *
- * ******************** Node Libraries
+ * ******************** Node.js Core Modules
  * ************************************************** */
 
 /***
  * Path
+ * @stability 3 - Stable
  * @description Handles tranforming file paths.
  * @website http://nodejs.org/api/path.html
  */
@@ -22,29 +22,24 @@ var path = require('path');
  * ******************** Library Variables
  * ************************************************** */
 
-var debug = false,
-    fox,
-    log,
-    nodemon,
-    trace = false;
+var debug = false,        // Flag to show debug logs.
+    fox,                  // Reference to fox instance.
+    log,                  // Reference to fox log instance.
+    nodemon,              // Reference to nodemon module.
+    trace = false;        // Flag to show trace logs.
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
  * ************************************************** */
 
 var Nodemon = function(_fox) {
-  // Handle parameters
-  fox = _fox;
-
-  // Load internal modules.
-  log = fox.log;
-
   // Load nodemon module.  According to their docs you
-  // should only require nodemon once.
+  // should only require nodemon once.  Not sure if they 
+  // know what they are talking about since require ensures
+  // you only load a module once.
   nodemon = require('nodemon');
 
-  // Configure message instance.
-  handleConfig(fox["config"]);
+  updateFoxReference(_fox);
 }
 
 /**
@@ -59,10 +54,32 @@ var handleConfig = function(config) {
   }
 }
 
+/**
+ * Update this instance's reference to the fox object.
+ */
+var updateFoxReference = function(_fox, next) {
+  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
+
+  if( ! _fox) {
+    next(new Error("Node Controller Module: Cannot update fox with an invalid fox object."));
+  }
+
+  fox = _fox;
+  log = fox.log;
+
+  handleConfig(fox["config"]);
+
+  next();
+}
+
+
 /* ************************************************** *
  * ******************** Private API
  * ************************************************** */
 
+/**
+ * Default configuration for nodemon to run.
+ */
 var defaultNodemonConfig = {
     // Restart command.
     "restartable":"rs",
@@ -90,7 +107,8 @@ var defaultNodemonConfig = {
  * process and perform automatic restarts when files change.
  */
 var start = function(config, next, onStdoutFn) {
-  var onStdOutput,
+  var nodemonConfig = defaultNodemonConfig,
+      onStdOutput,
       isNextCalled = false,
       out = "";
 
@@ -100,9 +118,11 @@ var start = function(config, next, onStdoutFn) {
   if( ! next) {
     next = function(err) { if(err) { log.error(err); } };;
   } else {
+    // Create a method to listen for when the server has actually started.
     onStdOutput = function(data) {
       out += data;
       if( ! isNextCalled) {
+        // If the server is listening, return our results.
         if(data && data.toString().indexOf("Listening on port") != -1) {
           if(out.length > 0) {
             next(undefined, out.substring(0, out.length-1));
@@ -112,17 +132,16 @@ var start = function(config, next, onStdoutFn) {
           isNextCalled = true;
         }
       }
-      //str = data.toString();
-      //str = (str) ? str.substring(0, str.length-1) : "";
     };
   }
 
-  var nodemonConfig = defaultNodemonConfig;
-
+  // Add non-default changes to the nodemon configuration object.
   nodemonConfig["script"] = config["serverPath"];
   nodemonConfig["watch"] = [ config["serverPath"], path.resolve(fox.config["serverPath"], "../configs") ];
   nodemonConfig["env"] = {  "NODE_ENV": config.environment  };
 
+  // If we have a method predefined for standard output, 
+  // then turn off redirection of stdout.
   if(onStdOutput) {
     nodemonConfig["stdout"] = false;
   }
@@ -130,25 +149,29 @@ var start = function(config, next, onStdoutFn) {
   // Start the server using nodemon.
   nodemon(nodemonConfig);
 
-  // Setup 
+  // Use our custom stdout method.
   if(onStdOutput) {
     nodemon.on('stdout', onStdOutput);
   }
 
-  // Listen for events.
+  // Listen for nodemon events.
   //nodemon.on('start', function() { console.log("Start")});
   //nodemon.on('quit', function() {console.log("Quit")});
   //nodemon.on('restart', function(files) { console.log("Restart")});
   //nodemon.on('log', function(log) {});
 }
 
-
+/**
+ * Restart the nodemon server.
+ */
 var restart = function(next) {
   nodemon.restart();
 }
 
+/**
+ * Stop the nodemon server.
+ */
 var stop = function(next) {
-  //nodemon.stop();
   nodemon.emit("quit");
 }
 
@@ -159,6 +182,7 @@ var stop = function(next) {
 Nodemon.prototype.start = start;
 Nodemon.prototype.stop = stop;
 Nodemon.prototype.restart = restart;
+Nodemon.prototype.updateFoxReference = updateFoxReference;
 
 
 /* ************************************************** *
