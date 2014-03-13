@@ -297,7 +297,12 @@ function killChild(child, signal, next) {
 
   // Kill the child process with the specified signal.
   if(child && child.pid && signal) {
-    process.kill(child.pid, signal);
+    try {
+      process.kill(child.pid, signal);
+    } catch(e) {
+      log.debug(e);
+      fox.exit();
+    }
   }
 }
 
