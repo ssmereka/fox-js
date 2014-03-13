@@ -326,7 +326,7 @@ var create = function(name, _config, next) {
   _config = (_config) ? _config : config;
 
   // Ensure the server has a name.
-  name = (name === undefined) ? "server" : name;
+  name = (name === undefined) ? "fox" : name;
 
   // Find the new server's path.
   var newServerPath = path.normalize(_config.userPath + "/" + name);
@@ -353,7 +353,8 @@ var create = function(name, _config, next) {
 
   // Copy the server boilerplate to the new server location.
   log.info("3. Creating " + name + "...");
-  wrench.copyDirSyncRecursive(_config.foxServerPath, newServerPath, {
+  var templatePath = path.normalize(_config.foxTemplatePath + "/" + _config.template);
+  wrench.copyDirSyncRecursive(templatePath, newServerPath, {
     forceDelete: true, 
     preserveFiles: true, 
     inflateSymlinks: false, 
@@ -362,7 +363,7 @@ var create = function(name, _config, next) {
 
   // Install the server's dependencies using npm install.
   log.info("2. Installing npm modules...");
-  fox.worker.execute("npm", ["--prefix", newServerPath, "install"], {}, false, function(err, code, stdout, stderr) {
+  fox.worker.execute("npm", ["--prefix", path.normalize(newServerPath + "/server"), "install"], {}, false, function(err, code, stdout, stderr) {
 
     // Update the config object with the new server's paths.
     _config = fox.config.updateConfigPaths(_config);

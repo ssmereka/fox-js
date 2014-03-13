@@ -116,7 +116,7 @@ var start = function(config, next, onStdoutFn) {
   // Otherwise create a method to call next after the server
   // has started successfully.
   if( ! next) {
-    next = function(err) { if(err) { log.error(err); } };;
+    next = function(err) { if(err) { log.error(err["message"] || err); } };;
   } else {
     // Create a method to listen for when the server has actually started.
     onStdOutput = function(data) {
@@ -133,6 +133,11 @@ var start = function(config, next, onStdoutFn) {
         }
       }
     };
+  }
+
+  // Check if we found the server
+  if(config["serverPath"] === undefined) {
+    return next(new Error("Cannot find server to start."));
   }
 
   // Add non-default changes to the nodemon configuration object.

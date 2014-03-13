@@ -59,8 +59,12 @@ var Config = function(type) {
     node: 'node',
     local: 'local',
     development: 'development',
-    production: 'production'
+    production: 'production',
+    mean: 'mean'
   };
+
+  // Set the default boilerplate template.
+  this.template = "mean";
 
   // Set a local config instance so we can 
   // refer to "this" outside the constructor.
@@ -84,8 +88,11 @@ var updateConfigPaths = function(_config) {
   // Absolute path to the fox module root directory.
   _config["foxPath"] = path.resolve(_config.foxBinPath, "../");
 
+  // Absolute path to the fox boiler plate templates for server and client code.
+  _config["foxTemplatePath"] = path.normalize(_config.foxPath + "/templates");
+
   // Absolute path to the fox server boiler plate directory.
-  _config["foxServerPath"] = path.normalize(_config.foxPath + "/server");
+  //_config["foxServerPath"] = path.normalize(_config.foxPath + "/templates");
 
   // Absolute path to the current user directory.
   _config["userPath"] = process.cwd();
@@ -95,7 +102,6 @@ var updateConfigPaths = function(_config) {
 
   return _config;
 }
-
 
 /**
  * Set configuration properties based on the config type
@@ -174,6 +180,7 @@ function getServerPathSync(_config) {
 
   var currentDir = _config.userPath,
       grandParentDir = path.normalize(currentDir + "/server/app"),
+      greatGrandParentDir = path.normalize(currentDir +"/"+config["name"]+"/server/app"),
       parentDir = path.normalize(currentDir + "/app");
 
   if(fs.existsSync(currentDir + "/index.js")) {
@@ -182,9 +189,47 @@ function getServerPathSync(_config) {
     return parentDir;
   } else if(fs.existsSync(grandParentDir + "/index.js")) {
     return grandParentDir;
+  } else if(fs.existsSync(greatGrandParentDir + "/index.js")) {
+    return greatGrandParentDir;    
   } else {
-    return undefined;
+    return searchForFileSync(currentDir, "/server/app/index.js");
   }
+}
+
+/**
+ * Search for a file path in the current directory.  This does not
+ * walk through subdirectories and is designed to be used with 
+ * getServerPath.
+ */
+function searchForFileSync(dir, file) {
+  // Get a list of all the files and folders in the 
+  // current directory.
+  var files = fs.readdirSync(dir);
+
+  // Loop through each file/folder.
+  for(var i in files) {
+    if(files.hasOwnProperty(i)) {
+
+      // Check if the file is in the current directory.
+      if(files[i] === file) {
+        return dir+"/"+files[i];
+      }
+
+      // Check if the file is a directory.
+      var filePath = dir+"/"+files[i];
+      if(fs.statSync(filePath).isDirectory()) {
+        
+        // Check if the directory contains the file.
+        filePath = path.normalize(filePath+file);
+        if(fs.existsSync(filePath)){
+          
+          // Return the full path to the file.
+          return filePath;
+        }
+      }
+    }
+  }
+  return undefined;
 }
 
 
@@ -312,7 +357,7 @@ var deepPriorityMerge = function(obj1, obj2, done, depth, next) {
  * ************************************************** */
 
 var fox = {
-  name: '', 
+  name: 'fox', 
   environment: 'local', 
   controller: 'node',
   debug: true
@@ -390,7 +435,6 @@ Config.prototype.updateConfigPaths = updateConfigPaths;
  * ************************************************** */
 
 var getConfigInstance = function(_type, _log) {
-  
   // Handle log parameter.
   log = (_log) ? _log : log;
   if( ! log) {
