@@ -188,6 +188,10 @@ var handleCli = function(_config, next) {
     return next();
   }
 
+  if(isKillCommand()) {
+    return fox.worker.kill(_config, argv._[1], next);
+  }
+
   // Stop the server.
   if(isStopServerCommand()) {
     return fox.server.stop(_config, next);
@@ -308,6 +312,9 @@ var isShowLogsCommand = function() {
   return (argv._[0] && _.contains(['log', 'logs'], argv._[0]));
 }
 
+var isKillCommand = function() {
+  return (argv._[0] && _.contains(['kill'], argv._[0]));;
+}
 
 /* ************************************************** *
  * ******************** Public API

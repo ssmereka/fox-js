@@ -18,6 +18,13 @@
  */
 var childProcess = require('child_process');
 
+/***
+ * Utility
+ * @stability 4 - API Frozen
+ * @description node.js utility functions
+ * @website http://nodejs.org/api/util.html#util_util
+ */
+var util = require('util');
 
 /* ************************************************** *
  * ******************** Library Variables
@@ -294,6 +301,19 @@ function killChild(child, signal, next) {
   }
 }
 
+var killProcessAtPort = function(config, port, next) {
+  port = (port) ? port : config["port"];
+
+  if(port != undefined) {
+    execute("sudo kill `sudo lsof -t -i:" + port + "`", function(err, stdout, stderr) {
+      util.puts(stdout);
+      next();
+    });
+  } else {
+    next(new Error("Port is not defined."));
+  }
+}
+
 
 /* ************************************************** *
  * ******************** Public API
@@ -303,6 +323,7 @@ function killChild(child, signal, next) {
 Worker.prototype.fork = fork;
 Worker.prototype.execute = spawn;
 Worker.prototype.addChild = addChild;
+Worker.prototype.kill = killProcessAtPort;
 Worker.prototype.removeChild = removeChild;
 Worker.prototype.killChildren = killChildren;
 Worker.prototype.killChildFunction = killChildFunction;
