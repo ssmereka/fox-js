@@ -14,6 +14,7 @@
 
 // Local Modules
 var Cli     = require("./cli.js"),
+    Client  = require('./client/'),
     Config  = require("./config/config.js"),
     Log     = require("./log.js"),
     Package = require('../package.json'),
@@ -121,7 +122,10 @@ function Fox(next) {
     fox.package = (Package !== undefined) ? Package : {};
 
     // Add the server module.
-    fox.server   = new Server(fox);
+    fox.server = new Server(fox);
+
+    // Add the client module.
+    fox.client = new Client(fox);
     
     // Update the fox instance stored in the CLI module.
     cli.updateFoxReference(fox);

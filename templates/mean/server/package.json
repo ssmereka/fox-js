@@ -1,6 +1,6 @@
 {
-  "name": "fox-boilerplate",
-  "description": "Template for a quick maintainable website using very powerful JavaScript frameworks.",
+  "name": "foxjs-server",
+  "description": "A template for a quick maintainable backend server.",
   "author": "Scott Smereka",
   "version": "0.0.1",
   "repository": {

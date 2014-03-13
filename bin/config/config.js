@@ -91,14 +91,16 @@ var updateConfigPaths = function(_config) {
   // Absolute path to the fox boiler plate templates for server and client code.
   _config["foxTemplatePath"] = path.normalize(_config.foxPath + "/templates");
 
-  // Absolute path to the fox server boiler plate directory.
-  //_config["foxServerPath"] = path.normalize(_config.foxPath + "/templates");
-
   // Absolute path to the current user directory.
   _config["userPath"] = process.cwd();
 
   // Find the path to the current server's directory.
   _config["serverPath"] = getServerPathSync(_config);
+
+  // Absoulte path to the current client server directory.
+  if(_config["serverPath"]) {
+    _config["clientPath"] = path.normalize(_config["serverPath"] + "/client");
+  }
 
   return _config;
 }
@@ -202,6 +204,10 @@ function getServerPathSync(_config) {
  * getServerPath.
  */
 function searchForFileSync(dir, file) {
+  // Check if directory exits
+  if( ! fs.existsSync(dir)) {
+    return undefined;
+  }
   // Get a list of all the files and folders in the 
   // current directory.
   var files = fs.readdirSync(dir);
@@ -284,6 +290,16 @@ var setServerEnviorment = function(env) {
   if(config) {
     config["environment"] = env;
   }
+}
+
+var setSeverPath = function(serverPath) {
+  if(config) {
+    config["serverPath"] = serverPath;
+  }
+}
+
+var getConfigObject = function() {
+  return config;
 }
 
 
@@ -426,6 +442,8 @@ Config.prototype.getServerName = getServerName;
 Config.prototype.setServerName = setServerName;
 Config.prototype.getServerEnviorment = getServerEnviorment;
 Config.prototype.setServerEnviorment = setServerEnviorment;
+Config.prototype.setSeverPath = setSeverPath;
+Config.prototype.getConfigObject = getConfigObject;
 
 Config.prototype.updateConfigPaths = updateConfigPaths;
 

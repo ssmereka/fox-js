@@ -2,12 +2,14 @@
   "name": "foxjs",
   "author": "Scott Smereka",
   "version": "0.0.24",
-  "description": "",
+  "description": "A lightweight framework and template for creating a quick maintainable javascript server.",
   "homepage": "",
   "keywords": [
     "API",
     "REST",
-    "MVC"
+    "MVC",
+    "node.js",
+    "angular.js"
   ],
   "main": "./libs",
   "bin": {

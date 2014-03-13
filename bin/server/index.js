@@ -69,6 +69,7 @@ var Server = function(_fox) {
   request = require('request');
   wrench = require('wrench');
 
+
   updateFoxReference(_fox);
 }
 
@@ -352,26 +353,35 @@ var create = function(name, _config, next) {
   }
 
   // Copy the server boilerplate to the new server location.
-  log.info("3. Creating " + name + "...");
-  var templatePath = path.normalize(_config.foxTemplatePath + "/" + _config.template);
-  wrench.copyDirSyncRecursive(templatePath, newServerPath, {
+  log.info("4. Creating " + name + "...");
+  wrench.copyDirSyncRecursive(path.normalize(_config.foxTemplatePath + "/" + _config.template), newServerPath, {
     forceDelete: true, 
     preserveFiles: true, 
     inflateSymlinks: false, 
     excludeHiddenUnix: true
   });
 
+  // Update the current config object as well as the global one.
+  _config.setSeverPath(newServerPath);
+  _config["serverPath"] = newServerPath;
+  _config["clientPath"] = path.normalize(newServerPath + "/client");
+
   // Install the server's dependencies using npm install.
-  log.info("2. Installing npm modules...");
+  log.info("3. Installing server modules...");
   fox.worker.execute("npm", ["--prefix", path.normalize(newServerPath + "/server"), "install"], {}, false, function(err, code, stdout, stderr) {
 
-    // Update the config object with the new server's paths.
-    _config = fox.config.updateConfigPaths(_config);
+    // Install all the client's dependencies using bower.
+    log.info("2. Intalling client modules...");
+    fox.client.install(_config, function(err) {
 
-    // Run install on the server, initalizing the database and performing 
-    // any other tasks defined by the server boilerplate.
-    // This will also start the server.
-    install(_config, next);
+      // Update the config object with the new server's paths.
+      _config = fox.config.updateConfigPaths(_config);
+
+      // Run install on the server, initalizing the database and performing 
+      // any other tasks defined by the server boilerplate.
+      // This will also start the server.
+      install(_config, next);
+    });
   });
 }
 
