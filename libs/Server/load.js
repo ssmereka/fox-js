@@ -25,6 +25,7 @@ var accessToken,
     model, 
     mongoose, 
     MongoStore, 
+    sender,
     trace = false;
 
 
@@ -41,6 +42,7 @@ var Load = function(_fox) {
   merge = fox.merge;
   model = fox.model;
   accessToken = fox.accessToken;
+  sender = fox.send;
 
   // Load external modules
   //...
@@ -209,12 +211,26 @@ var requireStaticFolders = function() {
     log.d("Configuring Static Routes: ", debug);
   }
 
-  // Require all static folders as public static routes.
-  for(var i = 0; i < config.paths.staticFolders.length; i++) {
-    log.d("\tFolder: " + config.paths.staticFolders[i], debug);
-    app.use(express.static(config.paths.staticFolders[i]));
+  
+  for(var key in config.paths.staticFolders) {
+    if(config.paths.staticFolders.hasOwnProperty(key)) {
+      log.d("\t"+key+": " + config.paths.staticFolders[key].path, debug);
+      console.log(app);
+
+      app.use("/"+key, express.static(config.paths.staticFolders[key].path));
+    }
   }
+
+  /*for(var key in config.paths.staticFolders) {
+    if(config.paths.staticFolders.hasOwnProperty(key)) {
+      app.all("/"+key+"/*", function(req, res, next) {
+        //sender.setRequestHandled(req, true);
+        next();
+      });
+    }
+  }*/
 }
+
 
 /**
  * Configure the view engine and view folder.

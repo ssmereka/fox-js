@@ -1,6 +1,7 @@
 var path            = require('path'),
     serverDirectory = path.resolve(__dirname + "../../"),
-    clientDirectory = path.resolve(__dirname + '../../../client');;
+    clientDirectory = path.resolve(__dirname, '../../../../../client');
+
 
 /* ************************************************** *
  * ******************** Server Install Key
@@ -106,8 +107,8 @@ var allConfig = {
 
   // Private configs for the internal libraries.
   system: {
-    debug: false,
-    trace: false
+    debug: true,
+    trace: true
   },
 
 
@@ -136,11 +137,17 @@ var allConfig = {
   dirname: serverDirectory + "/app/",                          // Server application directory.
   installKey: SERVER_INSTALL_KEY,                              // Server install key, a private key used to activate the installation of the server. (Keep it secret, keep it safe)
   paths: {                                                     // The paths object contains information about where different files and folders are located on the disk.
-    staticFolders: [                                           // The folders listed in static folders will be required before all other routes as static.
-      clientDirectory + '/app/',                               // Client application folder.
-      clientDirectory + '/libs/',                              // Client libs folder.
-      clientDirectory + '/public/',                            // Client public folder, containing things such as images, css, etc.
-    ],
+    staticFolders: {                                           // The folders listed in static folders will be required before all other routes as static.
+      app: {
+        path: path.normalize(clientDirectory + '/app/')
+      },
+      assets: {
+        path: path.normalize(clientDirectory + '/assets/')
+      },
+      libs: {
+        path: path.normalize(clientDirectory + '/libs/')
+      }
+    },
     favIcon: clientDirectory + '/public/img/quickie_favicon.ico',      // Fav Icon location.
     clientFolder: clientDirectory,                             // The client root folder.  All things client will be below this folder.
     clientAppFolder: clientDirectory + "/app/",                // Client application folder, which stores all of the core components for the client application.
