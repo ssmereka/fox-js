@@ -107,8 +107,8 @@ var allConfig = {
 
   // Private configs for the internal libraries.
   system: {
-    debug: true,
-    trace: true
+    debug: false,
+    trace: false
   },
 
 
