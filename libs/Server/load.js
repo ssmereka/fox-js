@@ -215,20 +215,9 @@ var requireStaticFolders = function() {
   for(var key in config.paths.staticFolders) {
     if(config.paths.staticFolders.hasOwnProperty(key)) {
       log.d("\t"+key+": " + config.paths.staticFolders[key].path, debug);
-      console.log(app);
-
       app.use("/"+key, express.static(config.paths.staticFolders[key].path));
     }
   }
-
-  /*for(var key in config.paths.staticFolders) {
-    if(config.paths.staticFolders.hasOwnProperty(key)) {
-      app.all("/"+key+"/*", function(req, res, next) {
-        //sender.setRequestHandled(req, true);
-        next();
-      });
-    }
-  }*/
 }
 
 
