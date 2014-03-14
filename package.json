@@ -1,16 +1,16 @@
 {
   "name": "foxjs",
-  "author": "Scott Smereka",
+  "author": {
+    "name" : "Scott Smereka",
+    "url" : "http://scottsmereka.com"
+  },
+  "contributors": [],
   "version": "0.0.25",
   "description": "A lightweight framework and template for creating a quick maintainable javascript server.",
-  "homepage": "",
-  "keywords": [
-    "API",
-    "REST",
-    "MVC",
-    "node.js",
-    "angular.js"
-  ],
+  "homepage": "http://github.com/ssmereka/fox-js",
+  "bugs": {
+    "url": "http://github.com/ssmereka/fox-js/issues"
+  },
   "main": "./libs",
   "bin": {
     "fox": "./bin/fox"
@@ -22,12 +22,10 @@
     "type": "git",
     "url": "http://github.com/ssmereka/fox-js"
   },
-  "licenses": [
-    {
+  "licenses": [{
       "type": "MIT",
-      "url": ""
-    }
-  ],
+      "url": "https://github.com/ssmereka/fox-js/blob/master/license"
+  }],
   "engines": {
     "node": ">= 0.10.0"
   },
@@ -40,5 +38,17 @@
     "request": "2.34.x",
     "winston": "0.7.x",
     "wrench": "1.5.x"
-  }
+  },
+  "keywords": [
+    "API",
+    "REST",
+    "MVC",
+    "node.js",
+    "angular.js",
+    "awesome",
+    "framework",
+    "boilerplate",
+    "easy",
+    "free"
+  ]
 }
