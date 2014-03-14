@@ -123,7 +123,7 @@ function Fox(next) {
     fox.package = (Package !== undefined) ? Package : {};
 
     // Add the template module.
-    fox.template = new Server(fox);
+    fox.template = new Template(fox);
 
     // Add the server module.
     fox.server = new Server(fox);

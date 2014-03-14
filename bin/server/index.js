@@ -354,6 +354,9 @@ var create = function(name, _config, next) {
 
   // Copy the server boilerplate to the new server location.
   log.info("4. Creating " + name + "...");
+  
+  console.log(path.normalize(_config.foxTemplatePath + "/" + _config.template));
+  return fox.exit();
   wrench.copyDirSyncRecursive(path.normalize(_config.foxTemplatePath + "/" + _config.template), newServerPath, {
     forceDelete: true, 
     preserveFiles: true, 

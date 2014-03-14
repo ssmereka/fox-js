@@ -75,14 +75,14 @@ var updateFoxReference = function(_fox, next) {
  */
 var printHelp = function() {
   log.info("Usage:  fox <command> <options>\n");
-  log.info("Commands:");
+  log.info("Server Commands:");
+  printColumns("clear", "Stop the server and clear all logs and history.");
+  printColumns("logs", "Show server logs");
   printColumns("new <name>", "Create a new server with a specified name.");
   printColumns("start", "Start the server.");
   printColumns("stop", "Stop the server.");
   printColumns("restart", "Restart the server.");
-  printColumns("reload", "Restart the server with zero downtime.");
-  printColumns("clear", "Stop the server and clear all logs and history.");
-  printColumns("logs", "Show server logs\n");
+  printColumns("reload", "Restart the server with zero downtime.\n");
 
   log.info("Options:")
   printColumns("-d", "Start in development environment mode.");
@@ -91,6 +91,11 @@ var printHelp = function() {
   printColumns("-n", "Start server using plain old node.js and local mode.");
   printColumns("-p", "Start in production environment mode.");
   printColumns("-v", "Enable verbose or debug mode.\n");
+
+  log.info("fox template <command> <options>");
+  printColumns("add <template>", "Add a new template by name or git repo.");
+  printColumns("list", "List all templates");
+  printColumns("remove <template>", "Remove a template by name or git repo.\n");
 
   log.info("Info:")
   printColumns("Author", getFoxAuthor());
@@ -186,6 +191,18 @@ var handleCli = function(_config, next) {
   if(isPrintHelpFlagSet()) {
     printHelp();
     return next();
+  }
+
+  if(isTemplateCommand()) {
+    if(isListTemplateCommand()) {
+      return fox.template.printList(_config, next);
+    }
+    if(isAddTemplateCommand()) {
+      return fox.template.add(_config, argv._[2], next);
+    }
+    if(isRemoveTemplateCommand()) {
+      return fox.template.remove(_config, argv._[2], next);
+    }
   }
 
   if(isKillCommand()) {
@@ -317,6 +334,22 @@ var isShowLogsCommand = function() {
 
 var isKillCommand = function() {
   return (argv._[0] && _.contains(['kill'], argv._[0]));;
+}
+
+var isTemplateCommand = function() {
+  return (argv._[0] && _.contains(['template'], argv._[0]));;
+}
+
+var isAddTemplateCommand = function() {
+  return (argv._[1] && _.contains(['add'], argv._[1]));;
+}
+
+var isRemoveTemplateCommand = function() {
+  return (argv._[1] && _.contains(['remove'], argv._[1]));;
+}
+
+var isListTemplateCommand = function() {
+  return (argv._[1] && _.contains(['list'], argv._[1]));;
 }
 
 /* ************************************************** *

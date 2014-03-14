@@ -86,16 +86,17 @@ var config = {
     // the folder on your computer.  Everything in the static folders is made 
     // public to everyone.
     //
-    // Entries are made available using the following pattern:
+    // Entries are made available using the following pattern:   /:name/:folderName/:file
     //
-    // Pattern:  /:name/:folderName/:file
     // Example:  /assets/css/styles.css
+    // 
+    //   staticFolders: {
+    //     assets: {
+    //       path: path.normalize('/assets/')
+    //     }
+    //   }
     //
-    staticFolders: {
-      assets: {
-        path: path.normalize(clientDirectory + '/assets/')
-      }
-    },
+    staticFolders: {},
 
   },
 
