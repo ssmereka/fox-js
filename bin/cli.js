@@ -214,6 +214,9 @@ var handleCli = function(_config, next) {
 
   // Create a new server.
   if(isCreateCommand()) {
+    if(argv._[2] !== undefined) {
+      _config = _config.setTemplate(argv._[2]); 
+    }
     return fox.server.create(argv._[1], _config, next);
   }
 

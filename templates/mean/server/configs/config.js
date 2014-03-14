@@ -7,14 +7,25 @@
  * defined will override its default setting.
  */
 
-var path            = require('path'),
-    serverDirectory = path.resolve(__dirname, "../");	// Path to the server directory.
 
+/* ************************************************** *
+ * ******************** Modules & Variables
+ * ************************************************** */
+
+var path            = require('path'),
+    serverDirectory = path.resolve(__dirname, "../"); // Path to the server directory.
+
+
+/* ************************************************** *
+ * ******************** Config Object
+ * ************************************************** */
 
 var config = {
-	
+  
+  // Access tokens are used for API calls made on behalf
+  // of a user.  You can override the default behavior here.
   accessTokens: {
-    tokenLifeInDays: 10
+    tokenLifeInDays: 10                       // How long a token is valid before a new token must be requested.
   },
 
   // Create, read, update, and delete routes and methods can be automatically
@@ -50,10 +61,10 @@ var config = {
     }
   },
 
-  // Private configs for the internal libraries.
-  system: {
-    debug: false,
-    trace: false
+  // Fox-js system settings, these affect fox's internal libraries.
+  system: { 
+    debug: false,                             // Flag to enable display of debug messages by the fox module.
+    trace: false                              // Flag to enable display of trace log messages by the fox module.
   },
 
   // Server application root directory.
@@ -62,14 +73,30 @@ var config = {
   // Absolute paths to files and folders.
   paths: {
 
-  	// Server application root directory.
+    // Server application root directory.
     serverAppFolder: serverDirectory + "/app/",
 
     // Server configuration folder, where all the config files are stored.
     serverConfigFolder: serverDirectory + "/configs/",
 
     // Server node_modules folder, where all the dependencies are stored.
-    serverNodeModulesFolder: path.resolve(__dirname, "../node_modules") + "/"
+    serverNodeModulesFolder: path.resolve(__dirname, "../node_modules") + "/",
+
+    // A static folder's content is made available in routes similar to browsing
+    // the folder on your computer.  Everything in the static folders is made 
+    // public to everyone.
+    //
+    // Entries are made available using the following pattern:
+    //
+    // Pattern:  /:name/:folderName/:file
+    // Example:  /assets/css/styles.css
+    //
+    staticFolders: {
+      assets: {
+        path: path.normalize(clientDirectory + '/assets/')
+      }
+    },
+
   },
 
   // Routes determines the order in which models and controllers are required

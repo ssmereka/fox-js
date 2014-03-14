@@ -13,13 +13,14 @@
  * ************************************************** */
 
 // Local Modules
-var Cli     = require("./cli.js"),
-    Client  = require('./client/'),
-    Config  = require("./config/config.js"),
-    Log     = require("./log.js"),
-    Package = require('../package.json'),
-    Server  = require("./server/"),
-    Worker  = require("./worker.js");
+var Cli      = require("./cli.js"),
+    Client   = require('./client/'),
+    Config   = require("./config/config.js"),
+    Log      = require("./log.js"),
+    Package  = require('../package.json'),
+    Server   = require("./server/"),
+    Template = require("./template/"),
+    Worker   = require("./worker.js");
 
 var fox;
 
@@ -121,12 +122,15 @@ function Fox(next) {
     // Add the package.json object
     fox.package = (Package !== undefined) ? Package : {};
 
+    // Add the template module.
+    fox.template = new Server(fox);
+
     // Add the server module.
     fox.server = new Server(fox);
 
     // Add the client module.
     fox.client = new Client(fox);
-    
+
     // Update the fox instance stored in the CLI module.
     cli.updateFoxReference(fox);
 

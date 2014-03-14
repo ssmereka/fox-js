@@ -302,6 +302,12 @@ var getConfigObject = function() {
   return config;
 }
 
+var setTemplate = function(template) {
+  if(config) {
+    config["template"] = template;
+  }
+  return config;
+}
 
 /**
  * Merge two objects attributes into a single object.
@@ -444,6 +450,7 @@ Config.prototype.getServerEnviorment = getServerEnviorment;
 Config.prototype.setServerEnviorment = setServerEnviorment;
 Config.prototype.setSeverPath = setSeverPath;
 Config.prototype.getConfigObject = getConfigObject;
+Config.prototype.setTemplate = setTemplate;
 
 Config.prototype.updateConfigPaths = updateConfigPaths;
 
