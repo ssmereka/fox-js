@@ -64,7 +64,7 @@ var Config = function(type) {
   };
 
   // Set the default boilerplate template.
-  this.template = "mean";
+  this.template = "fox-mean-template";
 
   // Set a local config instance so we can 
   // refer to "this" outside the constructor.

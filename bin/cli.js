@@ -70,6 +70,28 @@ var updateFoxReference = function(_fox, next) {
  * ******************** Private API
  * ************************************************** */
 
+var printTemplateList = function(templates, next) {
+  var repoLength = 0;
+  for(var key in templates) {
+    if(templates.hasOwnProperty(key)) {
+      if(templates[key]["git"].length > repoLength) {
+        repoLength = templates[key]["git"].length
+      }
+    }
+  }
+
+  printHeader("Template Name", "Installed", "Repo", repoLength);
+
+  for(var key in templates) {
+    if(templates.hasOwnProperty(key)) {
+      printRow(templates[key].name, templates[key]["installed"].toString(), templates[key]["git"], repoLength);
+    }
+  }
+
+  printFooter(repoLength)
+  next();
+}
+
 /**
  * Print the fox script's usage.
  */
@@ -112,6 +134,41 @@ function printColumns(left, right) {
   
   var n = 25 - left.length;
   log.info("  " + left + Array(n+1).join(" ") + right);
+}
+
+/**
+ * Print a 3 column table header.
+ */
+function printHeader(left, center, right, rightLength) {
+  left = (!left) ? "" : left;
+  center = (!center) ? "" : center;
+  right = (!right) ? "" : right;
+
+  log.info(Array(56 + rightLength).join("-"));
+  log.info( "| " + left   + Array(24 - left.length).join(" ")   + 
+            "| " + center + Array(24 - center.length).join(" ") +
+            "| " + right  + Array(rightLength+2 - right.length).join(" ") + " |");
+  log.info(Array(56 + rightLength).join("-"));
+}
+
+/**
+ * Print a 3 column table row.
+ */
+function printRow(left, center, right, rightLength) {
+  left = (!left) ? "" : left;
+  center = (!center) ? "" : center;
+  right = (!right) ? "" : right;
+
+  log.info( "| " + left   + Array(24 - left.length).join(" ")   +
+            "| " + center + Array(24 - center.length).join(" ") +
+            "| " + right  + Array(rightLength+2 - right.length).join(" ") + " |");
+}
+
+/**
+ * Print a 3 column table footer.
+ */
+function printFooter(length) {
+  log.info(Array(56 + length).join("-"));
 }
 
 /**
@@ -193,15 +250,34 @@ var handleCli = function(_config, next) {
     return next();
   }
 
+  // Handle template commands.
   if(isTemplateCommand()) {
+
+    // List templates
     if(isListTemplateCommand()) {
-      return fox.template.printList(_config, next);
+      return printTemplateList(fox.template.list(), next);
     }
+
+    // Add a new template by name or repo.
     if(isAddTemplateCommand()) {
-      return fox.template.add(_config, argv._[2], next);
+      return fox.template.add(_config, argv._[2], function(err) {
+        if(err) {
+          return next(err);
+        }
+        
+        return printTemplateList(fox.template.list(), next);
+      });
     }
+
+    // Remove a template by name or repo.
     if(isRemoveTemplateCommand()) {
-      return fox.template.remove(_config, argv._[2], next);
+      return fox.template.remove(_config, argv._[2], function(err) {
+        if(err) {
+          return next(err);
+        }
+        
+        return printTemplateList(fox.template.list(), next);
+      });
     }
   }
 
@@ -231,6 +307,8 @@ var handleCli = function(_config, next) {
 
   // Create a new server.
   if(isCreateCommand()) {
+
+    // Optional:  Set the template to install.
     if(argv._[2] !== undefined) {
       _config = _config.setTemplate(argv._[2]); 
     }
@@ -349,7 +427,7 @@ var isRemoveTemplateCommand = function() {
 }
 
 var isListTemplateCommand = function() {
-  return (argv._[1] && _.contains(['list'], argv._[1]));;
+  return (argv._[1] === undefined || (argv._[1] && _.contains(['list'], argv._[1])));
 }
 
 /* ************************************************** *

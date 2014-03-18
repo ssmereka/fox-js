@@ -352,12 +352,17 @@ var create = function(name, _config, next) {
     }
   }
 
+
+  var templates = fox.template.list();
+  if( ! templates || ! templates[_config.template] || ! templates[_config.template]["installed"]) {
+    return next(new Error("You must first install the "+_config.template+" template.  Try this command:\n\n  fox template add "+_config.template+"\n"));
+  }
+
   // Copy the server boilerplate to the new server location.
   log.info("4. Creating " + name + "...");
   
-  console.log(path.normalize(_config.foxTemplatePath + "/" + _config.template));
-  return fox.exit();
-  wrench.copyDirSyncRecursive(path.normalize(_config.foxTemplatePath + "/" + _config.template), newServerPath, {
+  wrench.copyDirSyncRecursive(templates[_config.template]["dir"], newServerPath, {
+  //wrench.copyDirSyncRecursive(path.normalize(_config.foxTemplatePath + "/" + _config.template), newServerPath, {
     forceDelete: true, 
     preserveFiles: true, 
     inflateSymlinks: false, 

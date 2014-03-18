@@ -9,6 +9,6 @@
         "name": "sdl_auth_server",
         "git": "https://ssmereka_livio@bitbucket.org/livio/sdl_auth_server.git",
         "dir": "/Users/scottsmereka/Documents/Scott/fox-js/templates/sdl_auth_server",
-        "installed": true
+        "installed": false
     }
 }

@@ -1,6 +1,7 @@
 // ~A Scott Smereka
 
 /* Template
+ * Manage client and server boilerplate code templates.
  */
 
 
@@ -35,9 +36,10 @@ var async,
     debug = false,        // Flag to show debug logs.
     fox,                  // Reference to current fox instance.
     log,                  // Reference to fox log object.
-    trace = false;        // Flag to show trace logs.
+    trace = false,        // Flag to show trace logs.
+    wrench;
 
-var Templates = require("./templates.json");
+var Templates;
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
@@ -50,6 +52,8 @@ var Templates = require("./templates.json");
  */
 var Template = function(_fox) {
   async = require("async");
+  wrench = require('wrench');
+  Templates = require("./templates.json");
   updateFoxReference(_fox);
 }
 
@@ -119,6 +123,11 @@ var loadTemplates = function(_config, next) {
     if(templates[i]["installed"] === true) {
       checkIfInstalled[i] = templates[i];
     }
+  }
+
+  // Create the template directory, if it doesn't exist.
+  if( ! fs.existsSync(_config.foxTemplatePath)) {
+    fs.mkdirSync(_config.foxTemplatePath, "0775");
   }
 
   // Load all the files in the template root directory.
@@ -223,6 +232,7 @@ var saveTemplates = function(_config, templates, next) {
 }
 
 /**
+ * Add a template to the template folder by cloning the repo.
  */
 var add = function(_config, str, next) {
   // Check for valid argument
@@ -248,65 +258,16 @@ var add = function(_config, str, next) {
   });
 }
 
-var gitClone = function(repo, dir, next) {
-  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
-  if( ! repo) {
-    return next(new Error("Cannot clone invalid repo '"+repo+"'"));
-  }
-
-  fox.worker.execute("git", ["clone", repo], { cwd: (dir) ? dir : "." }, true, function(err, code, stdout, stderr) {
-    return next();
-  });
-}
-
-var gitPull = function(dir, next) {
-  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
-
-  fox.worker.execute("git", ["pull"], { cwd: (dir) ? dir : "." }, true, function(err, code, stdout, stderr) {
-    return next();
-  });
-}
-
 /**
- * Lookup a git url of an existing repo.
+ * Remove a template from the template folder by um, well... 
+ * deleting the template's folder.
  */
-var gitRemote = function(dir, next) {
-  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
-
-  fox.worker.execute("git", ["remote", "-v"], { cwd: (dir) ? dir : "." }, false, function(err, code, stdout, stderr) {
-    var lines = stdout.split(/\n/);
-    for(var i in lines) {
-      if(lines.hasOwnProperty(i)) {
-        var fetch = lines[i].indexOf("(fetch)");
-        if( fetch !== -1) {
-          lines[i] = lines[i].substring(0, fetch-1);
-          return next(undefined, lines[i].split(/\t/)[1]);        
-        }
-      }
-    }
-    return next();
-  });
-}
-
-
-
-var addTemplateToList = function(repo) {
-  // Check if we have a url
-  if( ! repo || repo.length < 5 || repo.substr(0, 4) !== "http") {
-    return undefined;
+var remove = function(_config, str, next) {
+  var template = getTemplate(str);
+  if(fs.existsSync(template["dir"])) {
+    wrench.rmdirSyncRecursive(template["dir"]);
+    loadTemplates(_config, next);
   }
-
-  var name = (repo.substr(repo.lastIndexOf("/") + 1));
-  name = name.substr(0, name.length-4);
-  
-  templates[name] = {
-    "name": name,
-    "git": repo,
-    "dir": path.normalize(_config.foxTemplatePath + "/" + name),
-    "installed": false
-  };
-
-  return name;
 }
 
 /**
@@ -405,42 +366,33 @@ var getNameFromRepo = function(repo) {
 
 
 /**
+ * Return a list of all the templates.
  */
-var remove = function(_config, folderName, next) {
-  console.log("remove");
-  return next();
-  var template = path.normalize(_config.foxTemplatePath + folderName);
-  if(fs.existsSync(template)) {
-    fs.rmdir(path.normalize(_config.foxTemplatePath + folderName), next);
-  }
-}
-
 var list = function() {
   return templates;
 }
 
-var printList = function(_config, next) {
-  if( ! templates) {
-    log.info("No templates");
-    return;
-  }
-
-  for(var key in templates) {
-    if(templates.hasOwnProperty(key)) {
-      log.info(templates[key].name);
-    }
-  }
-}
-
+/**
+ * Get a template from the local registry using the 
+ * template's name or git repo url.
+ */
 var getTemplate = function(str) {
   var template = getTemplateFromName(str);
   return (template) ? template : getTemplateFromGit(str);
 }
 
+/**
+ * Get a template from the local registry using the 
+ * template's name.
+ */
 var getTemplateFromName = function(name) {
   return templates[name];
 }
 
+/**
+ * Get a template from the local registry using the 
+ * template's git repo url.
+ */
 var getTemplateFromGit = function(gitRepo) {
   for(var key in templates) {
     if(templates.hasOwnProperty(key) && templates[key]["git"] === gitRepo) {
@@ -451,13 +403,66 @@ var getTemplateFromGit = function(gitRepo) {
   return undefined;
 }
 
+
+/* ************************************************** *
+ * ******************** Git Commands
+ * ************************************************** */
+
+/**
+ * Clone a git repo into a target directory.
+ */
+var gitClone = function(repo, dir, next) {
+  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
+  if( ! repo) {
+    return next(new Error("Cannot clone invalid repo '"+repo+"'"));
+  }
+
+  fox.worker.execute("git", ["clone", repo], { cwd: (dir) ? dir : "." }, true, function(err, code, stdout, stderr) {
+    return next();
+  });
+}
+
+/**
+ * Perform an update using git pull for a target directory.
+ */
+var gitPull = function(dir, next) {
+  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
+
+  fox.worker.execute("git", ["pull"], { cwd: (dir) ? dir : "." }, true, function(err, code, stdout, stderr) {
+    return next();
+  });
+}
+
+/**
+ * Lookup a git url of an existing repo.
+ */
+var gitRemote = function(dir, next) {
+  next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
+
+  fox.worker.execute("git", ["remote", "-v"], { cwd: (dir) ? dir : "." }, false, function(err, code, stdout, stderr) {
+    var lines = stdout.split(/\n/);
+    for(var i in lines) {
+      if(lines.hasOwnProperty(i)) {
+        var fetch = lines[i].indexOf("(fetch)");
+        if( fetch !== -1) {
+          lines[i] = lines[i].substring(0, fetch-1);
+          return next(undefined, lines[i].split(/\t/)[1]);        
+        }
+      }
+    }
+    return next();
+  });
+}
+
+
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */
 
 Template.prototype.add = add;
 Template.prototype.remove = remove;
-Template.prototype.list = remove;
+Template.prototype.list = list;
+
 Template.prototype.getTemplate = getTemplate;
 Template.prototype.getTemplateFromName = getTemplateFromName;
 Template.prototype.getTemplateFromGit = getTemplateFromGit;
