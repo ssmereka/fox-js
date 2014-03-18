@@ -278,7 +278,13 @@ var ensureTemplateIsInstalled = function(_config, templateName, next) {
   if( ! templates[templateName]["installed"]) {
     log.info("5. Installing " + templateName + "...");
     gitClone(templates[templateName]["git"], _config.foxTemplatePath, function(err) {
-      next(err, templates[templateName]);
+      if(err) {
+        return next(err);
+      }
+      
+      loadTemplates(_config, function(err) {
+        next(err, templates[templateName]);
+      });
     }, true);
   } else {
     next(undefined, templates[templateName]);
