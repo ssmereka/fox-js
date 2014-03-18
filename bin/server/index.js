@@ -352,43 +352,42 @@ var create = function(name, _config, next) {
     }
   }
 
+  // Ensure the choosen template is already installed.
+  fox.template.ensureTemplateIsInstalled(_config, _config.template, function(err, template) {
+    if(err) {
+      return next(err);
+    }
 
-  var templates = fox.template.list();
-  if( ! templates || ! templates[_config.template] || ! templates[_config.template]["installed"]) {
-    return next(new Error("You must first install the "+_config.template+" template.  Try this command:\n\n  fox template add "+_config.template+"\n"));
-  }
+    // Copy the server boilerplate to the new server location.
+    log.info("4. Creating " + name + "...");
+    wrench.copyDirSyncRecursive(template["dir"], newServerPath, {
+      forceDelete: true, 
+      preserveFiles: true, 
+      inflateSymlinks: false, 
+      excludeHiddenUnix: true
+    });
 
-  // Copy the server boilerplate to the new server location.
-  log.info("4. Creating " + name + "...");
-  
-  wrench.copyDirSyncRecursive(templates[_config.template]["dir"], newServerPath, {
-  //wrench.copyDirSyncRecursive(path.normalize(_config.foxTemplatePath + "/" + _config.template), newServerPath, {
-    forceDelete: true, 
-    preserveFiles: true, 
-    inflateSymlinks: false, 
-    excludeHiddenUnix: true
-  });
+    // Update the current config object as well as the global one.
+    _config.setSeverPath(newServerPath);
+    _config["serverPath"] = newServerPath;
+    _config["clientPath"] = path.normalize(newServerPath + "/client");
 
-  // Update the current config object as well as the global one.
-  _config.setSeverPath(newServerPath);
-  _config["serverPath"] = newServerPath;
-  _config["clientPath"] = path.normalize(newServerPath + "/client");
+    // Install the server's dependencies using npm install.
+    log.info("3. Installing server modules...");
+    fox.worker.execute("npm", ["--prefix", path.normalize(newServerPath + "/server"), "install"], {}, false, function(err, code, stdout, stderr) {
 
-  // Install the server's dependencies using npm install.
-  log.info("3. Installing server modules...");
-  fox.worker.execute("npm", ["--prefix", path.normalize(newServerPath + "/server"), "install"], {}, false, function(err, code, stdout, stderr) {
+      // Install all the client's dependencies using bower.
+      log.info("2. Intalling client modules...");
+      fox.client.install(_config, function(err) {
 
-    // Install all the client's dependencies using bower.
-    log.info("2. Intalling client modules...");
-    fox.client.install(_config, function(err) {
+        // Update the config object with the new server's paths.
+        _config = fox.config.updateConfigPaths(_config);
 
-      // Update the config object with the new server's paths.
-      _config = fox.config.updateConfigPaths(_config);
-
-      // Run install on the server, initalizing the database and performing 
-      // any other tasks defined by the server boilerplate.
-      // This will also start the server.
-      install(_config, next);
+        // Run install on the server, initalizing the database and performing 
+        // any other tasks defined by the server boilerplate.
+        // This will also start the server.
+        install(_config, next);
+      });
     });
   });
 }

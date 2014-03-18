@@ -234,7 +234,7 @@ var saveTemplates = function(_config, templates, next) {
 /**
  * Add a template to the template folder by cloning the repo.
  */
-var add = function(_config, str, next) {
+var add = function(_config, str, next, silent) {
   // Check for valid argument
   if( ! str) {
     return next(new Error("Invalid template '"+str+"'"));
@@ -255,7 +255,7 @@ var add = function(_config, str, next) {
     }
 
     loadTemplates(_config, next);
-  });
+  }, silent);
 }
 
 /**
@@ -267,6 +267,21 @@ var remove = function(_config, str, next) {
   if(fs.existsSync(template["dir"])) {
     wrench.rmdirSyncRecursive(template["dir"]);
     loadTemplates(_config, next);
+  }
+}
+
+var ensureTemplateIsInstalled = function(_config, templateName, next) {
+  if( ! templates || ! templates[templateName]) {
+    return next(new Error("The template " + templateName + " is unknown.  Try adding the template first using:\n\n  fox template add <git-repo-url>\n"));
+  }
+
+  if( ! templates[templateName]["installed"]) {
+    log.info("5. Installing " + templateName + "...");
+    gitClone(templates[templateName]["git"], _config.foxTemplatePath, function(err) {
+      next(err, templates[templateName]);
+    }, true);
+  } else {
+    next(undefined, templates[templateName]);
   }
 }
 
@@ -411,13 +426,13 @@ var getTemplateFromGit = function(gitRepo) {
 /**
  * Clone a git repo into a target directory.
  */
-var gitClone = function(repo, dir, next) {
+var gitClone = function(repo, dir, next, silent) {
   next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
   if( ! repo) {
     return next(new Error("Cannot clone invalid repo '"+repo+"'"));
   }
 
-  fox.worker.execute("git", ["clone", repo], { cwd: (dir) ? dir : "." }, true, function(err, code, stdout, stderr) {
+  fox.worker.execute("git", ["clone", repo], { cwd: (dir) ? dir : "." }, (silent !== undefined) ? ! silent : true, function(err, code, stdout, stderr) {
     return next();
   });
 }
@@ -466,7 +481,7 @@ Template.prototype.list = list;
 Template.prototype.getTemplate = getTemplate;
 Template.prototype.getTemplateFromName = getTemplateFromName;
 Template.prototype.getTemplateFromGit = getTemplateFromGit;
-
+Template.prototype.ensureTemplateIsInstalled = ensureTemplateIsInstalled;
 
 /* ************************************************** *
  * ******************** Export the Public API
