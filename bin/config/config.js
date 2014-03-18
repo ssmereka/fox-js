@@ -302,11 +302,11 @@ var getConfigObject = function() {
   return config;
 }
 
-var setTemplate = function(template) {
-  if(config) {
-    config["template"] = template;
+var setTemplate = function(_config, template) {
+  if(_config) {
+    _config["template"] = template;
   }
-  return config;
+  return _config;
 }
 
 /**

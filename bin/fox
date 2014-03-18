@@ -132,11 +132,15 @@ function Fox(next) {
     fox.client = new Client(fox);
 
     // Update the fox instance stored in the CLI module.
-    cli.updateFoxReference(fox);
+    cli.updateFoxReference(fox, function(err) {
+      if(err) {
+        return next(err);
+      }
 
-    // Add cli module.
-    fox.cli = cli;
-    
-    next();
+      // Add cli module.
+      fox.cli = cli;
+
+      next();
+    });
   });
 };

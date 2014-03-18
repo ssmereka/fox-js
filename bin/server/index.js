@@ -161,7 +161,7 @@ var start = function(_config, next) {
       break;
 
     case "pm2":
-      pm2.start(config, next);
+      pm2.start(_config, next);
       break;
     
     case "fox":

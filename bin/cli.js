@@ -197,6 +197,7 @@ var handleConfigCli = function(_config, next) {
 
   next = (next) ? next : function(err) { if(err) { log.error(err); }};
 
+  // For a create command, default to the local config.
   if(isCreateCommand()) {
     _config.setDefaultConfig(_config.consts.local, next);
     return;
@@ -231,7 +232,7 @@ var handleCli = function(_config, next) {
   };
 
   // Ensure a config parameter exists.
-  _config = ( ! _config) ? fox["config"] : _config;
+  _config = (_config === undefined) ? fox["config"] : _config;
 
   // Enable Debug Mode
   if(isDebugFlagSet(argv)) {
@@ -310,7 +311,7 @@ var handleCli = function(_config, next) {
 
     // Optional:  Set the template to install.
     if(argv._[2] !== undefined) {
-      _config = _config.setTemplate(argv._[2]); 
+      _config = _config.setTemplate(_config, argv._[2]); 
     }
     return fox.server.create(argv._[1], _config, next);
   }
