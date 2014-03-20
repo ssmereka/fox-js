@@ -1000,6 +1000,57 @@ var remove = function(obj, userId, next) {
 
 
 /* ************************************************** *
+ * ******************** Formatting Objects
+ * ************************************************** */
+
+  /**
+   * Change the name of an object's key
+   * @param obj is the object to be modified.
+   * @param oldKey is the old property name to be removed.
+   * @param newKey is the new property name to be created.
+   * @param next is an optional callback method.
+   */
+  var changeKeyName = function(obj, oldKey, newKey, next) {
+    // If the object contains a value for the old key.
+    if(obj.hasOwnProperty(oldKey)) {
+      
+      // Save the value to the new property location
+      obj[newKey] = obj[oldKey];
+      
+      // Remove the old property.
+      delete obj[oldKey];
+    }
+
+    if(next) {
+      next(undefined, obj);
+    } else {
+      obj;
+    }
+  }
+
+  /**
+   * Create an object out of an array where one of the
+   * array's properties is used to index the new object.
+   * If a key is not defined the array's index will be used
+   * to index the new object.
+   */
+  var mapArrayToObject = function(array, keyProperty) {
+    var obj = {};
+    if( ! keyProperty) {
+      for(var i = array.length()-1; i >=0; --i) {
+        obj[i] = array[i];
+      }
+    } else {   
+      for(var i = array.length()-1; i >=0; --i) {
+        obj[array[i][keyProperty]] = array[i];
+        delete obj[array[i][keyProperty]][keyProperty];
+      }
+    }
+
+    return obj;
+  }
+
+/* ************************************************** *
  * ******************** Public API
  * ************************************************** */
 
@@ -1041,6 +1092,11 @@ Model.prototype.loadCrudMethod = loadCrudMethod;
 Model.prototype.getCrudAuthRouteName = getCrudAuthRouteName;
 Model.prototype.getCrudQueryRouteName = getCrudQueryRouteName;
 Model.prototype.getCrudMethodRouteName = getCrudMethodRouteName;
+
+// Format Objects
+Model.prototype.changeKeyName = changeKeyName;
+Model.prototype.mapArrayToObject = mapArrayToObject;
+
 
 /* ************************************************** *
  * ******************** Export the Public API
