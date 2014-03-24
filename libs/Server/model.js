@@ -19,6 +19,7 @@ var app,
     log,
     merge,
     sanitize,
+    sender,
     trace = false,
     traceHeader = "Model Library";
 
@@ -41,6 +42,7 @@ var Model = function(_fox) {
   auth    = fox.authentication;
   log     = fox.log;
   merge   = fox.merge;
+  sender  = fox.send;
   
   // Load external modules.
   sanitize = require("sanitize-it");
@@ -136,6 +138,25 @@ var getQueryResult = function(req, defaultValue) {
   return (req && req.queryResult !== undefined) ? req.queryResult : defaultValue;
 }
 
+var isCrudQueryHandled = function(req) {
+  return (req && req.isCrudQueryHandled);
+}
+
+var setCrudQueryHandled = function(req, value) {
+  if(req) {
+    req.isCrudQueryHandled = (value !== undefined) ? value : true;
+  }
+}
+
+var isCrudRequestHandled = function(req) {
+  return (req && req.isCrudRequestHandled);
+}
+
+var setCrudRequestHandled = function(req, value) {
+  if(req) {
+    req.isCrudRequestHandled = (value !== undefined) ? value : true;
+  }
+}
 
 /**
  * Route method to query by ID for a schema object and store the result
@@ -148,10 +169,30 @@ var getQueryResult = function(req, defaultValue) {
  * @populateModels is the mongoose populate models parameter.
  * @populateConditions is the mongoose populate conditions parameter.
  */
-var loadById = function(Schema, param, populateFields, populateSelects, populateModels, populateConditions) {
+var loadById = function(Schema, param, populateFields, populateSelects, populateModels, populateConditions, overwrite) {
   return function(req, res, next) {
+    // Check if the CRUD query has already been handled,
+    // don't perform a query on an already handled route.
+    if(isCrudQueryHandled(req)) {
+      console.log("LoadById: query already handled.");
+      return next();
+    }
+
+    // Don't overwrite queries if the overwrite 
+    //has been set to false
+    if( ! overwrite && getQueryResult(req) !== undefined) {
+      console.log("LoadById: Don't overwrite");
+      return next();
+    }
+
     // Check if the parameter exists in the request.
     if(req.params[param]) {
+      
+      // If we are evaluating an object ID and the parameter is not 
+      // possibly an object ID, the move on.
+      if( param === "_id" && ! isObjectIdString(req.params[param])) {
+        return next();
+      }
       
       // Ensure that each undefined parameter is handled.
       populateFields     = (populateFields)     ? populateFields     : "";
@@ -165,7 +206,13 @@ var loadById = function(Schema, param, populateFields, populateSelects, populate
           next(err);
         }
         
-        log.t(traceHeader, "Loaded by id " + obj.toString(), trace);
+        if(obj) {
+          log.t(traceHeader, "Loaded by id " + obj.toString(), trace);
+        }
+
+        setCrudQueryHandled(req);
+
+        console.log("LoadById: Next");
 
         // Set the query result and continue on.
         setQueryResult(obj, req, undefined, next);
@@ -178,8 +225,22 @@ var loadById = function(Schema, param, populateFields, populateSelects, populate
 };
 
 
-var load = function load(Schema, queryObject, opts) {
+var load = function load(Schema, queryObject, opts, overwrite, queryBody) {
   return load[Schema, queryObject, opts] = function(req, res, next) {
+    // Check for a previous query performed by CRUD method.
+    // Don't perform a query if a CRUD query has already been handled.
+    if(isCrudQueryHandled(req)) {
+      console.log("Load: Already handled.");
+      return next();
+    }
+
+    // If overwrite is false, don't perform a query to overwrite an existing one.
+    if( ! overwrite && getQueryResult(req) !== undefined) {
+      console.log("Load: Don't overwrite the query...");
+      return next();
+    }
+
+
     if(!queryObject) {   
       queryObject = {};
     }
@@ -193,12 +254,17 @@ var load = function load(Schema, queryObject, opts) {
     }
     var query = merge.priorityMerge(requestQuery, queryObject);
 
-    log.d("Query: " + JSON.stringify(query), debug);
+    // Merge body as part of the query, if the flag is set.
+    if(queryBody && req.body) {
+      query = merge.priorityMerge(req.body, query);
+    }
 
+    // Handle options
     if(opts) {
       sort = (opts["sort"]) ? opts["sort"] : "";
     }
-    Schema.find({}, function(err, obj) {
+
+    Schema.find(query, function(err, obj) {
       if(err) {
         next(err);
       } else if( ! obj){
@@ -206,8 +272,10 @@ var load = function load(Schema, queryObject, opts) {
         log.w("\t" + query);
       } else {
         setQueryResult(obj, req, []);
+        setCrudQueryHandled(req);
+        console.log("Load: Next")
       }
-        return next();
+      return next();
     });
   };
 };
@@ -452,6 +520,10 @@ var loadCrudAuthOnSchema = function(schemaName, config, next) {
       deleteAuth = createAuthMethod("remove", schemaName, authConfig),
       readAllAuth = createAuthMethod("readAll", schemaName, authConfig);
 
+  // Query all
+  app.get('/'+collectionName+'/query.:format', readAllAuth);
+  app.post('/'+collectionName+'/query.:format', readAllAuth);
+
   // Get by ID.
   app.get('/'+collectionName+'/:id.:format', readAuth);
 
@@ -460,12 +532,15 @@ var loadCrudAuthOnSchema = function(schemaName, config, next) {
 
   // Update
   app.post('/'+collectionName+'/:id.:format', updateAuth);
+  app.post('/'+collectionName+'/:id/update.:format', updateAuth);
 
   // Create
   app.post('/'+collectionName+'.:format', createAuth);
+  app.post('/'+collectionName+'/create.:format', createAuth);
 
   // Delete
   app.delete('/'+collectionName+'/:id.:format', deleteAuth);
+  app.delete('/'+collectionName+'/:id/delete.:format', deleteAuth);
 
   log.d("\tCRUD Authentication enabled for the "+schemaName.cyan+" schema.".magenta, debug);
 
@@ -498,21 +573,30 @@ var loadCrudQuery = function(app, db, config, next) {
 
 var loadCrudQueryOnSchema = function(schemaName, config, next) {
   schema = db.model(schemaName);
+
+  //Overwrite previous queries?
+  var overwrite = (config && config["crud"] && config.crud["overridePreviousQueries"]);
   
   // Get the collection name from the schema name.
   collectionName = schemaName.toLowerCase() + 's';
 
+  // Query all by parameter and body properties.
+  app.get('/'+collectionName+'/query.:format', load(schema, {}, undefined, overwrite, true));
+  app.post('/'+collectionName+'/query.:format', load(schema, {}, undefined, overwrite, true));
+
   // Get by ID.
-  app.get('/'+collectionName+'/:id.:format', loadById(schema, "id"));
+  app.get('/'+collectionName+'/:id.:format', loadById(schema, "id", overwrite));
 
   // Get all
-  app.get('/'+collectionName+'.:format', load(schema, {}));
+  app.get('/'+collectionName+'.:format', load(schema, {}, undefined, overwrite, true));
 
   // Update
-  app.post('/'+collectionName+'/:id.:format', loadById(schema, "id"));
+  app.post('/'+collectionName+'/:id.:format', loadById(schema, "id", overwrite));
+  app.post('/'+collectionName+'/:id/update.:format', loadById(schema, "id", overwrite));
 
   // Delete
-  app.delete('/'+collectionName+'/:id.:format', loadById(schema, "id"));
+  app.delete('/'+collectionName+'/:id.:format', loadById(schema, "id", overwrite));
+  app.delete('/'+collectionName+'/:id/delete.:format', loadById(schema, "id", overwrite));
 
   log.d("\tCRUD Query enabled for the "+schemaName.cyan+" schema.".magenta, debug);
 
@@ -550,6 +634,10 @@ var loadCrudMethodOnSchema = function(schemaName, config, next) {
   // Check if the sanitize method is available.
   var isSanitized = (verifyModelHasCrudMethod(schema, "sanitize"));
 
+  // Query all by parameters or body.
+  app.get('/'+collectionName+'/query.:format', getAllRoute(isSanitized));
+  app.post('/'+collectionName+'/query.:format', getAllRoute(isSanitized));
+
   // Get by ID.
   app.get('/'+collectionName+'/:id.:format', getRoute(isSanitized));
 
@@ -559,6 +647,7 @@ var loadCrudMethodOnSchema = function(schemaName, config, next) {
   // Update
   if(verifyModelHasCrudMethod(schema, "update")) {
     app.post('/'+collectionName+'/:id.:format', updateRoute(isSanitized));
+    app.post('/'+collectionName+'/:id/update.:format', updateRoute(isSanitized));
   } else {
     log.e("Schema " + schemaName + " must implement the update method to enable the update CRUD route.");
   }
@@ -566,6 +655,7 @@ var loadCrudMethodOnSchema = function(schemaName, config, next) {
   // Create
   if(verifyModelHasCrudMethod(schema, "update")) {
     app.post('/'+collectionName+'.:format', createRoute(schema, isSanitized));
+    app.post('/'+collectionName+'/create.:format', createRoute(schema, isSanitized));
   } else {
     log.e("Schema " + schemaName + " must implement the update method to enable the create CRUD route.");
   }
@@ -573,6 +663,7 @@ var loadCrudMethodOnSchema = function(schemaName, config, next) {
   // Delete
   if(verifyModelHasCrudMethod(schema, "delete")) {
     app.delete('/'+collectionName+'/:id.:format', removeRoute);
+    app.delete('/'+collectionName+'/:id/delete.:format', removeRoute);
   } else {
     log.e("Schema " + schemaName + " must implement the delete method to enable the delete CRUD route.");
   }
@@ -585,7 +676,7 @@ var loadCrudMethodOnSchema = function(schemaName, config, next) {
  * a schema object.  It also protects the routes using default authentication
  * settings found in the config.
  */
-var enableCrudOnSchema = function(schemaName, isAuthEnabled, config) {
+/*var enableCrudOnSchema = function(schemaName, isAuthEnabled, config) {
   schema = db.model(schemaName);
   
   // Get the collection name from the schema name.
@@ -603,6 +694,9 @@ var enableCrudOnSchema = function(schemaName, isAuthEnabled, config) {
       updateAuth = createAuthMethod("update", schemaName, authConfig),
       deleteAuth = createAuthMethod("remove", schemaName, authConfig),
       readAllAuth = createAuthMethod("readAll", schemaName, authConfig);
+
+  // Query
+  app.get('/'+collectionName+'/query.:format', readAuth, )
 
   // Get by ID.
   app.get('/'+collectionName+'/:id.:format', readAuth, loadById(schema, "id"), getRoute(isSanitized));
@@ -631,8 +725,9 @@ var enableCrudOnSchema = function(schemaName, isAuthEnabled, config) {
     log.e("Schema " + schemaName + " must implement the delete method to enable the delete CRUD route.");
   }
 
+
   log.d("\tCRUD enabled for the "+schemaName.cyan+" schema.".magenta, debug);
-}
+} */
 
 /**
  * CRUD plugin for mongoose schema objects. When enabled, adds 
@@ -661,7 +756,7 @@ var verifyModelHasAllCrudMethods = function(Schema) {
   var methods = ['update', 'delete'];
 
   for(var i = methods.length-1; i >= 0; --i) {
-    if( ! verifyModelHasCrudMethods(Schema, methods[i])) {
+    if( ! verifyModelHasCrudMethod(Schema, methods[i])) {
       return false;
     }
   }
@@ -744,6 +839,12 @@ var createRoute = function(Schema, isSanitized) {
  */
 var getRoute = function(isSanitized) {
   return function(req, res, next) {
+    // If the CRUD request is already handled, move on.
+    if(isCrudRequestHandled(req)) {
+      console.log("GetRoute: Already handled, moving on");
+      return next();
+    }
+
     // Get the object from the query result.
     var obj = getQueryResult(req);
 
@@ -754,6 +855,11 @@ var getRoute = function(isSanitized) {
 
     // Remove private properties in object.
     obj = sanitizeObject(obj, isSanitized);
+
+    // Mark the CRUD request as handled.
+    setCrudRequestHandled(req);
+
+    console.log("GetRoute: Next");
 
     // Set the response object to be returned to the caller.
     sender.setResponse(obj, req, res, next);
@@ -771,6 +877,12 @@ var getRoute = function(isSanitized) {
  */
 var getAllRoute = function(isSanitized) {
   return function(req, res, next) {
+    // If the CRUD request is already handled, move on.
+    if(isCrudRequestHandled(req)) {
+      console.log("GetAllRoute: Already handled, moving on");
+      return next();
+    }
+
     // Get the array from the query result.
     var objs = getQueryResult(req);
 
@@ -781,6 +893,11 @@ var getAllRoute = function(isSanitized) {
 
     // Remove private properties in object.
     obj = sanitizeObjects(objs, isSanitized);
+
+    // Mark the CRUD request as handled.
+    setCrudRequestHandled(req);
+
+    console.log("GetAllRoute: Next");
 
     // Set the response object to be returned to the caller.
     sender.setResponse(objs, req, res, next);
@@ -804,6 +921,12 @@ var getAllRoute = function(isSanitized) {
  */
 var updateRoute = function(isSanitized) {
   return function(req, res, next) {
+    // If the CRUD request is already handled, move on.
+    if(isCrudRequestHandled(req)) {
+      console.log("UpdateRoute: Already handled");
+      return next();
+    }
+
     // Retrieve the object to update from the query result.
     var obj = req.queryResult;                             
 
@@ -821,6 +944,11 @@ var updateRoute = function(isSanitized) {
 
       // Remove private properties in the object.
       obj = sanitizeObject(obj, isSanitized);
+
+      // Mark the CRUD request as handled.
+      setCrudRequestHandled(req);
+
+      console.log("UpdateRoute: Next");
 
       // Set the response object to the updated object.
       sender.setResponse(obj, req, res, next);                       
@@ -1049,6 +1177,22 @@ var remove = function(obj, userId, next) {
 
     return obj;
   }
+
+/* Regular Expression - 24 Character Hex String
+ * A regular expression to check if a string is 24 characters long and using hex
+ * characters.  This is used to verify a string can be used as an Object ID as 
+ * defined by MongoDB.
+ */
+var regex_24Hex = new RegExp("^[0-9a-fA-F]{24}$");
+
+/**
+ * Check if a string is a possible object id, meaning
+ * it has 24 hex characters.
+ */
+var isObjectIdString = function(str) {
+  return (str !== undefined && regex_24Hex.test(str));
+}
+
 
 /* ************************************************** *
  * ******************** Public API
