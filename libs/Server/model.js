@@ -174,14 +174,14 @@ var loadById = function(Schema, param, populateFields, populateSelects, populate
     // Check if the CRUD query has already been handled,
     // don't perform a query on an already handled route.
     if(isCrudQueryHandled(req)) {
-      console.log("LoadById: query already handled.");
+      log.t(traceHeader, "LoadById: CRUD load route is already handled, skipping this route method.", trace);
       return next();
     }
 
     // Don't overwrite queries if the overwrite 
     //has been set to false
     if( ! overwrite && getQueryResult(req) !== undefined) {
-      console.log("LoadById: Don't overwrite");
+      //console.log("LoadById: Don't overwrite");
       return next();
     }
 
@@ -212,8 +212,6 @@ var loadById = function(Schema, param, populateFields, populateSelects, populate
 
         setCrudQueryHandled(req);
 
-        console.log("LoadById: Next");
-
         // Set the query result and continue on.
         setQueryResult(obj, req, undefined, next);
       });
@@ -230,13 +228,13 @@ var load = function load(Schema, queryObject, opts, overwrite, queryBody) {
     // Check for a previous query performed by CRUD method.
     // Don't perform a query if a CRUD query has already been handled.
     if(isCrudQueryHandled(req)) {
-      console.log("Load: Already handled.");
+      log.t(traceHeader, "Load: CRUD load route is already handled, skipping this route method.", trace);
       return next();
     }
 
     // If overwrite is false, don't perform a query to overwrite an existing one.
     if( ! overwrite && getQueryResult(req) !== undefined) {
-      console.log("Load: Don't overwrite the query...");
+      //console.log("Load: Don't overwrite the query...");
       return next();
     }
 
@@ -273,7 +271,6 @@ var load = function load(Schema, queryObject, opts, overwrite, queryBody) {
       } else {
         setQueryResult(obj, req, []);
         setCrudQueryHandled(req);
-        console.log("Load: Next")
       }
       return next();
     });
@@ -841,7 +838,7 @@ var getRoute = function(isSanitized) {
   return function(req, res, next) {
     // If the CRUD request is already handled, move on.
     if(isCrudRequestHandled(req)) {
-      console.log("GetRoute: Already handled, moving on");
+      log.t(traceHeader, "GetRotue: CRUD route is already handled, skipping this route method.", trace);
       return next();
     }
 
@@ -858,8 +855,6 @@ var getRoute = function(isSanitized) {
 
     // Mark the CRUD request as handled.
     setCrudRequestHandled(req);
-
-    console.log("GetRoute: Next");
 
     // Set the response object to be returned to the caller.
     sender.setResponse(obj, req, res, next);
@@ -879,7 +874,7 @@ var getAllRoute = function(isSanitized) {
   return function(req, res, next) {
     // If the CRUD request is already handled, move on.
     if(isCrudRequestHandled(req)) {
-      console.log("GetAllRoute: Already handled, moving on");
+      log.t(traceHeader, "GetAllRoute: CRUD route is already handled, skipping this route method.", trace);
       return next();
     }
 
@@ -896,8 +891,6 @@ var getAllRoute = function(isSanitized) {
 
     // Mark the CRUD request as handled.
     setCrudRequestHandled(req);
-
-    console.log("GetAllRoute: Next");
 
     // Set the response object to be returned to the caller.
     sender.setResponse(objs, req, res, next);
@@ -923,7 +916,7 @@ var updateRoute = function(isSanitized) {
   return function(req, res, next) {
     // If the CRUD request is already handled, move on.
     if(isCrudRequestHandled(req)) {
-      console.log("UpdateRoute: Already handled");
+      log.t(traceHeader, "updateRoute: CRUD route is already handled, skipping this route method.", trace);
       return next();
     }
 
@@ -947,8 +940,6 @@ var updateRoute = function(isSanitized) {
 
       // Mark the CRUD request as handled.
       setCrudRequestHandled(req);
-
-      console.log("UpdateRoute: Next");
 
       // Set the response object to the updated object.
       sender.setResponse(obj, req, res, next);                       

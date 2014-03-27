@@ -80,11 +80,19 @@ var getResponse = function(res) {
 }
 
 var setRequestHandled = function(req, handled) {
-  req.isHandled = true;
+  req.isHandled = (handled === undefined) ? true : handled;
 }
 
 var isRequestHandled = function(req) {
   return (req.isHandled) ? req.isHandled : false;
+}
+
+var isResponseSent = function(res) {
+  return res.locals.isResponseSent;
+}
+
+var setIsResponseSent = function(res, value) {
+  res.locals.isResponseSent = value;
 }
 
 /**
@@ -95,14 +103,19 @@ var sendResponse = function(obj, req, res, next) {
 
   // Format the object into a response object.
   obj = createResponseObject(undefined, obj);
+  
+  // Update the response object.
+  res.locals.response = obj;
+  res.locals.isResponseSent = true;
 
   // Send a TEXT response.
   if(sanitize.isText(req)) {
-    return res.type('txt').send(JSON.stringify(obj));
+    res.type('txt').send(JSON.stringify(obj));
+  } else {
+    // Default by returning json.
+    res.json(obj);
   }
-
-  // Default by returning json.
-  return res.json(obj);
+  next();
 }
 
 /** 
@@ -339,14 +352,21 @@ function syntaxHighlight(json) {
 
 // Expose the public methods available.
 Send.prototype.send = sendResponse;
+
 Send.prototype.setResponse = setResponse;
 Send.prototype.getResponse = getResponse;
+
 Send.prototype.setRequestHandled = setRequestHandled;
 Send.prototype.isRequestHandled = isRequestHandled;
+
+Send.prototype.setIsResponseSent = setIsResponseSent;
+Send.prototype.isResponseSent = isResponseSent;
+
 Send.prototype.sendResponse = sendResponse;
 Send.prototype.createAndSendError = createAndSendError;
 Send.prototype.createError = createError;
 Send.prototype.sendError = sendError;
+Send.prototype.createResponseObject = createResponseObject;
 Send.prototype.createSuccessObject = createSuccessObject;
 Send.prototype.createAndSendSuccessObject = createAndSendSuccessObject;
 Send.prototype.prettifyJson = prettifyJson;
