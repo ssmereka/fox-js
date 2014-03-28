@@ -563,6 +563,10 @@ var routes = function routes(next) {
 
   // Require all the files of the specified type, in the correct order.
   requireTypesInFolder(config.routes, config.paths.serverAppFolder, function(err, success) {
+
+    // Add a route to ensure the chain of routes end.
+    app.all("/*", function(req, res, next) {return;});
+
     next(err, success);
   });
 };
