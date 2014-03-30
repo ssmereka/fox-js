@@ -1,0 +1,146 @@
+#!/usr/bin/env node
+
+// ~A Scott Smereka
+
+/* Fox
+ * Node script to control the server and other parts of
+ * the fox framework.
+ */
+
+
+/* ************************************************** *
+ * ******************** Library Variables & Modules
+ * ************************************************** */
+
+// Local Modules
+var Cli      = require("./cli.js"),
+    Client   = require('./client/'),
+    Config   = require("./config/config.js"),
+    Log      = require("./log.js"),
+    Package  = require('../package.json'),
+    Server   = require("./server/"),
+    Template = require("./template/"),
+    Worker   = require("./worker.js");
+
+var fox;
+
+
+/* ************************************************** *
+ * ******************** Event Handlers
+ * ************************************************** */
+
+/**
+ * Handle exit from terminal.
+ *
+ * SIGINT from the terminal is supported on all 
+ * platforms, and can usually be generated with 
+ * CTRL+C (though this may be configurable). It is 
+ * not generated when terminal raw mode is enabled.
+ */
+process.once("SIGINT", function() {
+  // Gracefully kill any children processes
+  if(fox && fox.worker) {
+    fox.worker.killChildren();
+  }
+
+  // Set a timeout of 5 seconds before force closing.
+  setTimeout(function() {
+    process.exit(0);
+  }, 5000);
+});
+
+
+/* ************************************************** *
+ * ******************** Fox Main Method
+ * ************************************************** */
+
+/**
+ * Create a new instance of the fox module used to 
+ * control the server.  Once the object is created
+ * it will handle all CLI input automatically.
+ * then the instance will be returned.
+ */
+var foxInstance = new Fox(function(err) {
+  if(err) {
+    console.log(err);
+  }
+
+  // Handle commandline input.
+  fox.cli.handleCli(fox.config, function(err) {
+    if(err) {
+      fox.log.error(err["message"] || err);
+      fox.exit();
+    }
+  });
+});
+
+
+/* ************************************************** *
+ * ******************** Constructor & Initalization
+ * ************************************************** */
+
+/**
+ * Fox constructor to initalize this module and other sub 
+ * modules.
+ */
+function Fox(next) {
+  fox = {};
+
+  // Load the fox logger.
+  fox.log = Log;
+
+  // Ensure next is defined.
+  next = (next) ? next : function(err) { fox.log.error(err["message"] || err) };
+
+  var cli = new Cli(fox);
+  // Load configuration object based off cli input.
+  cli.handleConfigCli(Config(undefined, fox.log), function(err, _config) {
+    if(err) {
+      return next(err);
+    }
+
+    // Handle undefined config.
+    if( ! _config) {
+      return next(new Error("Config is invalid."));
+    }
+
+    // After we are finished creating our config object, store it.
+    fox.config = _config;
+
+    // Create a list of child processes.
+    //fox.littleChildren = [];
+
+    // Add an exit method.
+    fox.exit = function(code) {
+      code = (code) ? code : 1;
+      process.exit(code);
+    };
+
+    // Add the worker module.
+    fox.worker = new Worker(fox);
+
+    // Add the package.json object
+    fox.package = (Package !== undefined) ? Package : {};
+
+    // Add the template module.
+    fox.template = new Template(fox);
+
+    // Add the server module.
+    fox.server = new Server(fox);
+
+    // Add the client module.
+    fox.client = new Client(fox);
+
+    // Update the fox instance stored in the CLI module.
+    cli.updateFoxReference(fox, function(err) {
+      if(err) {
+        return next(err);
+      }
+
+      // Add cli module.
+      fox.cli = cli;
+
+      next();
+    });
+  });
+};
