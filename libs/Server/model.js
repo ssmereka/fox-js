@@ -1011,6 +1011,9 @@ var update = function(updateMethods) {
 function makeUpdatePropertyMethod(key, type) {
   return function(curObj, newObj) {
 
+    console.log(key);
+    console.log(type);
+
     // If the update object contains the property "key",
     // then check if its value is valid based on the property type.
     if(newObj && newObj[key] && curObj) {

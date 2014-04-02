@@ -25,6 +25,7 @@ var accessToken,
     model, 
     mongoose, 
     MongoStore, 
+    path,
     sender,
     trace = false;
 
@@ -45,7 +46,7 @@ var Load = function(_fox) {
   sender = fox.send;
 
   // Load external modules
-  //...
+  path = require('path');
 
   // Configure the load instance.
   handleConfig(fox.config);
@@ -75,7 +76,7 @@ var handleConfig = function(config) {
  * the configuration object.
  */
 var modules = function(_config, next) {
-  
+
   loadConfig(_config, function(err, loadedConfig) {
 
     // Make sure we loaded a config object before we try to use it.
@@ -104,27 +105,31 @@ var modules = function(_config, next) {
 };
 
 var loadConfig = function(_config, next) {
-  // Load the config module.  This holds a default configuration object
-  // and functions used to help configure the server.
-  configModule = require("../Config/config.js");
-
-  // Make sure we loaded the config module before we use it.
-  if( ! configModule) {
-    console.log("Could not load the config module.");
-    return false;
+  // Ensure the next method is valid.
+  next = (next) ? next : function(err) { 
+    if(err){ 
+      log.e(err["message"]||err); 
+    }
+  };
+  
+  var systemConfig,
+      systemConfigFile,
+      systemConfigFilePath = path.normalize("../Config/config.js");
+  
+  // Load the system configuration file.  This file holds the default
+  // configurations for the server.
+  try {
+    systemConfigFile = require(systemConfigFilePath);
+  } catch(err) {
+    log.e(err);
+    return next(new Error("Cannot load system configuration file."));
   }
 
-  // The config object holds information about how the server should
-  // work and function. If a config parameter is valid, then combine 
-  // the default config object with the config parameter.  The merge 
-  // will give the config parameter priority.
-  if(_config !== undefined && _config != null && typeof _config === 'object') {
-    config = merge.deepPriorityMergeSync(_config, configModule.config());
-    next(undefined, config);
-  } else {
-    config = configModule.config();
-    next(undefined, mergedConfig);
-  }
+  systemConfig = new systemConfigFile();
+
+  var config = systemConfig.createConfigObject(_config);
+
+  next(undefined, config);
 }
 
 /**
@@ -142,7 +147,6 @@ var database = function(next) {
 
   // If we using MongoDB
   if(config.mongodb.enabled) {                                         // If we are configuring a Mongo database.
-    
     // Setup a Mongo Session Store, this will define the database
     // settings and event actions.
     var mongoSessionStore = new MongoStore({                           // Setup a mongo session store and code to run on a connection.
@@ -151,8 +155,6 @@ var database = function(next) {
     }, function() {                                                    // This function is called after a successful connection is setup by mongo-connect.
       mongoose.connect(config.mongodb.uri);                            // Finally, connect to the MongoDB Database.
       
-
-
       mongoose.connection.on('close', function() {
         log.e("Database connection closed.");
       });
@@ -183,7 +185,7 @@ var database = function(next) {
     );
 
   // If we are using PostgreSQL database.
-  } else if(config.postgresql.enabled) {                               // If we are configuring a postgresql database.
+  } else if(config.postgresql && config.postgresql.enabled) {                               // If we are configuring a postgresql database.
     return next(new Error("Could not connect to postgresql, one was not configured."), undefined);
   
   // Otherwise, throw an error.
@@ -457,7 +459,7 @@ var application = function appFunction(_config, next) {
   // This includes loading our configuration object.
   modules(_config, function(err, config) {
     if(err) {
-      next(err);
+      return next(err);
     } else if( ! config) {
       return next(new Error("An error occured while loading modules."));
     }
@@ -468,10 +470,10 @@ var application = function appFunction(_config, next) {
     app = module.exports = express(); 
 
     // Handle configuration and setup for different server enviorment modes. (Such as local, development, and production).
-    var success = configModule.configureEnviorment(express, app);
-    if(! success) {
-      return next(new Error("Could not load config environment"));
-    }
+    //var success = configModule.configureEnviorment(express, app);
+    //if(! success) {
+    //  return next(new Error("Could not load config environment"));
+    //}
 
     // Setup express.
     app.use(express.cookieParser());  // Setup express: enable cookies.
@@ -520,10 +522,8 @@ var application = function appFunction(_config, next) {
  * Configure and setup Passport for authentication.
  */
 var passport = function passport(db, next) {
-  //var passport = require(config.paths.nodeModulesFolder + 'passport');
   var passport = require('passport');
 
-  //app.use(require(config.paths.nodeModulesFolder + 'connect-flash')());  // Enables flash messages while authenticating with passport.
   app.use(require('connect-flash')());  // Enables flash messages while authenticating with passport.
   app.use(passport.initialize());
   app.use(passport.session());
@@ -573,11 +573,18 @@ var routes = function routes(next) {
 
 
 var start = function start(config, next) {
+  next = (next) ? next : function(err) {
+    if(err) {
+      console.log(err);
+      process.exit();
+    }
+  };
+
   // Create our config object, application, and connect to the database.
   application(config, function(err, app, config, db) { 
     if(err) { 
       // Error occurred and server cannot start, display error.
-      return (next) ? next(err) : console.log(err);
+      return next(err);
     }
 
     // Load and configure passport for authentication.
@@ -607,16 +614,19 @@ var start = function start(config, next) {
  * Let the user know under what conditions the server started on.
  */
 var server = function server() {
-  // You can set the port using "export PORT=1234" or it will default to your configuration file.
-  var port = (config.port);                                              
-  
+  if(! config || ! config.server) {
+    log.e("Configuration file is missing the server property.");
+    return;
+  }
+
   // Start our server listening on previously declared port.
-  app.listen(port);
+  // You can set the port using "export PORT=1234" or it will default to your configuration file.
+  app.listen(config.server.port);
   
   if(config.mongodb.enabled) {
-    console.log("[ OK ] Listening on port ".green + port.cyan + " in ".green + app.settings.env.cyan + " mode with database ".green + config.mongodb.database.cyan + ".".green);
+    console.log("[ OK ] Listening on port ".green + config.server.port.cyan + " in ".green + app.settings.env.cyan + " mode with database ".green + config.mongodb.database.cyan + ".".green);
   } else {
-    console.log("[ OK ] Listening on port ".green + port.cyan + " in ".green + app.settings.env.cyan + " mode.".green);
+    console.log("[ OK ] Listening on port ".green + config.server.port.cyan + " in ".green + app.settings.env.cyan + " mode.".green);
   }
 };
 
