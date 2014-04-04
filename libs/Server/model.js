@@ -18,10 +18,12 @@ var app,
     fox,
     log,
     merge,
+    pluralize,
     sanitize,
     sender,
     trace = false,
-    traceHeader = "Model Library";
+    traceHeader = "Model Library",
+    _;
 
 
 /* ************************************************** *
@@ -46,6 +48,8 @@ var Model = function(_fox) {
   
   // Load external modules.
   sanitize = require("sanitize-it");
+  pluralize = require("pluralize");
+  _ = require("underscore");
 
   // Setup library based on config.
   handleConfig(fox["config"]);
@@ -505,7 +509,7 @@ var loadCrudAuthOnSchema = function(schemaName, config, next) {
   schema = db.model(schemaName);
   
   // Get the collection name from the schema name.
-  collectionName = schemaName.toLowerCase() + 's';
+  collectionName = pluralize.plural(schemaName.toLowerCase());
 
   // Get the authentication configuration object from the config.
   var authConfig = getCrudAuthConfig(config);
@@ -575,7 +579,7 @@ var loadCrudQueryOnSchema = function(schemaName, config, next) {
   var overwrite = (config && config["crud"] && config.crud["overridePreviousQueries"]);
   
   // Get the collection name from the schema name.
-  collectionName = schemaName.toLowerCase() + 's';
+  collectionName = pluralize.plural(schemaName.toLowerCase());
 
   // Query all by parameter and body properties.
   app.get('/'+collectionName+'/query.:format', load(schema, {}, undefined, overwrite, true));
@@ -626,7 +630,7 @@ var loadCrudMethodOnSchema = function(schemaName, config, next) {
   schema = db.model(schemaName);
   
   // Get the collection name from the schema name.
-  collectionName = schemaName.toLowerCase() + 's';
+  collectionName = pluralize.plural(schemaName.toLowerCase());
 
   // Check if the sanitize method is available.
   var isSanitized = (verifyModelHasCrudMethod(schema, "sanitize"));
@@ -667,64 +671,6 @@ var loadCrudMethodOnSchema = function(schemaName, config, next) {
 
   log.d("\tCRUD Method enabled for the "+schemaName.cyan+" schema.".magenta, debug);
 }
-
-/**
- * Add routes for creating, reading, updateing, and deleting instances of
- * a schema object.  It also protects the routes using default authentication
- * settings found in the config.
- */
-/*var enableCrudOnSchema = function(schemaName, isAuthEnabled, config) {
-  schema = db.model(schemaName);
-  
-  // Get the collection name from the schema name.
-  collectionName = schemaName.toLowerCase() + 's';
-
-  // Check if the sanitize method is available.
-  var isSanitized = (verifyModelHasCrudMethod(schema, "sanitize"));
-
-  // Get the authentication configuration object from the config.
-  var authConfig = getCrudAuthConfig(config);
-
-  // Create our CRUD authenticaiton methods.
-  var createAuth = createAuthMethod("create", schemaName, authConfig),
-      readAuth = createAuthMethod("read", schemaName, authConfig),
-      updateAuth = createAuthMethod("update", schemaName, authConfig),
-      deleteAuth = createAuthMethod("remove", schemaName, authConfig),
-      readAllAuth = createAuthMethod("readAll", schemaName, authConfig);
-
-  // Query
-  app.get('/'+collectionName+'/query.:format', readAuth, )
-
-  // Get by ID.
-  app.get('/'+collectionName+'/:id.:format', readAuth, loadById(schema, "id"), getRoute(isSanitized));
-
-  // Get all
-  app.get('/'+collectionName+'.:format', readAllAuth, load(schema, {}), getAllRoute(isSanitized));  //{ "sort": "creationDate"}
-
-  // Update
-  if(verifyModelHasCrudMethod(schema, "update")) {
-    app.post('/'+collectionName+'/:id.:format', updateAuth, loadById(schema, "id"), updateRoute(isSanitized));
-  } else {
-    log.e("Schema " + schemaName + " must implement the update method to enable the update CRUD route.");
-  }
-
-  // Create
-  if(verifyModelHasCrudMethod(schema, "update")) {
-    app.post('/'+collectionName+'.:format', createAuth, createRoute(schema, isSanitized));
-  } else {
-    log.e("Schema " + schemaName + " must implement the update method to enable the create CRUD route.");
-  }
-
-  // Delete
-  if(verifyModelHasCrudMethod(schema, "delete")) {
-    app.delete('/'+collectionName+'/:id.:format', deleteAuth, loadById(schema, "id"), removeRoute);
-  } else {
-    log.e("Schema " + schemaName + " must implement the delete method to enable the delete CRUD route.");
-  }
-
-
-  log.d("\tCRUD enabled for the "+schemaName.cyan+" schema.".magenta, debug);
-} */
 
 /**
  * CRUD plugin for mongoose schema objects. When enabled, adds 
@@ -965,7 +911,28 @@ var createUpdateMethod = function(Schema) {
   // and create a validation method.
   for(var key in Schema.paths) {
     if(Schema.paths.hasOwnProperty(key)) {
-      updateMethods.push(makeUpdatePropertyMethod(key, Schema.paths[key]["instance"]));
+      var type;
+
+      // Get the type of variable
+      if(Schema.paths[key]["instance"] !== undefined) {
+        // Get the type from the instance property.
+        type = Schema.paths[key]["instance"];
+      } else if(Schema.paths[key].options !== undefined) {
+
+        // Get the type from the options function type.
+        if(_.isFunction(Schema.paths[key].options.type)) {
+          var func = Schema.paths[key].options.type.toString();
+          type = func.substring(9, func.indexOf("("));
+        } else if(_.isObject(Schema.paths[key].options.type)) {
+          type = "Array";
+        }
+
+      } else {
+        // Unknown type.
+        log.d("Type is unknown for key "+key);
+      }
+
+      updateMethods.push(makeUpdatePropertyMethod(key, type));
     }
   }
 
@@ -982,6 +949,8 @@ var update = function(updateMethods) {
   return function(newObj, userId, next) {
     // Store a reference to the current object
     var obj = this;
+
+    log.t("Update", "User "+userId+" is updating schema object.");
 
     // Loop through each validation method updating the 
     // current object when the user input is valid.
@@ -1011,54 +980,78 @@ var update = function(updateMethods) {
 function makeUpdatePropertyMethod(key, type) {
   return function(curObj, newObj) {
 
-    console.log(key);
-    console.log(type);
+    // Get the property value from the new object.   
+    var newValue;
+    try {
+      newValue = eval("newObj." + key);
+    } catch(err) {
+      // If the new object does not contain a property
+      // with the chosen key, then no updates need to be made.
+      return curObj;
+    }
 
-    // If the update object contains the property "key",
-    // then check if its value is valid based on the property type.
-    if(newObj && newObj[key] && curObj) {
-      var value = undefined;
-      
-      switch(type) {
-        case 'Array':
-          value = sanitize.array(newObj[key]);
-          break;
-        case 'Boolean': 
-          value = sanitize.boolean(newObj[key]);
-          break;
-        case 'Buffer':
-          //TODO: Sanitize a buffer.
-          value = newObj[key];
-          break;
-        case 'Date': 
-          value = sanitize.date(newObj[key]);
-          break;
-        case 'Mixed':
-          //TODO: Sanitize mixed.
-          value = newObj[key];
-          break;
-        case 'Number': 
-          value = sanitize.number(newObj[key]);
-          break;
-        case 'ObjectID':
-          value = sanitize.objectId(newObj[key]);
-          break;
-        case 'String': 
-          value = sanitize.string(newObj[key]);
-          break;
-        default: 
-          log.i("Processing '"+key+": "+newObj[key]+"'");
-          log.e("Mongoose property type is unknown: " + type);
-          // TODO: For now just assume undefined is a date, because mongoose is dumb:
-          value = sanitize.date(newObj[key]);
-          break;
-      }
+    // Check if the new object contains the property with 
+    // the named key.
+    var keys = key.split("."),
+        property = keys[keys.length-1],
+        parents = key.substring(0, key.length-property.length);
 
-      // If the value is valid, update the current schema object
-      // with the new value from the update object.
-      if(value !== undefined) {
-        curObj[key] = value;
-      }
+    // If the new object does not contain the named property, no
+    // updates need to be made.
+    if( ! eval("(newObj."+parents+"hasOwnProperty('"+property+"'))")) {
+      return curObj;
+    }
+    
+    // If the property is defined and has a value of 
+    // undefined, then update the value to undefined.
+    if(newValue === undefined || newValue === "undefined") {
+      eval("curObj."+key+" = undefined");
+      log.t("Update", key + " updated to " + newValue);
+      return curObj;
+    }
+
+    // Otherwise, check if the value is valid
+    var value = undefined;
+    switch(type) {
+      case 'Array':
+        value = sanitize.array(newValue);
+        break;
+      case 'Boolean': 
+        value = sanitize.boolean(newValue);
+        break;
+      case 'Buffer':
+        //TODO: Sanitize a buffer.
+        value = newValue;
+        break;
+      case 'Date': 
+        value = sanitize.date(newValue);
+        break;
+      case 'Mixed':
+        //TODO: Sanitize mixed.
+        value = newValue;
+        break;
+      case 'Number': 
+        value = sanitize.number(newValue);
+        break;
+      case 'ObjectID':
+        value = sanitize.objectId(newValue);
+        break;
+      case 'String': 
+        value = sanitize.string(newValue);
+        break;
+      default: 
+        log.i("Processing '"+key+": "+newValue+"'");
+        log.e("Mongoose property type is unknown: " + type);
+        // TODO: For now just assume undefined is a date, because mongoose is dumb:
+        value = sanitize.date(newValue);
+        break;
+    }
+
+    // If the value is valid, update the current schema object
+    // with the new value from the update object.
+    if(value !== undefined) {
+      eval("curObj."+key+" = value");
+      log.t("Update", key + " updated to " + newValue);
     }
 
     // Return the possibly updated object.
