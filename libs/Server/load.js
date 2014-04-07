@@ -467,7 +467,8 @@ var application = function appFunction(_config, next) {
     // Create and return an application object created by express.
     // We use module.exports as opposed to exports so that we can use
     // the "app" object as a function.  (Reference: http://goo.gl/6yzmKc)
-    app = module.exports = express(); 
+    //app = module.exports = express(); 
+    app = express();
 
     // Handle configuration and setup for different server enviorment modes. (Such as local, development, and production).
     //var success = configModule.configureEnviorment(express, app);
@@ -598,13 +599,8 @@ var start = function start(config, next) {
     // Dynamically require all of our routes in the correct order.
     routes(function(err, success) {    
 
-      // Start the server. 
-      server();                        
-      
-      // Notify the caller that the server has started successfully.
-      if(next) {
-        return next();
-      }
+      // Start the server and notify the caller that the server has started successfully.
+      server(next);                  
     });
   });
 };
@@ -613,7 +609,14 @@ var start = function start(config, next) {
  * Start the server on the specifed port.
  * Let the user know under what conditions the server started on.
  */
-var server = function server() {
+var server = function server(next) {
+  next = (next) ? next : function(err, server) {
+    if(err) {
+      return log.error(err);
+    }
+    return server;
+  };
+
   if(! config || ! config.server) {
     log.e("Configuration file is missing the server property.");
     return;
@@ -621,13 +624,15 @@ var server = function server() {
 
   // Start our server listening on previously declared port.
   // You can set the port using "export PORT=1234" or it will default to your configuration file.
-  app.listen(config.server.port);
+  var server = app.listen(config.server.port);
   
   if(config.mongodb.enabled) {
     console.log("[ OK ] Listening on port ".green + config.server.port.cyan + " in ".green + app.settings.env.cyan + " mode with database ".green + config.mongodb.database.cyan + ".".green);
   } else {
     console.log("[ OK ] Listening on port ".green + config.server.port.cyan + " in ".green + app.settings.env.cyan + " mode.".green);
   }
+
+  next(undefined, server);
 };
 
 
