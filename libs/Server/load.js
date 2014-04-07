@@ -632,7 +632,7 @@ var server = function server(next) {
     console.log("[ OK ] Listening on port ".green + config.server.port.cyan + " in ".green + app.settings.env.cyan + " mode.".green);
   }
 
-  next(undefined, server);
+  next(undefined, app, db, config, server);
 };
 
 
