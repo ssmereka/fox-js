@@ -237,6 +237,15 @@ var defaultConfig = {
     protocol: 'https'                   // Default protocol to use, http or https.
   },
 
+  socketio: {
+    enabled: true,                      // Enable or disable use of web sockets through socket.io
+    routes: {
+      enabled: true,
+      whitelist: {},
+      blacklist: {}
+    }
+  },
+
   // Private configs for the internal fox libraries.
   system: {
     debug: false,                       // Flag to enabled additional logging of debug information.
