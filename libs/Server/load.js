@@ -212,7 +212,7 @@ var database = function(next) {
       app.io.set('authorization', passportSocketIo.authorize({
         cookieParser: express.cookieParser,
         fail: function(data, message, error, accept) {
-          log.t("Passport IO", "Authentication failure.", true);
+          log.t("Passport IO", "Authentication failure.", trace);
           log.e(message);
           accept(null, false);
         },
@@ -225,6 +225,8 @@ var database = function(next) {
           return expressIo_authorization(data, accept);
         }
       }));
+
+      //app.io.set('log level', )
     }
 
   // If we are using PostgreSQL database.
@@ -515,7 +517,18 @@ var application = function appFunction(_config, next) {
 
     // Setup socket.io if it is enabled.
     if(config && config.socketio && config.socketio.enabled) {
-      io = app.http().io();
+      if(config.socketio.protocol === "https") {
+        var ssl = fs.readFileSync(config.socketio.sslFilePath);
+        if(! ssl) {
+          log.e("Cannot start socket.io with invalid ssl cert and or key.");
+        } else {
+          io = app.https({key: ssl, cert: ssl}).io();
+          log.t("Load","Socket.io enabled over https.", trace);
+        }
+      } else {
+        io = app.http().io();
+        log.t("Load","Socket.io enabled over http.", trace);
+      }
     }
 
     // Handle configuration and setup for different server enviorment modes. (Such as local, development, and production).
