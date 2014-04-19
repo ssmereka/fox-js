@@ -102,6 +102,29 @@ var defaultNodemonConfig = {
     stdout: true
 }
 
+var isInstalled = function(next) {
+  npmListProcess = fox.worker.execute("npm", ["list", "nodemon", "-g"], { cwd: '.' }, false, function(err, code, npmlist, stderr) {
+    next(err, (npmlist.indexOf("nodemon") !== -1));
+  });
+}
+
+var install = function(next) {
+  isInstalled(function(err, isInstalled) {
+    if(err) {
+      next(err);
+    } else if(isInstalled) {
+      console.log("Is installed!");
+      next();
+    } else {
+      log.info("Installing nodemon...");
+      fox.worker.execute("npm", ["install", "nodemon", "-g"], { cwd: '.' }, false, function(err, code, output, stderr) {
+        log.success("Nodemon install complete.");
+        next(err);
+      });
+    }
+  });
+}
+
 /**
  * Start the server using nodemon.  This will deamonize the 
  * process and perform automatic restarts when files change.
@@ -118,21 +141,27 @@ var start = function(config, next, onStdoutFn) {
   if( ! next) {
     next = function(err) { if(err) { log.error(err["message"] || err); } };;
   } else {
-    // Create a method to listen for when the server has actually started.
-    onStdOutput = function(data) {
-      out += data;
-      if( ! isNextCalled) {
-        // If the server is listening, return our results.
-        if(data && data.toString().indexOf("Listening on port") != -1) {
-          if(out.length > 0) {
-            next(undefined, out.substring(0, out.length-1));
-          } else {
-            next();
-          }
-          isNextCalled = true;
-        }
+    install(function(err) {
+      if(err) {
+        return next(err);
       }
-    };
+
+      // Create a method to listen for when the server has actually started.
+      onStdOutput = function(data) {
+        out += data;
+        if( ! isNextCalled) {
+          // If the server is listening, return our results.
+          if(data && data.toString().indexOf("Listening on port") != -1) {
+            if(out.length > 0) {
+              next(undefined, out.substring(0, out.length-1));
+            } else {
+              next();
+            }
+            isNextCalled = true;
+          }
+        }
+      };
+    });
   }
 
   // Check if we found the server
@@ -184,6 +213,8 @@ var stop = function(next) {
  * ******************** Public API
  * ************************************************** */
 
+Nodemon.prototype.isInstalled = isInstalled;
+Nodemon.prototype.install = install;
 Nodemon.prototype.start = start;
 Nodemon.prototype.stop = stop;
 Nodemon.prototype.restart = restart;
