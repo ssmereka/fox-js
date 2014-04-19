@@ -61,11 +61,38 @@ var updateFoxReference = function(_fox, next) {
  * ******************** Private API
  * ************************************************** */
 
+var isInstalled = function(next) {
+  npmListProcess = fox.worker.execute("npm", ["list", "pm2", "-g"], { cwd: '.' }, false, function(err, code, npmlist, stderr) {
+    next(err, (npmlist.indexOf("pm2") !== -1));
+  });
+}
+
+var install = function(next) {
+  isInstalled(function(err, isInstalled) {
+    if(err) {
+      next(err);
+    } else if(isInstalled) {
+      next();
+    } else {
+      log.info("Installing pm2...");
+      fox.worker.execute("npm", ["install", "pm2", "-g"], { cwd: '.' }, false, function(err, code, output, stderr) {
+        log.success("PM2 install complete.");
+        next(err);
+      });
+    }
+  });
+}
+
 /**
  * Start the server using pm2 to daemonize the process.  Also 
  * perform any clustering that is needed.
  */
 var start = function(config, next) {
+  // Check for a valid server file.
+  if(! config || config.serverPath === undefined) {
+    return next(new Error("A node.js server file was not found."));
+  }
+
   // Arguments for staring the server using pm2.
   var args = [
     "start",
@@ -86,33 +113,36 @@ var start = function(config, next) {
     env: env
   };
 
-  // Check if pm2 server already running, Get list of current pm2 servers.
-  var jlistProcess = fox.worker.execute("pm2", ["jlist"], { cwd: '.' }, false, function(err, code, jlist, stderr) {
-    if(err) {
-      if(next) {
-        return next(err);
-      }
-      fox.log.error(err);
-      exit();
-    }
-    
-    // Convert the list to an array.
-    jlist = (jlist) ? JSON.parse(jlist) : undefined;
+  install(function(err) {
 
-    // Check if the server is already running.
-    if(jlist !== undefined && jlist instanceof Array && jlist.length > 0) {
-      for(var i = jlist.length-1; i >= 0; --i) {
-        if(jlist[i]["name"] === config.name && jlist[i]["pm2_env"]["status"] === "online") {
-          if(next) {
-            return next(new Error("Server " + config.name + " is already started."));
+    // Check if pm2 server already running, Get list of current pm2 servers.
+    var jlistProcess = fox.worker.execute("pm2", ["jlist"], { cwd: '.' }, false, function(err, code, jlist, stderr) {
+      if(err) {
+        if(next) {
+          return next(err);
+        }
+        fox.log.error(err);
+        exit();
+      }
+      
+      // Convert the list to an array.
+      jlist = (jlist) ? JSON.parse(jlist) : undefined;
+
+      // Check if the server is already running.
+      if(jlist !== undefined && jlist instanceof Array && jlist.length > 0) {
+        for(var i = jlist.length-1; i >= 0; --i) {
+          if(jlist[i]["name"] === config.name && jlist[i]["pm2_env"]["status"] === "online") {
+            if(next) {
+              return next(new Error("Server " + config.name + " is already started."));
+            }
+            return fox.log.error("Server " + config.name + " is already started.");
           }
-          return fox.log.error("Server " + config.name + " is already started.");
         }
       }
-    }
 
-    // Server is not running, so start it.
-    var startProcess = fox.worker.execute("pm2", args, opts, true, next);
+      // Server is not running, so start it.
+      var startProcess = fox.worker.execute("pm2", args, opts, true, next);
+    });
   });
 }
 
@@ -236,6 +266,8 @@ var reload = function(config, next) {
  * ******************** Public API
  * ************************************************** */
 
+Pm2.prototype.isInstalled = isInstalled;
+Pm2.prototype.install = install;
 Pm2.prototype.start = start;
 Pm2.prototype.stop = stop;
 Pm2.prototype.restart = restart;

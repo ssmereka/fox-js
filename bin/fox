@@ -66,7 +66,7 @@ var foxInstance = new Fox(function(err) {
   }
 
   // Handle commandline input.
-  fox.cli.handleCli(fox.config, function(err) {
+  fox.cli.handleCli(fox.config, function(err, handled) {
     if(err) {
       fox.log.error(err["message"] || err);
       fox.exit();
@@ -118,6 +118,10 @@ function Fox(next) {
 
     // Add the worker module.
     fox.worker = new Worker(fox);
+
+    /*fox.worker.execute("npm", ["list", "-g"], {}, false, function(err, code, stdout, stderr) {
+      console.log(stdout);
+    }*/
 
     // Add the package.json object
     fox.package = (Package !== undefined) ? Package : {};

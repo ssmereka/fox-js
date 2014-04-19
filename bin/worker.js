@@ -136,8 +136,11 @@ var fork = function(command, args, options, end, onStdout, onStderr, onMessage) 
  * so it can be gracefully killed if needed.
  */
 var execute = function(cmd, end) {
+  console.log("Exectue");
   var child = childProcess.exec(cmd, function(err, stdout, stderr) {
+    console.log("End?")
     if(end) {
+      console.log("End!")
       end(err, stdout, stderr);
     }
 
@@ -200,6 +203,19 @@ var spawn = function(command, args, options, showStd, end) {
 
     // Remove the child from the list of children processes.
     removeChild(this);
+  });
+
+  // Catch errors thrown by the child process.
+  child.on("error", function(error) {
+    if(error) {
+      if(showStd) {
+        stderr += error.message || error.toString();
+        process.stderr.write("" + error);
+      }
+      if(end) {
+        end(error, undefined, undefined, undefined);
+      }
+    }
   });
 
   // Add the child to the list of children processes.
