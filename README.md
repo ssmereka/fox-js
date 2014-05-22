@@ -1,6 +1,6 @@
 # Fox JS 
 
-Light-framework and boilerplate code to quickly build scalable web apps using javascript.  The backend is a standalone node server with authenticaiton, users, and anything else all API's need.  The frontend is a standalone angular framework already setup to communicate with the backend.
+Light-framework and boilerplate code to quickly build scalable web apps using JavaScript. The Node.js server is configured to handle authentication and CRUD operations on data models you create. It even has some basic ones already defined such as users. The Angular.js client is configured to communicate with the server's API and ready to be extended.
 
 **Current Status:** In Development.
 
