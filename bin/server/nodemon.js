@@ -213,9 +213,9 @@ var install = function(next) {
  * Start the server using nodemon.  This will deamonize the 
  * process and perform automatic restarts when files change.
  */
-var start = function(config, next, onStdoutFn) {
+var start = function(config, next, showAllLogs) {
   var nodemonConfig = defaultNodemonConfig,
-      waitForStart = true,
+      waitForStart = (showAllLogs) ? false : true,
       isNextCalled = false,
       out = "";
 
@@ -254,7 +254,6 @@ var start = function(config, next, onStdoutFn) {
       } else {
         console.log(data + "");
       }
-
       if( ! isNextCalled) {
         out += data;
         // If the server is listening, return our results.
@@ -281,7 +280,7 @@ var start = function(config, next, onStdoutFn) {
     //nodemon.on('start', function() { console.log("Start")});
     //nodemon.on('quit', function() {console.log("Quit")});
     //nodemon.on('restart', function(files) { console.log("Restart")});
-    //nodemon.on('log', function(log) {});
+    //nodemon.on('log', function(log) { console.log(log)});
   });
 }
 

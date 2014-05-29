@@ -150,14 +150,14 @@ function updateObjectReferenceFn(obj, _fox) {
  * Start the server using a controller and conditions 
  * defiend in the config object.
  **/
-var start = function(_config, next) {
+var start = function(_config, next, showAllLogs) {
   switch(_config["controller"]) {
     case "node":
       node.start(_config, next);
       break;
 
     case "nodemon":
-      nodemon.start(_config, next);
+      nodemon.start(_config, next, showAllLogs);
       break;
 
     case "pm2":
