@@ -413,11 +413,7 @@ var install = function(_config, next) {
     var installKey = "IOlQ9V6Tg6RVL7DSJFL248723Bm3JjCF34FI0TJOVPvRzz";
 
     // Execute the install command.
-<<<<<<< HEAD
-    request.post("http://localhost:3001/install.json?access_token="+installKey, {}, function(err, r, body) {
-=======
     request.post("http://localhost:3000/install.json?access_token="+installKey, {}, function(err, r, body) {
->>>>>>> a76ab4db271f4bfe154e76265c87b93e4458cf60
       if(err) {
         return next(err)
       }
