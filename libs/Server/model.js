@@ -1014,30 +1014,42 @@ function makeUpdatePropertyMethod(key, type) {
     var value = undefined;
     switch(type) {
       case 'Array':
-        value = sanitize.array(newValue);
+        if(_.isArray(newValue)) {
+          value = newValue;
+        }
         break;
-      case 'Boolean': 
-        value = sanitize.boolean(newValue);
+      case 'Boolean':
+        if(_.isBoolean(newValue)) {
+          value = newValue;
+        }
         break;
       case 'Buffer':
-        //TODO: Sanitize a buffer.
+        // TODO: Sanitize a buffer.
         value = newValue;
         break;
       case 'Date': 
-        value = sanitize.date(newValue);
+        //TODO: Test
+        if(_.isDate(newValue)) {
+          value = newValue;
+        }
+        //value = sanitize.date(newValue);
         break;
       case 'Mixed':
-        //TODO: Sanitize mixed.
+        // TODO: Sanitize mixed.
         value = newValue;
         break;
-      case 'Number': 
-        value = sanitize.number(newValue);
+      case 'Number':
+        if(_.isNumber) {
+          value = newValue;
+        }
         break;
       case 'ObjectID':
         value = sanitize.objectId(newValue);
         break;
       case 'String': 
-        value = sanitize.string(newValue);
+        if(_.isString) {
+          value = newValue;
+        }
         break;
       default: 
         log.i("Processing '"+key+": "+newValue+"'");

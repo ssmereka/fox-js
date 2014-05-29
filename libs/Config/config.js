@@ -205,7 +205,7 @@ var defaultConfig = {
     staticFolders: {
 
       // Client application files.
-      app: {
+      '': {
         path: path.normalize(clientDirectory + '/app/')
       },
 
