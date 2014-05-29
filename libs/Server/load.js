@@ -17,7 +17,6 @@ var accessToken,
     debug = false, 
     db,
     fox,
-    io,
     log, 
     express,
     expressValidator, 
@@ -26,11 +25,8 @@ var accessToken,
     model, 
     mongoose, 
     MongoStore, 
-    passport,
-    passportSocketIo,
     path,
     sender,
-    socketIoHandler,
     trace = false;
 
 
@@ -90,14 +86,8 @@ var modules = function(_config, next) {
 
     config = loadedConfig;
 
-    // Express will handle our sessions and routes at a low level.
-    // If socket.io is enabled, we will use express.io instead.
-    if(config && config.socketio && config.socketio.enabled) {
-      express = require("express.io");
-    } else {
-      express = require("express");   
-    }         
-
+                                          
+    express          = require("express");           // Express will handle our sessions and routes at a low level.
     expressValidator = require("express-validator"); // Express validator will assist express.
     fs               = require('fs');                // Initialize the file system module.
     
@@ -193,41 +183,6 @@ var database = function(next) {
         store: mongoSessionStore                                       // Setup & connect to the MongoDB database.
       })
     );
-
-    //Load and configure passport for authentication.
-    if(passport === undefined) {
-      passport = require('passport');
-    } 
-
-    // Setup passport.io if socket.io is enabled.
-    if(config && config.socketio && config.socketio.enabled) {
-      if(passportSocketIo === undefined) {
-        passportSocketIo = require('passport.socketio');
-      }
-
-      // We don't want to override the current express.io auth method,
-      // so we will make sure we call it after our custom auth method.
-      var expressIo_authorization = app.io.get('authorization');
-
-      app.io.set('authorization', passportSocketIo.authorize({
-        cookieParser: express.cookieParser,
-        fail: function(data, message, error, accept) {
-          log.t("Passport IO", "Authentication failure.", trace);
-          log.e(message);
-          accept(null, false);
-        },
-        key: 'connect.sid',
-        passport: passport,
-        secret: config.express.sessionKey,
-        store: mongoSessionStore,
-        success: function(data, accept) {
-          log.t("Passport IO", "Authentication Successful!", true);
-          return expressIo_authorization(data, accept);
-        }
-      }));
-
-      //app.io.set('log level', )
-    }
 
   // If we are using PostgreSQL database.
   } else if(config.postgresql && config.postgresql.enabled) {                               // If we are configuring a postgresql database.
@@ -512,24 +467,7 @@ var application = function appFunction(_config, next) {
     // Create and return an application object created by express.
     // We use module.exports as opposed to exports so that we can use
     // the "app" object as a function.  (Reference: http://goo.gl/6yzmKc)
-    //app = module.exports = express(); 
-    app = express();
-
-    // Setup socket.io if it is enabled.
-    if(config && config.socketio && config.socketio.enabled) {
-      if(config.socketio.protocol === "https") {
-        var ssl = fs.readFileSync(config.socketio.sslFilePath);
-        if(! ssl) {
-          log.e("Cannot start socket.io with invalid ssl cert and or key.");
-        } else {
-          io = app.https({key: ssl, cert: ssl}).io();
-          log.t("Load","Socket.io enabled over https.", trace);
-        }
-      } else {
-        io = app.http().io();
-        log.t("Load","Socket.io enabled over http.", trace);
-      }
-    }
+    app = module.exports = express(); 
 
     // Handle configuration and setup for different server enviorment modes. (Such as local, development, and production).
     //var success = configModule.configureEnviorment(express, app);
@@ -583,10 +521,8 @@ var application = function appFunction(_config, next) {
 /**
  * Configure and setup Passport for authentication.
  */
-var passportSetup = function passportSetup(db, next) {
-  if(passport === undefined) {
-    passport = require('passport');
-  }
+var passport = function passport(db, next) {
+  var passport = require('passport');
 
   app.use(require('connect-flash')());  // Enables flash messages while authenticating with passport.
   app.use(passport.initialize());
@@ -652,7 +588,7 @@ var start = function start(config, next) {
     }
 
     // Load and configure passport for authentication.
-    passportSetup(db);                                
+    passport(db);                                
 
     // Enable CRUD routes for all schemas
     if(config && config["crud"] && config.crud["enabled"]) {
@@ -662,101 +598,22 @@ var start = function start(config, next) {
     // Dynamically require all of our routes in the correct order.
     routes(function(err, success) {    
 
-      // Start the server and notify the caller that the server has started successfully.
-      server(app, db, config, next);                  
-    });
-  });
-};
-
-var setSocketIoHandler = function setSocketIoHandler(handler) {
-  socketIoHandler = (handler) ? handler : socketIoHandler;
-}
-
-/*
-var socketio = function socketio(app, db, config, server, next) {
-  if(! config || ! config.socketio || ! config.socketio.enabled) {
-    return next();
-  }
-
-  if(socketIoHandler === undefined) {
-    socketIoHandler = {};
-  }
-
-  socketIo = require('socket.io');
-
-  io = socketIo.listen(server);
-
-
-  var getRoutes = app.routes["get"];
-  var httpRouteHandler = [];
-  //console.log(getRoutes);
-  for(var key in getRoutes) {
-    httpRouteHandler.push({
-      path: console.log(getRoutes[key]["path"]),
-      method: "get",
-      fn: function() {}
-    });
-    //console.log(getRoutes[key]["path"].replace(/\//g, ":"));
-    //eval("httpRouteHandler"+getRoutes[key]["path"].replace(/\//g, ".")+"="
-  }
-
-  //console.log(app);
-  //fs.writeFile(config.paths.serverAppFolder +"entireapp.json", JSON.stringify(app.router, null, '\t'), function(err) {console.log(err);});
-
-
-  io.sockets.on('connection', function(socket) {
-    socketIoConnect(socket, socketIoHandler["connection"]);
-
-    for(var key in socketIoHandler) {
-      switch(key) {
-        case 'disconnect':
-          socketIoDisconnect(socket, socketIoHandler[key]);
-          break;
-        default:
-          socket.on(key, function(param1, param2, param3) {
-            socketIoHandler[key](socket, param1, param2, param3);
-          });
-          break;
+      // Start the server. 
+      server();                        
+      
+      // Notify the caller that the server has started successfully.
+      if(next) {
+        return next();
       }
-    }
-
-    for(var i = httpRouteHandler.length-1; i >=0; --i) {
-      console.log(httpRouteHandler.method+" "+httpRouteHandler.path);
-      //socket.on(httpRouteHandler.method+" "+httpRouteHandler.path, httpRouteHandler.fn);
-    }
+    });
   });
-
-  next(undefined, io);
-} */
-
-/*
-var socketIoConnect = function (socket, next) {
-  log.s("Socket "+socket.id.cyan+" Connected.".green);
-  if(next) {
-    return next(socket);
-  }
 };
-
-var socketIoDisconnect = function(socket, next) {
-  log.e("Socket "+socket.id.cyan+" Disconnected: ".red);
-  if(next) {
-    return next(socket);
-  }
-} */
-
 
 /**
  * Start the server on the specifed port.
  * Let the user know under what conditions the server started on.
  */
-var server = function server(app, db, config, next) {
-  next = (next) ? next : function(err, server) {
-    if(err) {
-      return log.error(err);
-    }
-    return server;
-  };
-
+var server = function server() {
   if(! config || ! config.server) {
     log.e("Configuration file is missing the server property.");
     return;
@@ -764,20 +621,13 @@ var server = function server(app, db, config, next) {
 
   // Start our server listening on previously declared port.
   // You can set the port using "export PORT=1234" or it will default to your configuration file.
-  var server = app.listen(config.server.port);
+  app.listen(config.server.port);
   
   if(config.mongodb.enabled) {
     console.log("[ OK ] Listening on port ".green + config.server.port.cyan + " in ".green + app.settings.env.cyan + " mode with database ".green + config.mongodb.database.cyan + ".".green);
   } else {
     console.log("[ OK ] Listening on port ".green + config.server.port.cyan + " in ".green + app.settings.env.cyan + " mode.".green);
   }
-
-  /*socketio(app, db, config, server, function(err, io) {
-    next(undefined, app, db, config, server, fox, io);
-  }); */
-
-  next(undefined, app, db, config, server, fox, io);
-
 };
 
 
@@ -799,12 +649,11 @@ var stop = function stop(next) {
 
 // Expose the public methods available.
 Load.prototype.app = application;
-Load.prototype.passport = passportSetup;
+Load.prototype.passport = passport;
 Load.prototype.routes = routes;
 Load.prototype.server = server;
 Load.prototype.start = start;
 Load.prototype.stop = stop;
-Load.prototype.setSocketHandler = setSocketIoHandler;
 
 
 /* ************************************************** *
