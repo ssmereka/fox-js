@@ -330,10 +330,7 @@ var handleCli = function(_config, next) {
         }
       });
     } else {
-      fox.server.start(_config);
-      if(next) {
-        return next();
-      }
+      fox.server.start(_config, next);
     }
   } else {
     // If we reached here, the command was not handled.

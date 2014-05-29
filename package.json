@@ -5,11 +5,7 @@
     "url" : "http://scottsmereka.com"
   },
   "contributors": [],
-<<<<<<< HEAD
-  "version": "0.0.28",
-=======
-  "version": "0.0.30",
->>>>>>> a76ab4db271f4bfe154e76265c87b93e4458cf60
+  "version": "0.0.35",
   "description": "A lightweight framework and template for creating a quick maintainable javascript server.",
   "homepage": "http://github.com/ssmereka/fox-js",
   "bugs": {
@@ -40,6 +36,7 @@
     "nodemon": "1.0.x",
     "optimist": "0.6.x",
     "pluralize": "0.x.x",
+    "pm2": "x.x.x",
     "request": "2.34.x",
     "underscore": "1.6.x",
     "winston": "0.7.x",

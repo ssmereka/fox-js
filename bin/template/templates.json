@@ -2,13 +2,13 @@
     "fox-mean-template": {
         "name": "fox-mean-template",
         "git": "https://github.com/ssmereka/fox-mean-template.git",
-        "dir": "/Users/scottsmereka/Documents/Scott/fox-js/templates/fox-mean-template",
+        "dir": "/home/scott/Documents/projects/foxjs/github/fox-js/templates/fox-mean-template",
         "installed": true
     },
     "sdl_auth_server": {
         "name": "sdl_auth_server",
         "git": "https://bitbucket.org/livio/sdl_auth_server.git",
         "dir": "/Users/scottsmereka/Documents/Scott/fox-js/templates/sdl_auth_server",
-        "installed": true
+        "installed": false
     }
 }
