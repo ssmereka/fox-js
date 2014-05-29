@@ -113,7 +113,6 @@ var install = function(next) {
     if(err) {
       next(err);
     } else if(isInstalled) {
-      console.log("Is installed!");
       next();
     } else {
       log.info("Installing nodemon...");
