@@ -128,11 +128,13 @@ var install = function(next) {
  * Start the server using nodemon.  This will deamonize the 
  * process and perform automatic restarts when files change.
  */
-var start = function(config, next, onStdoutFn) {
+/*var start = function(config, next, onStdoutFn) {
   var nodemonConfig = defaultNodemonConfig,
       onStdOutput,
       isNextCalled = false,
       out = "";
+
+  console.log("Starting nodemon...");
 
   // If next is not defined, create a method to print errors.
   // Otherwise create a method to call next after the server
@@ -142,18 +144,25 @@ var start = function(config, next, onStdoutFn) {
   } else {
     install(function(err) {
       if(err) {
+        console.log("ERRORRR");
         return next(err);
       }
 
+      console.log("Set stdoutput");
       // Create a method to listen for when the server has actually started.
       onStdOutput = function(data) {
+        console.log("Stdout");
+        console.log(data);
         out += data;
         if( ! isNextCalled) {
           // If the server is listening, return our results.
           if(data && data.toString().indexOf("Listening on port") != -1) {
+            console.log("In1")
             if(out.length > 0) {
+              console.log("in2")
               next(undefined, out.substring(0, out.length-1));
             } else {
+              console.log("in3")
               next();
             }
             isNextCalled = true;
@@ -173,9 +182,12 @@ var start = function(config, next, onStdoutFn) {
   nodemonConfig["watch"] = [ config["serverPath"], path.resolve(fox.config["serverPath"], "../configs") ];
   nodemonConfig["env"] = {  "NODE_ENV": config.environment  };
 
+  console.log(onStdOutput);
+
   // If we have a method predefined for standard output, 
   // then turn off redirection of stdout.
   if(onStdOutput) {
+    console.log("nodemonconfig");
     nodemonConfig["stdout"] = false;
   }
 
@@ -184,7 +196,10 @@ var start = function(config, next, onStdoutFn) {
 
   // Use our custom stdout method.
   if(onStdOutput) {
+    console.log("onStdOutput");
     nodemon.on('stdout', onStdOutput);
+  } else {
+    console.log("FUCKKKKK")
   }
 
   // Listen for nodemon events.
@@ -192,6 +207,82 @@ var start = function(config, next, onStdoutFn) {
   //nodemon.on('quit', function() {console.log("Quit")});
   //nodemon.on('restart', function(files) { console.log("Restart")});
   //nodemon.on('log', function(log) {});
+} */
+
+/**
+ * Start the server using nodemon.  This will deamonize the 
+ * process and perform automatic restarts when files change.
+ */
+var start = function(config, next, onStdoutFn) {
+  var nodemonConfig = defaultNodemonConfig,
+      waitForStart = true,
+      isNextCalled = false,
+      out = "";
+
+  // If next is not defined, create a log method.  Do not wait 
+  // for the server to finish starting to return these errors.
+  if( ! next) {
+    next = function(err) { if(err) { log.error(err["message"] || err); } };
+    waitForStart = false;
+  }
+
+  // Check if we found the server
+  if(config["serverPath"] === undefined) {
+    return next(new Error("Cannot find server to start."));
+  }
+
+  // Add non-default changes to the nodemon configuration object.
+  nodemonConfig["script"] = config["serverPath"];
+  nodemonConfig["watch"] = [ config["serverPath"], path.resolve(fox.config["serverPath"], "../configs") ];
+  nodemonConfig["env"] = {  "NODE_ENV": config.environment  };
+
+  // If we will have a method predefined for standard output, 
+  // then turn off redirection of stdout.
+  if(waitForStart) {
+    nodemonConfig["stdout"] = false;
+  }
+
+  install(function(err) {
+    if(err) {
+      return next(err);
+    }
+
+    // Create a method to listen for when the server has actually started.
+    var onStdOutput = function(data) {
+      if(data && data.length > 0) {
+        console.log(data.toString().substring(0,data.length-1));
+      } else {
+        console.log(data + "");
+      }
+
+      if( ! isNextCalled) {
+        out += data;
+        // If the server is listening, return our results.
+        if(data && data.toString().indexOf("Listening on port") != -1) {
+          if(out.length > 0) {
+            next(undefined, out.substring(0, out.length-1));
+          } else {
+            next();
+          }
+          isNextCalled = true;
+        }
+      }
+    };
+
+    // Start the server using nodemon.
+    nodemon(nodemonConfig);
+
+    if(waitForStart) {
+      // Use our custom stdout method.
+      nodemon.on('stdout', onStdOutput);
+    }
+
+    // Listen for nodemon events.
+    //nodemon.on('start', function() { console.log("Start")});
+    //nodemon.on('quit', function() {console.log("Quit")});
+    //nodemon.on('restart', function(files) { console.log("Restart")});
+    //nodemon.on('log', function(log) {});
+  });
 }
 
 /**
