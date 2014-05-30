@@ -97,9 +97,13 @@ var updateConfigPaths = function(_config) {
   // Find the path to the current server's directory.
   _config["serverPath"] = getServerPathSync(_config);
 
-  // Absoulte path to the current client server directory.
   if(_config["serverPath"]) {
-    _config["clientPath"] = path.normalize(_config["serverPath"] + "/client");
+    // Absolute path to the main server folder
+    _config["serverFolderPath"] = path.resolve(_config["serverPath"], "../");
+
+    // Absoulte path to the current client server directory.
+    _config["clientFolderPath"] = path.resolve(_config["serverFolderPath"], "../client");
+    _config["clientPath"] = path.normalize(_config["clientFolderPath"] + "/app");
   }
 
   return _config;

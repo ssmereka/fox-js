@@ -151,27 +151,38 @@ function updateObjectReferenceFn(obj, _fox) {
  * defiend in the config object.
  **/
 var start = function(_config, next, showAllLogs) {
-  switch(_config["controller"]) {
-    case "node":
-      node.start(_config, next);
-      break;
+  // Ensure there is a next function.
+  next = (next) ? next : function(err) { log.error(err); };
 
-    case "nodemon":
-      nodemon.start(_config, next, showAllLogs);
-      break;
+  installDependencies(_config, function(err) {
+    if(err) {
+      return next(err);
+    }
 
-    case "pm2":
-      pm2.start(_config, next);
-      break;
-    
-    case "fox":
-      log.info("Not implemented.");
-      break;
+    switch(_config["controller"]) {
+      case "node":
+        node.start(_config, next);
+        break;
 
-    default:
-      log.error("The controller type of '" + controllerType +"' in the config is unrecognized.");
-      break;
-  }
+      case "nodemon":
+        nodemon.start(_config, next);
+        break;
+
+      case "pm2":
+        pm2.start(_config, next);
+        break;
+      
+      case "fox":
+        log.info("Not implemented.");
+        next(new Error("Protocol not implemented"));
+        break;
+
+      default:
+        log.error("The controller type of '" + controllerType +"' in the config is unrecognized.");
+        next(new Error("The controller type of '" + controllerType +"' in the config is unrecognized."));
+        break;
+    }
+  });
 }
 
 /**
@@ -434,6 +445,32 @@ var install = function(_config, next) {
         return next(err);
       }); 
     });
+  });
+}
+
+var installDependencies = function(_config, next) {
+  installServerDependencies(_config, function(err) {
+    if(err) {
+      next(err);
+    }
+    fox.client.install(_config, function(err) {
+      next(err);
+    });
+  })
+}
+
+
+var installServerDependencies = function(_config, next) {
+  // Check if the node modules are already installed.
+  if(fs.existsSync(path.normalize(_config["serverFolderPath"] + "/node_modules"))) {
+    return next();
+  }
+
+  fox.log.info("Installing Server Dependencies...");
+
+  // Install the server's dependencies using npm install.
+  fox.worker.execute("npm", ["--prefix", path.normalize(newServerPath + "/server"), "install"], {}, false, function(err, code, stdout, stderr) {
+    next(err);
   });
 }
 

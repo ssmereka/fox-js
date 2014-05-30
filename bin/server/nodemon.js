@@ -108,6 +108,9 @@ var isInstalled = function(next) {
   });
 }
 
+/**
+ * Install nodemon globally if it has not been already.
+ */
 var install = function(next) {
   isInstalled(function(err, isInstalled) {
     if(err) {
@@ -128,95 +131,9 @@ var install = function(next) {
  * Start the server using nodemon.  This will deamonize the 
  * process and perform automatic restarts when files change.
  */
-/*var start = function(config, next, onStdoutFn) {
-  var nodemonConfig = defaultNodemonConfig,
-      onStdOutput,
-      isNextCalled = false,
-      out = "";
-
-  console.log("Starting nodemon...");
-
-  // If next is not defined, create a method to print errors.
-  // Otherwise create a method to call next after the server
-  // has started successfully.
-  if( ! next) {
-    next = function(err) { if(err) { log.error(err["message"] || err); } };;
-  } else {
-    install(function(err) {
-      if(err) {
-        console.log("ERRORRR");
-        return next(err);
-      }
-
-      console.log("Set stdoutput");
-      // Create a method to listen for when the server has actually started.
-      onStdOutput = function(data) {
-        console.log("Stdout");
-        console.log(data);
-        out += data;
-        if( ! isNextCalled) {
-          // If the server is listening, return our results.
-          if(data && data.toString().indexOf("Listening on port") != -1) {
-            console.log("In1")
-            if(out.length > 0) {
-              console.log("in2")
-              next(undefined, out.substring(0, out.length-1));
-            } else {
-              console.log("in3")
-              next();
-            }
-            isNextCalled = true;
-          }
-        }
-      };
-    });
-  }
-
-  // Check if we found the server
-  if(config["serverPath"] === undefined) {
-    return next(new Error("Cannot find server to start."));
-  }
-
-  // Add non-default changes to the nodemon configuration object.
-  nodemonConfig["script"] = config["serverPath"];
-  nodemonConfig["watch"] = [ config["serverPath"], path.resolve(fox.config["serverPath"], "../configs") ];
-  nodemonConfig["env"] = {  "NODE_ENV": config.environment  };
-
-  console.log(onStdOutput);
-
-  // If we have a method predefined for standard output, 
-  // then turn off redirection of stdout.
-  if(onStdOutput) {
-    console.log("nodemonconfig");
-    nodemonConfig["stdout"] = false;
-  }
-
-  // Start the server using nodemon.
-  nodemon(nodemonConfig);
-
-  // Use our custom stdout method.
-  if(onStdOutput) {
-    console.log("onStdOutput");
-    nodemon.on('stdout', onStdOutput);
-  } else {
-    console.log("FUCKKKKK")
-  }
-
-  // Listen for nodemon events.
-  //nodemon.on('start', function() { console.log("Start")});
-  //nodemon.on('quit', function() {console.log("Quit")});
-  //nodemon.on('restart', function(files) { console.log("Restart")});
-  //nodemon.on('log', function(log) {});
-} */
-
-/**
- * Start the server using nodemon.  This will deamonize the 
- * process and perform automatic restarts when files change.
- */
 var start = function(config, next, showAllLogs) {
   var nodemonConfig = defaultNodemonConfig,
       waitForStart = (showAllLogs) ? false : true,
-      //waitForStart = false,
       isNextCalled = false,
       out = "";
 
@@ -243,6 +160,7 @@ var start = function(config, next, showAllLogs) {
     nodemonConfig["stdout"] = false;
   }
 
+  // Ensure nodemon is installed.
   install(function(err) {
     if(err) {
       return next(err);
@@ -250,7 +168,6 @@ var start = function(config, next, showAllLogs) {
 
     // Create a method to listen for when the server has actually started.
     var onStdOutput = function(data) {
-      console.log("onStdOut");
       if(data && data.length > 0) {
         console.log(data.toString().substring(0,data.length-1));
       } else {
@@ -273,8 +190,8 @@ var start = function(config, next, showAllLogs) {
     // Start the server using nodemon.
     nodemon(nodemonConfig);
 
+    // Set the methods for standard out and in.
     if(waitForStart) {
-      // Use our custom stdout method.
       nodemon.on('stdout', onStdOutput);
 
       nodemon.on('stderr', function(data) {
@@ -282,6 +199,7 @@ var start = function(config, next, showAllLogs) {
       });
     }
 
+    // Log failures.
     nodemon.on('log', function(msg) { 
       switch(msg.type) {
         default:

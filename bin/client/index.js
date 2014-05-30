@@ -104,12 +104,56 @@ var bowerConfig = {
 var install = function(_config, next) {
   // TODO: Install bower using module API, aka require("bower").commands.install();
 
-  fs.writeFileSync(path.normalize(_config.clientPath + "/.bowerrc"), JSON.stringify(bowerConfig), {});
-  fox.worker.execute("bower", ["install"], { cwd: _config.clientPath }, false, function(err, code, stdout, stderr) {
+  // Check if the libs are alreayd installed.
+  if(fs.existsSync(path.normalize(_config["clientFolderPath"] + "/libs"))) {
     return next();
+  }
+
+  fox.log.info("Installing Client Dependencies...");
+
+  // Check if bower is installed.
+  installBower(function(err) {
+    if(err) {
+      return next(err);
+    }
+
+    // Create the bower config, if it doesn't exist.
+    var bowerConfigPath = path.normalize(_config.clientFolderPath + "/.bowerrc");
+    if( ! fs.existsSync(bowerConfigPath)) {
+      fs.writeFileSync(path.normalize(_config.clientFolderPath + "/.bowerrc"), JSON.stringify(bowerConfig), {});
+    }
+
+    // Install the libs using bower.
+    fox.worker.execute("bower", ["install"], { cwd: _config.clientFolderPath }, false, function(err, code, stdout, stderr) {
+      return next();
+    });
+  })
+}
+
+var isBowerInstalledAsync = function(next) {
+  npmListProcess = fox.worker.execute("npm", ["list", "bower", "-g"], { cwd: '.' }, false, function(err, code, npmlist, stderr) {
+    next(err, (npmlist.indexOf("bower") !== -1));
   });
 }
 
+/**
+ * Install bower globally if it has not been already.
+ */
+var installBower = function(next) {
+  isBowerInstalledAsync(function(err, isInstalled) {
+    if(err) {
+      next(err);
+    } else if(isInstalled) {
+      next();
+    } else {
+      log.info("Installing bower...");
+      fox.worker.execute("npm", ["install", "bower", "-g"], { cwd: '.' }, false, function(err, code, output, stderr) {
+        log.success("Bower install complete.");
+        next(err);
+      });
+    }
+  });
+}
 
 /* ************************************************** *
  * ******************** Public API
