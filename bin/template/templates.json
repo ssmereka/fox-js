@@ -2,7 +2,7 @@
     "fox-mean-template": {
         "name": "fox-mean-template",
         "git": "https://github.com/ssmereka/fox-mean-template.git",
-        "dir": "/Users/scottsmereka/Documents/Scott/fox-js/templates/fox-mean-template",
+        "dir": "/Users/scottsmereka/Documents/Scott/foxjs/templates/fox-mean-template",
         "installed": true
     },
     "sdl_auth_server": {
