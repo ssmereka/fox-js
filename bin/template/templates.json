@@ -3,7 +3,7 @@
         "name": "fox-mean-template",
         "git": "https://github.com/ssmereka/fox-mean-template.git",
         "dir": "/Users/scottsmereka/Documents/Scott/foxjs/templates/fox-mean-template",
-        "installed": true
+        "installed": false
     },
     "sdl_auth_server": {
         "name": "sdl_auth_server",

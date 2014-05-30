@@ -216,6 +216,7 @@ var install = function(next) {
 var start = function(config, next, showAllLogs) {
   var nodemonConfig = defaultNodemonConfig,
       waitForStart = (showAllLogs) ? false : true,
+      //waitForStart = false,
       isNextCalled = false,
       out = "";
 
@@ -249,6 +250,7 @@ var start = function(config, next, showAllLogs) {
 
     // Create a method to listen for when the server has actually started.
     var onStdOutput = function(data) {
+      console.log("onStdOut");
       if(data && data.length > 0) {
         console.log(data.toString().substring(0,data.length-1));
       } else {
@@ -274,13 +276,30 @@ var start = function(config, next, showAllLogs) {
     if(waitForStart) {
       // Use our custom stdout method.
       nodemon.on('stdout', onStdOutput);
+
+      nodemon.on('stderr', function(data) {
+        console.log(data + "");
+      });
     }
 
-    // Listen for nodemon events.
+    nodemon.on('log', function(msg) { 
+      switch(msg.type) {
+        default:
+          //console.log(msg);   // Use this for debug.
+          break;
+        case 'fail': 
+          console.log(msg.colour);
+          break;
+        }
+    });
+
+    // Listen for nodemon events.  Mostly used for debug.
     //nodemon.on('start', function() { console.log("Start")});
     //nodemon.on('quit', function() {console.log("Quit")});
     //nodemon.on('restart', function(files) { console.log("Restart")});
-    //nodemon.on('log', function(log) { console.log(log)});
+    //nodemon.on('message', function(msg) {console.log(msg);});
+    //nodemon.on('crash', function() {console.log("App Crashed");});
+    //nodemon.on('exit', function() { console.log("Exit")});
   });
 }
 
