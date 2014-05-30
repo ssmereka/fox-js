@@ -1,4 +1,4 @@
-# Fox JS 
+# Fox 
 
 Light-framework and boilerplate code to quickly build scalable web apps using JavaScript. The Node.js server is configured to handle authentication and CRUD operations on data models you create. It even has some basic ones already defined such as users. The Angular.js client is configured to communicate with the server's API and ready to be extended.
 
@@ -6,7 +6,7 @@ Light-framework and boilerplate code to quickly build scalable web apps using Ja
 
 # Getting Started
 
-1. Install fox-js
+1. Install Fox
 
     `sudo npm -g install foxjs`
 
@@ -18,7 +18,7 @@ Your server is now started and you can start coding.  As you save changes the se
 
 # Documentation
 
-All documentation can be found in the [wiki](https://github.com/ssmereka/fox-js/wiki).
+All documentation can be found in the [wiki](https://github.com/ssmereka/foxjs/wiki).
 
 <a name="cli" />
 # Command Line Interface
