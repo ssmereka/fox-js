@@ -469,7 +469,7 @@ var installServerDependencies = function(_config, next) {
   fox.log.info("Installing Server Dependencies...");
 
   // Install the server's dependencies using npm install.
-  fox.worker.execute("npm", ["--prefix", __config["serverFolderPath"], "install"], {}, false, function(err, code, stdout, stderr) {
+  fox.worker.execute("npm", ["--prefix", _config["serverFolderPath"], "install"], {}, false, function(err, code, stdout, stderr) {
     next(err);
   });
 }
