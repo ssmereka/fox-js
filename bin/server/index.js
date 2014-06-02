@@ -388,7 +388,7 @@ var create = function(name, _config, next) {
     fox.worker.execute("npm", ["--prefix", path.normalize(newServerPath + "/server"), "install"], {}, false, function(err, code, stdout, stderr) {
 
       // Install all the client's dependencies using bower.
-      log.info("2. Intalling client modules...");
+      log.info("2. Installing client modules...");
       fox.client.install(_config, function(err) {
 
         // Update the config object with the new server's paths.

@@ -95,6 +95,7 @@ var start = function(config, next) {
 
   // Arguments for staring the server using pm2.
   var args = [
+    "-x",                     // Added -x argument to fix issue with node_env not working with pm2.
     "start",
     config.serverPath,
     "-i",

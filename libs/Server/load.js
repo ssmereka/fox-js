@@ -139,6 +139,8 @@ var loadConfig = function(_config, next) {
 
   var config = systemConfig.createConfigObject(_config);
 
+  //console.log(config);
+
   next(undefined, config);
 }
 
@@ -775,7 +777,7 @@ var server = function server(app, db, config, next) {
   /*socketio(app, db, config, server, function(err, io) {
     next(undefined, app, db, config, server, fox, io);
   }); */
-
+  //console.log(config);
   next(undefined, app, db, config, server, fox, io);
 
 };

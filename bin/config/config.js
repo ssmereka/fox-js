@@ -52,7 +52,6 @@ var config,             // Current config.
  * @param type is the type of config object to create.
  */
 var Config = function(type) {
-
   // Constant variables.
   this.consts = {
     fox: 'fox',
@@ -69,6 +68,8 @@ var Config = function(type) {
   // Set a local config instance so we can 
   // refer to "this" outside the constructor.
   config = this;
+
+  type = (type) ? type : config.consts.production;
 
   // Get a default configuration object based on the type.
   setDefaultConfig(type);
@@ -123,7 +124,7 @@ var setDefaultConfig = function(_type, next) {
   configObj["cluster"] = (configObj["cluster"]) ? configObj["cluster"] : {};
 
   // Get the number of workers for a clustered server.
-  configObj.cluster["workers"] = getNumberOfWorkers(configObj);
+  configObj.cluster["workers"] = 1//getNumberOfWorkers(configObj);
 
   if(next) {
     deepPriorityMerge(configObj, config, next);
@@ -411,7 +412,7 @@ var local = {
 // Use pm2 in clustered development mode.
 var development = {
   name: 'fox',
-  environment: 'local',
+  environment: 'development',
   controller: 'pm2',
   daemon: true,
   cluster: {

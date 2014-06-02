@@ -136,11 +136,8 @@ var fork = function(command, args, options, end, onStdout, onStderr, onMessage) 
  * so it can be gracefully killed if needed.
  */
 var execute = function(cmd, end) {
-  console.log("Exectue");
   var child = childProcess.exec(cmd, function(err, stdout, stderr) {
-    console.log("End?")
     if(end) {
-      console.log("End!")
       end(err, stdout, stderr);
     }
 
