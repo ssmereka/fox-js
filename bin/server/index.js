@@ -448,6 +448,10 @@ var install = function(_config, next) {
   });
 }
 
+var installServerPm2 = function(_config, next) {
+  pm2.installServer(_config, next);
+}
+
 var installDependencies = function(_config, next) {
   installServerDependencies(_config, function(err) {
     if(err) {
@@ -488,6 +492,8 @@ Server.prototype.install = install;
 Server.prototype.create = create;
 Server.prototype.logs = logs;
 Server.prototype.clear = clear;
+
+Server.prototype.installServerPm2 = installServerPm2;
 
 
 /* ************************************************** *

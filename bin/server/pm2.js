@@ -95,14 +95,19 @@ var start = function(config, next) {
 
   // Arguments for staring the server using pm2.
   var args = [
-    "-x",                     // Added -x argument to fix issue with node_env not working with pm2.
     "start",
     config.serverPath,
     "-i",
     config.cluster.workers,
     "--name", 
-    config.name
+    config.name,
+    " -- -p test"
   ];
+
+  // Enable/Disable fork mode
+  if(config.pm2 && config.pm2.fork) {
+    args.splice(1, 0, "-x");
+  }
 
   // Add the enviorment mode to the current enviorment.
   var env = process.env;
@@ -117,7 +122,8 @@ var start = function(config, next) {
   install(function(err) {
 
     // Check if pm2 server already running, Get list of current pm2 servers.
-    var jlistProcess = fox.worker.execute("pm2", ["jlist"], { cwd: '.' }, false, function(err, code, jlist, stderr) {
+    var jlistProcess = fox.worker.execute("pm2", ["jlist"], opts, false, function(err, code, jlist, stderr) {
+    //var jListProcess = fox.worker.executeCmd("pm2 jlist", function(err, jlist, stderr) {
       if(err) {
         if(next) {
           return next(err);
@@ -127,7 +133,15 @@ var start = function(config, next) {
       }
       
       // Convert the list to an array.
-      jlist = (jlist) ? JSON.parse(jlist) : undefined;
+      if(jlist) {
+        try {
+          JSON.parse(jlist);
+        } catch (e) {
+          jlist = undefined
+        };
+      } else {
+        jlist = undefined;
+      }
 
       // Check if the server is already running.
       if(jlist !== undefined && jlist instanceof Array && jlist.length > 0) {
@@ -136,14 +150,17 @@ var start = function(config, next) {
             if(next) {
               return next(new Error("Server " + config.name + " is already started."));
             }
-            return fox.log.error("Server " + config.name + " is already started.");
+            fox.log.error("Server " + config.name + " is already started.");
+            return;
           }
         }
       }
 
       // Server is not running, so start it.
-      var startProcess = fox.worker.execute("pm2", args, opts, true, next);
-    });
+      var startProcess = fox.worker.execute("pm2", args, opts, true, function() {
+        return next();
+      });
+    }, true);
   });
 }
 
@@ -231,12 +248,27 @@ function deleteServersFromPm2(config, next) {
 }
 
 /**
+ * Kill the PM2 deamon
+ */
+function killPm2Deamon(config, next) {
+  // Create the options used to flush the pm2 logs.
+  var opts = {
+    cwd: '.',
+    env: process.env
+  };
+
+  var deleteProcess = fox.worker.execute("pm2", ["kill"], opts, true, next);
+}
+
+/**
  * Clear and remove all current tracking of the server.
  */
 var clear = function(config, next) {
   stop(config, function(err) {
     clearServerLogs(config, function(err) {
-      deleteServersFromPm2(config, next);
+      deleteServersFromPm2(config, function(err) {
+        killPm2Deamon(config, next);
+      });
     });
   });
 }
@@ -263,12 +295,161 @@ var reload = function(config, next) {
 }
 
 
+var installServer = function(_config, next) { 
+  fox.log.info("1. Setting up the database...");
+
+  // Ensure there is a next function.
+  next = (next) ? next : function(err) { log.error(err); };
+
+  // Start the server
+  start(_config, function(err, output) {
+    if(err) {
+      return next(err);
+    }
+    //console.log(_config);
+
+    // Ensure we load the proper configuration object for the enviorment.
+    process.NODE_ENV = _config.environment;
+
+    // Load the system configuration file.  This file holds the default
+    // configurations for the server.
+    try {
+      serverConfigFile = require(_config["foxConfigLibPath"]);
+    } catch(err) {
+      console.log(err);
+      return next(new Error("Cannot load system configuration file."));
+    }
+
+    // Create a new server library config instance.
+    var serverConfig = new serverConfigFile();
+
+    // Create a server config object.
+    var config = serverConfig.createConfigObject(undefined);
+
+    // TODO: Generate / get an install key.
+    var installKey = "IOlQ9V6Tg6RVL7DSJFL248723Bm3JjCF34FI0TJOVPvRzz";
+
+    //console.log(config.server.uri+"/install.json?access_token="+installKey);
+
+    isServerRunning(config, function(err) {
+      if(err) {
+        return next(err);
+      }
+
+      // Execute the install command.
+      request.post(config.server.uri+"/install.json?access_token="+installKey, {}, function(err, r, body) {
+        if(err) {
+          return next(err)
+        }
+
+        // Check the body for an error.
+        body = (body) ? JSON.parse(body) : {};
+        if(body["error"]) {
+          //nodemon.stop();
+          return next("("+body["status"]+") "+body["error"]);
+        }
+
+        // Stop the server
+        stop(_config, function(err) {
+          isServerStopped(config, function(err) {
+            if(err) {
+              //return next(err);  for now just continue on.
+            }
+
+            fox.log.info("0. Success!");
+
+            // Finally relaunch the server, install complete.
+            fox.worker.fork(_config["foxBinPath"]+"/fox", ["start", "-d"], { cwd: '.' }, function(err) {
+              return next(err);
+            }); 
+          });
+        });
+      });
+    });
+  });
+
+  /*var ipm2 = require('pm2-interface')();
+  ipm2.on('ready', function() {
+    console.log("Connected to pm2");
+
+    ipm2.bus.on('cmd:install', function(data) {
+      console.log("Install results: ");
+      console.log(data);
+    });
+
+    console.log("Send Message");
+    ipm2.rpc.msgProcess({ name: "fox", msg: { type: "cmd:install" } }, function(err, res) {
+      if(err) {
+        console.log(err);
+      }
+      console.log("Response: ");
+      console.log(res);
+    });
+
+    ipm2.rpc.getMonitorData({}, function(err, dt) {
+      console.log("Monitor");
+      console.log(dt);
+    });
+  });
+  next(); */
+}
+
+function isServerRunning(config, next) {
+  var error = new Error("Server did not start.");
+  var attempts = 5;
+
+  var interval = setInterval(function() {    
+    if(attempts > 0) {
+      request.get(config.server.uri, function(err, r, body) {
+        if(err) {
+          //console.log(err);
+        } else {
+          attempts = 0;
+          error = undefined;
+        }
+      });
+
+      attempts--;
+    } else {
+      clearInterval(interval);
+      return next(error);
+    }
+  }, 2000);
+}
+
+
+// TODO: Does not throw an error....
+function isServerStopped(config, next) {
+  var error = new Error("Server did not stop.");
+  var attempts = 2;
+
+  var interval = setInterval(function() {    
+    if(attempts > 0) {
+      request.get(config.server.uri, function(err, r, body) {
+        if(err) {
+          //console.log(err);
+          attempts = 0;
+          error = undefined;
+        }
+      });
+
+      attempts--;
+    } else {
+      clearInterval(interval);
+      return next(error);
+    }
+  }, 2000);
+}
+
+
+
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */
 
 Pm2.prototype.isInstalled = isInstalled;
 Pm2.prototype.install = install;
+Pm2.prototype.installServer = installServer;
 Pm2.prototype.start = start;
 Pm2.prototype.stop = stop;
 Pm2.prototype.restart = restart;

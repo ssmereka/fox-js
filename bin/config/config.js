@@ -89,6 +89,12 @@ var updateConfigPaths = function(_config) {
   // Absolute path to the fox module root directory.
   _config["foxPath"] = path.resolve(_config.foxBinPath, "../");
 
+  // Absolute path to the fox library folder.
+  _config["foxLibPath"] = path.normalize(_config.foxPath + "/libs");
+
+  // Absolute path to the fox config library
+  _config["foxConfigLibPath"] = path.normalize(_config.foxLibPath + "/Config/config.js");
+
   // Absolute path to the fox boiler plate templates for server and client code.
   _config["foxTemplatePath"] = path.normalize(_config.foxPath + "/templates");
 
@@ -102,6 +108,13 @@ var updateConfigPaths = function(_config) {
     // Absolute path to the main server folder
     _config["serverFolderPath"] = path.resolve(_config["serverPath"], "../");
 
+    // Absolute path to the configuration file.
+    _config["serverConfigPath"] = path.normalize(_config["serverFolderPath"] + "/configs/config.js");
+    if( ! fs.existsSync(_config["serverConfigPath"])) {
+      console.log("Server config file is missing: " + _config["serverConfigPath"]);
+      _config["serverConfigPath"] = undefined;
+    }
+    
     // Absoulte path to the current client server directory.
     _config["clientFolderPath"] = path.resolve(_config["serverFolderPath"], "../client");
     _config["clientPath"] = path.normalize(_config["clientFolderPath"] + "/app");
@@ -420,6 +433,9 @@ var development = {
     workerPerCpu: true,
     workerMax: 2
   },
+  pm2: {
+    fork: false,
+  },
   debug: true
 };
 
@@ -432,6 +448,9 @@ var production = {
   cluster: {
     enabled: true,
     workerPerCpu: true
+  },
+  pm2: {
+    fork: false,
   },
   debug: false
 };

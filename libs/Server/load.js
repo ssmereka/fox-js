@@ -779,7 +779,6 @@ var server = function server(app, db, config, next) {
   }); */
   //console.log(config);
   next(undefined, app, db, config, server, fox, io);
-
 };
 
 

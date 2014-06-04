@@ -21,14 +21,18 @@ var debug = false,
  * ************************************************** */
 
 var Merge = function(_fox) {
+  // Load external modules.
+  sanitize = require("sanitize-it");
+  
+  if( ! fox) {
+    return;
+  }
+
   // Handle parameters.
   fox = _fox;
 
   // Load internal modules.
-  log = fox.log;
-
-  // Load external modules.
-  sanitize = require("sanitize-it");
+  log = fox.log
 
   // Configure merge instance.
   handleConfig(fox["config"]);

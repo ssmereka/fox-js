@@ -58,6 +58,7 @@ var handleConfig = function(config) {
 var handler = function(server) {
   
   // Handle pm2 messages.
+
   process.on('message', function(msg) {
   
     // Shutdown Message - The server process is going to be killed in 

@@ -163,10 +163,11 @@ var execute = function(cmd, end) {
  * the current processes' stdout and stderr.
  * @param end is a callback function called when the child is killed.
  */
-var spawn = function(command, args, options, showStd, end) {
+var spawn = function(command, args, options, showStd, end, callEndOnExit) {
+  var isEndCalled = false;
+
   // Default to showing the stderr and stdout.
   showStd = (showStd === undefined) ? true : showStd;
-
   var child = childProcess.spawn(command, args, options);
 
   var stdout = "",
@@ -194,13 +195,25 @@ var spawn = function(command, args, options, showStd, end) {
 
   // Define what to do when a child is closed.
   child.on('close', function(code) {
-    if(end) {
+    //console.log(this.pid + ": Close");
+    if(end && ! isEndCalled) {
+      isEndCalled = true;
       end(undefined, code, stdout, stderr);
     }
 
     // Remove the child from the list of children processes.
     removeChild(this);
   });
+
+  if(callEndOnExit) {
+    child.on("exit", function(code) {
+      //console.log(this.pid + ": Exit");
+      if(end && ! isEndCalled) {
+        isEndCalled = true;
+        end(undefined, code, stdout, stderr);
+      }
+    });
+  }
 
   // Catch errors thrown by the child process.
   child.on("error", function(error) {
@@ -340,6 +353,7 @@ var killProcessAtPort = function(config, port, next) {
 // Expose the public methods available.
 Worker.prototype.fork = fork;
 Worker.prototype.execute = spawn;
+Worker.prototype.executeCmd = execute;
 Worker.prototype.addChild = addChild;
 Worker.prototype.kill = killProcessAtPort;
 Worker.prototype.removeChild = removeChild;

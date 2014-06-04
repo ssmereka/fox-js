@@ -324,7 +324,8 @@ var handleCli = function(_config, next) {
   // Start the server.
   if(isStartServerCommand()) {
     if(isInitalizeFlagSet()) {
-      fox.server.install(_config, function(err) {
+      fox.server.installServerPm2(_config, function(err) {
+      //fox.server.install(_config, function(err) {
         if(next) {
           next(err);
         }
