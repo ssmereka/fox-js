@@ -182,7 +182,15 @@ var getFoxVersion = function() {
  * Get this module's author from the package.json.
  */
 var getFoxAuthor = function() {
-  return (fox.package["author"]) ? fox.package["author"].toString() : "Scott Smereka";
+  if(fox.package["author"]) {
+    if(fox.package["author"].name) {
+      return fox.package["author"].name.toString();
+    }
+
+    return fox.package["author"].toString();
+  }
+
+  return "Scott Smereka"
 }
 
 /**

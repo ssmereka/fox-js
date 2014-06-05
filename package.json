@@ -62,5 +62,5 @@
     "test-client": "mocha-phantomjs ./test/client/index.html",
     "test-server": "mocha -R spec ./test/index.js"
   },
-  "version": "0.0.43"
+  "version": "0.0.44"
 }
