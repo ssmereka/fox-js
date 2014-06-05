@@ -126,7 +126,7 @@ var install = function(_config, next, silent) {
     }
 
     // Install the libs using bower.
-    fox.worker.execute("bower", ["install"], { cwd: _config.clientFolderPath }, false, function(err, code, stdout, stderr) {
+    fox.worker.execute("bower", ["install", "--config.interactive=false"], { cwd: _config.clientFolderPath }, false, function(err, code, stdout, stderr) {
       return next();
     });
   })
