@@ -286,7 +286,7 @@ var ensureTemplateIsInstalled = function(_config, templateName, next) {
       loadTemplates(_config, function(err) {
         next(err, templates[templateName]);
       });
-    }, true);
+    }, false);
   } else {
     log.info("5. Checking and installing updates for " + templateName + "...");
 
@@ -297,7 +297,7 @@ var ensureTemplateIsInstalled = function(_config, templateName, next) {
       }
 
       next(undefined, templates[templateName]);
-    }, false);
+    }, true);
   }
 }
 
@@ -456,10 +456,10 @@ var gitClone = function(repo, dir, next, silent) {
 /**
  * Perform an update using git pull for a target directory.
  */
-var gitPull = function(dir, next) {
+var gitPull = function(dir, next, silent) {
   next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
 
-  fox.worker.execute("git", ["pull"], { cwd: (dir) ? dir : "." }, true, function(err, code, stdout, stderr) {
+  fox.worker.execute("git", ["pull"], { cwd: (dir) ? dir : "." }, (silent !== undefined) ? ! silent : true, function(err, code, stdout, stderr) {
     return next();
   });
 }

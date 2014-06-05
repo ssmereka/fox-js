@@ -235,12 +235,58 @@ var stop = function(next) {
   nodemon.emit("quit");
 }
 
+/**
+ * Run instalization on the server which should setup the database
+ * and anything else required by the server.  This will also run the 
+ * server and restart the server once installed.
+ */
+var installServer = function(_config, next) {
+  fox.log.info("1. Setting up the database...");
+
+  // Ensure there is a next function.
+  next = (next) ? next : function(err) { log.error(err); };
+
+  // Start the server
+  start(_config, function(err, output) {
+    if(err) {
+      return next(err);
+    }
+
+    // TODO: Generate / get an install key.
+    var installKey = "IOlQ9V6Tg6RVL7DSJFL248723Bm3JjCF34FI0TJOVPvRzz";
+
+    // Execute the install command.
+    request.post("http://localhost:3000/install.json?access_token="+installKey, {}, function(err, r, body) {
+      if(err) {
+        return next(err)
+      }
+
+      // Check the body for an error.
+      body = (body) ? JSON.parse(body) : {};
+      if(body["error"]) {
+        stop();
+        return next("("+body["status"]+") "+body["error"]);
+      }
+
+      // Stop the server
+      stop();
+      fox.log.info("0. Success!");
+
+      // Finally relaunch the server, install complete.
+      fox.worker.fork(_config["foxBinPath"]+"/fox", ["start", "-l"], { cwd: '.' }, function(err) {
+        return next(err);
+      }); 
+    });
+  });
+}
+
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */
 
 Nodemon.prototype.isInstalled = isInstalled;
 Nodemon.prototype.install = install;
+Nodemon.prototype.installServer = installServer;
 Nodemon.prototype.start = start;
 Nodemon.prototype.stop = stop;
 Nodemon.prototype.restart = restart;

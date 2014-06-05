@@ -212,7 +212,11 @@ function getServerPathSync(_config) {
   } else if(fs.existsSync(greatGrandParentDir + "/index.js")) {
     return greatGrandParentDir;    
   } else {
-    return searchForFileSync(currentDir, "/server/app/index.js");
+    var filePath = searchForFileSync(currentDir, "/server/app/index.js");
+    if(filePath) {
+      return path.resolve(filePath, "../");
+    }
+    return undefined;
   }
 }
 

@@ -147,6 +147,40 @@ function updateObjectReferenceFn(obj, _fox) {
  * ************************************************** */
 
 /**
+ * Install the server using a controller and conditions 
+ * defiend in the config object.
+ **/
+var install = function(_config, next, showAllLogs) {
+  // Ensure there is a next function.
+  next = (next) ? next : function(err) { log.error(err); };
+
+  switch(_config["controller"]) {
+    case "node":
+      node.install(_config, next);
+      break;
+
+    case "nodemon":
+      nodemon.installServer(_config, next);
+      break;
+
+    case "pm2":
+      pm2.install(_config, next);
+      break;
+    
+    case "fox":
+      log.info("Not implemented.");
+      next(new Error("Protocol not implemented"));
+      break;
+
+    default:
+      log.error("The controller type of '" + controllerType +"' in the config is unrecognized.");
+      next(new Error("The controller type of '" + controllerType +"' in the config is unrecognized."));
+      break;
+  }
+}
+
+
+/**
  * Start the server using a controller and conditions 
  * defiend in the config object.
  **/
@@ -379,9 +413,10 @@ var create = function(name, _config, next) {
     });
 
     // Update the current config object as well as the global one.
-    _config.setSeverPath(newServerPath);
-    _config["serverPath"] = newServerPath;
-    _config["clientPath"] = path.normalize(newServerPath + "/client");
+    //_config.setSeverPath(newServerPath);
+    //_config["serverPath"] = newServerPath;
+    //_config["clientPath"] = path.normalize(newServerPath + "/client");
+    _config.updateConfigPaths(_config);
 
     // Install the server's dependencies using npm install.
     log.info("3. Installing server modules...");
@@ -392,13 +427,13 @@ var create = function(name, _config, next) {
       fox.client.install(_config, function(err) {
 
         // Update the config object with the new server's paths.
-        _config = fox.config.updateConfigPaths(_config);
+        //_config = fox.config.updateConfigPaths(_config);
 
         // Run install on the server, initalizing the database and performing 
         // any other tasks defined by the server boilerplate.
         // This will also start the server.
         install(_config, next);
-      });
+      }, true);
     });
   });
 }
@@ -408,6 +443,7 @@ var create = function(name, _config, next) {
  * and anything else required by the server.  This will also run the 
  * server and restart the server once installed.
  */
+ /*
 var install = function(_config, next) {
   fox.log.info("1. Setting up the database...");
 
@@ -447,10 +483,7 @@ var install = function(_config, next) {
     });
   });
 }
-
-var installServerPm2 = function(_config, next) {
-  pm2.installServer(_config, next);
-}
+*/
 
 var installDependencies = function(_config, next) {
   installServerDependencies(_config, function(err) {
@@ -492,8 +525,6 @@ Server.prototype.install = install;
 Server.prototype.create = create;
 Server.prototype.logs = logs;
 Server.prototype.clear = clear;
-
-Server.prototype.installServerPm2 = installServerPm2;
 
 
 /* ************************************************** *

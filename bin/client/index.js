@@ -101,7 +101,7 @@ var bowerConfig = {
  * Install the client portion of the server including 
  * its dependencies. 
  */
-var install = function(_config, next) {
+var install = function(_config, next, silent) {
   // TODO: Install bower using module API, aka require("bower").commands.install();
 
   // Check if the libs are alreayd installed.
@@ -109,7 +109,9 @@ var install = function(_config, next) {
     return next();
   }
 
-  fox.log.info("Installing Client Dependencies...");
+  if( ! silent) {
+    fox.log.info("Installing Client Dependencies...");
+  }
 
   // Check if bower is installed.
   installBower(function(err) {

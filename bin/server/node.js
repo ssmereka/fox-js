@@ -110,11 +110,17 @@ var start = function(config, next) {
   var child = fox.worker.execute("node", args, opts, undefined, onStdOutput);
 }
 
+var install = function(config, next) {
+  log.info("Not implemented.");
+  next(new Error("Protocol not implemented"));
+}
+
 
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */
 
+Node.prototype.install = install;
 Node.prototype.start = start;
 Node.prototype.updateFoxReference = updateFoxReference;
 

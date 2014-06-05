@@ -8,7 +8,7 @@
     "sdl_auth_server": {
         "name": "sdl_auth_server",
         "git": "https://bitbucket.org/livio/sdl_auth_server.git",
-        "dir": "/Users/scottsmereka/Documents/Scott/fox-js/templates/sdl_auth_server",
-        "installed": false
+        "dir": "/Users/scottsmereka/Documents/Ford/sdl_auth_server/server/node_modules/foxjs/templates/sdl_auth_server",
+        "installed": true
     }
 }
