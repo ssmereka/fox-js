@@ -51,55 +51,86 @@ var handleConfig = function(config) {
  * ************************************************** */
 
 /**
- * Returns the difference between two dates.
- * A Postitive number is a date in the future where negative is in the past.
+ * Returns the difference between two dates.  A Postitive 
+ * number is a date in the future where negative is in the past.
+ * If either parameter is not a valid date, zero will be returned.
+ * @param a is the minuend date value.
+ * @param b is the subtrahend date value.
+ * @param isDLS when true the remainder will include Daylight Savings Time.
  */
-var diff = function(date1, date2) {
-  if(_.isDate(date1) && _.isDate(date2)) {
-    return (date1.getTime() - date2.getTime());
+var diff = function(a, b, isDLS) {
+  if(_.isDate(a) && _.isDate(b)) {
+    if(isDLS) {
+      return (a.getTime() - b.getTime());
+    } else {
+      // Discard the time and time-zone information.
+      var utc1 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+      var utc2 = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+      return (utc1 - utc2);
+    }
   }
 
   return 0;
+}
+
+/**
+ * Get the difference of two dates in milliseconds. 
+ * If either parameter is not a valid date, zero will be 
+ * returned as the remainder.
+ * @param a is the minuend date value.
+ * @param b is the subtrahend date value.
+ * @param isDLS when true the remainder will include Daylight Savings Time.
+ */
+var diffInMilliseconds = function(a, b, isDLS) {
+  return diff(a,b,isDLS);
 };
 
 /**
- * Get the difference of two dates in milliseconds.
+ * Get the difference of two dates in seconds. 
+ * If either parameter is not a valid date, zero will be 
+ * returned as the remainder.
+ * @param a is the minuend date value.
+ * @param b is the subtrahend date value.
+ * @param isDLS when true the remainder will include Daylight Savings Time.
  */
-var diffInMilliseconds = function(date1, date2) {
-  //return diffMilliseconds[date1, date2] || (diffMilliseconds[date1, date2] = function(req, res, next) {
-  return diff(date1, date2);
+var diffInSeconds = function(a, b, isDLS) {
+  return Math.floor( diff(a,b,isDLS) / 1000 );
 };
 
 /**
- * Get the difference of two dates in seconds.
+ * Get the difference of two dates in minutes. 
+ * If either parameter is not a valid date, zero will be 
+ * returned as the remainder.
+ * @param a is the minuend date value.
+ * @param b is the subtrahend date value.
+ * @param isDLS when true the remainder will include Daylight Savings Time.
  */
-var diffInSeconds = function(date1, date2) {
-  //return diffSeconds[date1, date2] || (diffSeconds[date1, date2] = function(req, res, next) {
-  return diff(date1, date2) / 1000;
+var diffInMinutes = function(a, b, isDLS) {
+  return Math.floor( diff(a,b,isDLS) / ( 60000 ));
 };
 
 /**
- * Get the difference of two dates in minutes.
+ * Get the difference of two dates in hours. 
+ * If either parameter is not a valid date, zero will be 
+ * returned as the remainder.
+ * @param a is the minuend date value.
+ * @param b is the subtrahend date value.
+ * @param isDLS when true the remainder will include Daylight Savings Time.
  */
-var diffInMinutes = function(date1, date2) {
-  //return diffMinutes[date1, date2] || (diffMinutes[date1, date2] = function(req, res, next) {
-  return diff(date1, date2) / (1000 * 60);
+var diffInHours = function(a, b, isDLS) {
+  return Math.floor( diff(a,b,isDLS) / ( 3600000 ));
 };
 
 /**
- * Get the difference of two dates in hours.
+ * Get the difference of two dates in days. 
+ * If either parameter is not a valid date, zero will be 
+ * returned as the remainder.
+ * @param a is the minuend date value.
+ * @param b is the subtrahend date value.
+ * @param isDLS when true the remainder will include Daylight Savings Time.
  */
-var diffInHours = function(date1, date2) {
-  //return diffHours[date1, date2] || (diffHours[date1, date2] = function(req, res, next) {
-  return diff(date1, date2) / (1000 * 60 * 60);
-};
-
-/**
- * Get the difference of two dates in days.
- */
-var diffInDays = function(date1, date2) {
-  //return diffDays[date1, date2] || (diffDays[date1, date2] = function(req, res, next) {
-  return diff(date1, date2) / (1000 * 60 * 60 * 24);
+var diffInDays = function(a, b, isDLS) {
+  return Math.floor( diff(a,b,isDLS) / ( 86400000 ));
 };
 
 
