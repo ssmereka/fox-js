@@ -13,21 +13,24 @@
 var debug = false,
     fox,
     log, 
-    trace = false;
+    trace = false,
+    _ = require("underscore");
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
  * ************************************************** */
 
 var DateLibrary = function(_fox) {
-  // Handle parameters
-  fox = _fox;
+  if(_fox) {
+    // Handle parameters
+    fox = _fox;
 
-  // Load internal modules.
-  log = fox.log;
+    // Load internal modules.
+    log = fox.log;
 
-  // Configure date instance.
-  handleConfig(fox["config"]);
+    // Configure date instance.
+    handleConfig(fox["config"]);
+  }
 }
 
 /**
@@ -52,56 +55,51 @@ var handleConfig = function(config) {
  * A Postitive number is a date in the future where negative is in the past.
  */
 var diff = function(date1, date2) {
-  if( ! (date1 instanceof Date) || ! (date2 instanceof Date)) {
-    return undefined
+  if(_.isDate(date1) && _.isDate(date2)) {
+    return (date1.getTime() - date2.getTime());
   }
-  
-  return (date1.getTime() - date2.getTime());
+
+  return 0;
 };
 
 /**
  * Get the difference of two dates in milliseconds.
  */
 var diffInMilliseconds = function(date1, date2) {
-  return diffMilliseconds[date1, date2] || (diffMilliseconds[date1, date2] = function(req, res, next) {
-    return diff(date1, date2);
-  });
+  //return diffMilliseconds[date1, date2] || (diffMilliseconds[date1, date2] = function(req, res, next) {
+  return diff(date1, date2);
 };
 
 /**
  * Get the difference of two dates in seconds.
  */
 var diffInSeconds = function(date1, date2) {
-  return diffSeconds[date1, date2] || (diffSeconds[date1, date2] = function(req, res, next) {
-    return diff(date1, date2) / 1000;
-  });
+  //return diffSeconds[date1, date2] || (diffSeconds[date1, date2] = function(req, res, next) {
+  return diff(date1, date2) / 1000;
 };
 
 /**
  * Get the difference of two dates in minutes.
  */
 var diffInMinutes = function(date1, date2) {
-  return diffMinutes[date1, date2] || (diffMinutes[date1, date2] = function(req, res, next) {
-    return diff(date1, date2) / (1000 * 60);
-  });
+  //return diffMinutes[date1, date2] || (diffMinutes[date1, date2] = function(req, res, next) {
+  return diff(date1, date2) / (1000 * 60);
 };
 
 /**
  * Get the difference of two dates in hours.
  */
 var diffInHours = function(date1, date2) {
-  return diffHours[date1, date2] || (diffHours[date1, date2] = function(req, res, next) {
-    return diff(date1, date2) / (1000 * 60 * 60);
-  });
+  //return diffHours[date1, date2] || (diffHours[date1, date2] = function(req, res, next) {
+  return diff(date1, date2) / (1000 * 60 * 60);
 };
 
 /**
  * Get the difference of two dates in days.
  */
 var diffInDays = function(date1, date2) {
-  return diffDays[date1, date2] || (diffDays[date1, date2] = function(req, res, next) {
-    return diff(date1, date2) / (1000 * 60 * 60 * 24);
-  });
+  //return diffDays[date1, date2] || (diffDays[date1, date2] = function(req, res, next) {
+  return diff(date1, date2) / (1000 * 60 * 60 * 24);
 };
 
 
