@@ -41,6 +41,9 @@ var async,
 
 var Templates;
 
+// List of available templates.
+var templates = {};
+
 /* ************************************************** *
  * ******************** Constructor & Initalization
  * ************************************************** */
@@ -88,12 +91,6 @@ var updateFoxReference = function(_fox, next) {
 
   loadTemplates(fox.config, next);
 }
-
-/* ************************************************** *
- * ******************** Template List
- * ************************************************** */
-
-var templates = {};
 
 
 /* ************************************************** *
@@ -258,6 +255,10 @@ var add = function(_config, str, next, silent) {
   }, silent);
 }
 
+var update = function(_config, next, silent) {
+
+}
+
 /**
  * Remove a template from the template folder by um, well... 
  * deleting the template's folder.
@@ -287,7 +288,16 @@ var ensureTemplateIsInstalled = function(_config, templateName, next) {
       });
     }, true);
   } else {
-    next(undefined, templates[templateName]);
+    log.info("5. Checking and installing updates for " + templateName + "...");
+
+    // Template is already installed, make sure it is up-to-date.
+    gitPull(templates[templateName]["dir"], function(err) {
+      if(err) {
+        return next(err);
+      }
+
+      next(undefined, templates[templateName]);
+    }, false);
   }
 }
 
@@ -481,6 +491,7 @@ var gitRemote = function(dir, next) {
  * ************************************************** */
 
 Template.prototype.add = add;
+Template.prototype.update = update;
 Template.prototype.remove = remove;
 Template.prototype.list = list;
 
