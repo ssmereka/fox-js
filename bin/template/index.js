@@ -440,6 +440,21 @@ var getTemplateFromGit = function(gitRepo) {
  * ************************************************** */
 
 /**
+ * Check if git is installed, if it is not an error
+ * message will be shown and the application will 
+ * quit gracefully. 
+ */
+var ensureGitInstalled = function(next) {
+  fox.worker.execute("git", ["--version"], { cwd: "." }, false, function(err, code, stdout, stderr) {
+    if(stderr) {
+      return next(new Error("Please install the dependency:  Git"));
+    }
+
+    return next();
+  });
+}
+
+/**
  * Clone a git repo into a target directory.
  */
 var gitClone = function(repo, dir, next, silent) {
@@ -448,8 +463,14 @@ var gitClone = function(repo, dir, next, silent) {
     return next(new Error("Cannot clone invalid repo '"+repo+"'"));
   }
 
-  fox.worker.execute("git", ["clone", repo], { cwd: (dir) ? dir : "." }, (silent !== undefined) ? ! silent : true, function(err, code, stdout, stderr) {
-    return next();
+  ensureGitInstalled(function(err) {
+    if(err) {
+      return next(err);
+    }
+
+    fox.worker.execute("git", ["clone", repo], { cwd: (dir) ? dir : "." }, (silent !== undefined) ? ! silent : true, function(err, code, stdout, stderr) {
+      return next();
+    });
   });
 }
 
@@ -459,8 +480,14 @@ var gitClone = function(repo, dir, next, silent) {
 var gitPull = function(dir, next, silent) {
   next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
 
-  fox.worker.execute("git", ["pull"], { cwd: (dir) ? dir : "." }, (silent !== undefined) ? ! silent : true, function(err, code, stdout, stderr) {
-    return next();
+  ensureGitInstalled(function(err) {
+    if(err) {
+      return next(err);
+    }
+
+    fox.worker.execute("git", ["pull"], { cwd: (dir) ? dir : "." }, (silent !== undefined) ? ! silent : true, function(err, code, stdout, stderr) {
+      return next();
+    });
   });
 }
 
@@ -470,18 +497,24 @@ var gitPull = function(dir, next, silent) {
 var gitRemote = function(dir, next) {
   next = (next) ? next : function(err) { if(err) { log.error(err["message"] || err); } };
 
-  fox.worker.execute("git", ["remote", "-v"], { cwd: (dir) ? dir : "." }, false, function(err, code, stdout, stderr) {
-    var lines = stdout.split(/\n/);
-    for(var i in lines) {
-      if(lines.hasOwnProperty(i)) {
-        var fetch = lines[i].indexOf("(fetch)");
-        if( fetch !== -1) {
-          lines[i] = lines[i].substring(0, fetch-1);
-          return next(undefined, lines[i].split(/\t/)[1]);        
+  ensureGitInstalled(function(err) {
+    if(err) {
+      return next(err);
+    }
+
+    fox.worker.execute("git", ["remote", "-v"], { cwd: (dir) ? dir : "." }, false, function(err, code, stdout, stderr) {
+      var lines = stdout.split(/\n/);
+      for(var i in lines) {
+        if(lines.hasOwnProperty(i)) {
+          var fetch = lines[i].indexOf("(fetch)");
+          if( fetch !== -1) {
+            lines[i] = lines[i].substring(0, fetch-1);
+            return next(undefined, lines[i].split(/\t/)[1]);        
+          }
         }
       }
-    }
-    return next();
+      return next();
+    });
   });
 }
 
