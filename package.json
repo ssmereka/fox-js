@@ -33,7 +33,7 @@
   "engines": {
     "node": ">= 0.10.0"
   },
-  "homepage": "http://github.com/ssmereka/fox-js",
+  "homepage": "http://github.com/ssmereka/foxjs",
   "keywords": [
     "API",
     "REST",
@@ -62,5 +62,5 @@
     "test-client": "mocha-phantomjs ./test/client/index.html",
     "test-server": "mocha -R spec ./test/index.js"
   },
-  "version": "0.0.45"
+  "version": "0.0.46"
 }
