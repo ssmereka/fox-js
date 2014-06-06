@@ -55,4 +55,4 @@ info:   Version                  0.1.0
 [Back to Index](#cliIndex)
 
 
-**[MIT License](http://www.tldrlegal.com/license/mit-license "MIT License")**
+###[MIT License](http://www.tldrlegal.com/license/mit-license "MIT License")
