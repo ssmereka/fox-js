@@ -6,11 +6,16 @@ Light-framework and boilerplate code to quickly build scalable web apps using Ja
 
 # Getting Started
 
-1. Install Fox
+0. [Install Node.js & NPM](https://github.com/ssmereka/foxjs/wiki/Getting-Started#installNode)
+1. [Install dependencies](https://github.com/ssmereka/foxjs/wiki/Getting-Started#installDependencies): [Git](http://git-scm.com/), [Make](http://en.wikipedia.org/wiki/Make_(software)), and [G++](http://gcc.gnu.org/).
 
-    `sudo npm -g install foxjs`
+    **Ubuntu:**  `sudo apt-get install git make g++`
 
-2. Create and start a new project.
+2. [Install Fox](https://github.com/ssmereka/foxjs/wiki/Getting-Started#installFox)
+
+    `npm -g install foxjs`
+
+3. Create and start a new project.
 
    `fox new "My Project Name"`
     
@@ -50,6 +55,4 @@ info:   Version                  0.1.0
 [Back to Index](#cliIndex)
 
 
-
-
-## [MIT License](http://www.tldrlegal.com/license/mit-license "MIT License")
+###[MIT License](http://www.tldrlegal.com/license/mit-license "MIT License")
