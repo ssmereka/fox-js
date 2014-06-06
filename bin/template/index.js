@@ -446,7 +446,7 @@ var getTemplateFromGit = function(gitRepo) {
  */
 var ensureGitInstalled = function(next) {
   fox.worker.execute("git", ["--version"], { cwd: "." }, false, function(err, code, stdout, stderr) {
-    if(stderr) {
+    if(err || stderr || code !== 0) {
       return next(new Error("Please install the dependency:  Git"));
     }
 
