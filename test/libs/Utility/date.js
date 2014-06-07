@@ -2,7 +2,7 @@ var assert = require("assert"),
     should = require("should"),
     _ = require("underscore");
 
-var dateUtility = require('../../../libs/Utility/date.js');
+var dui = require('../../../libs/Utility/date.js');
 
 var zeroDiffTest = function(fn) {
   it('difference of the same date should be 0.', function() {
@@ -56,8 +56,6 @@ var posDateDiffDLS = function(fn, resultCoefficient) {
     fn(date1, date2, true).should.equal((180 * resultCoefficient)+offset);
   });
 }
-
-var dui = new dateUtility();
 
 describe('Date Utility Lib', function() {
   

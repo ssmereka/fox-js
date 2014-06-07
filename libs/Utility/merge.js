@@ -10,64 +10,57 @@
  * ******************** Library Variables
  * ************************************************** */
 
-var debug = false,
-    fox,
-    log,
-    sanitize,
-    trace = false;
-
-/* ************************************************** *
- * ******************** Constructor & Initalization
- * ************************************************** */
-
-var Merge = function(_fox) {
-  // Load external modules.
-  sanitize = require("sanitize-it");
-  
-  if( ! fox) {
-    return;
-  }
-
-  // Handle parameters.
-  fox = _fox;
-
-  // Load internal modules.
-  log = fox.log
-
-  // Configure merge instance.
-  handleConfig(fox["config"]);
-}
-
-/**
- * Setup the module based on the config object.
- */
-var handleConfig = function(config) {
-  if(config) {
-    if(config["system"]) {
-      debug = (config.system["debug"]) ? config.system["debug"] : debug;
-      trace = (config.system["trace"]) ? config.system["trace"] : trace;
-    }
-  }
-}
+var _ = require("underscore");
 
 
 /* ************************************************** *
  * ******************** Private API
  * ************************************************** */
 
-
-/* Merge Objects
+/**
  * Combine two object's attributes giving priority
- * to the first object's (obj1) attribute values.
+ * to the first object's properties.  If either parameter
+ * is undefined or not an object, then the other valid 
+ * object will be returned.  If both parameters are
+ * not valid objects, then undefined will be returned.
+ * @param a Object to be merged with priority.
+ * @param b Other object to be merged into param 'a'.
  */
-var priorityMerge = function(obj1, obj2) {
-  for(var key in obj2) {
-    if(obj1[key] === undefined)
-      obj1[key] = obj2[key];
+var priorityMerge = function(a, b) {
+  // If 'a' or 'b' are a function they can't be merged.
+  if(_.isFunction(a) || _.isFunction(b)) {
+    return undefined;
   }
-  return obj1;
-}
 
+  // Check if both 'a' and 'b' are valid objects.
+  if(a === undefined) {
+    if(b === undefined || ! _.isObject(b)) {
+      return undefined;  // 'a' is undefined and 'b' is not valid
+    } else {
+      return b; // 'a' is undefined, but 'b' is valid.
+    }
+  } else if( ! _.isObject(a)) {
+    if(b === undefined || ! _.isObject(b)) {
+      return undefined;  // both 'a' and 'b' are not invalid.
+    } else {
+      return b;  // 'a' is not a valid object, but 'b' is.
+    }
+  } else {
+    if( b === undefined || ! _.isObject(b)) {
+      return a;  // 'a' is valid, but 'b' is not.
+    }
+  }
+
+  // Merge new values of 'b' into 'a'
+  for(var i in b) {
+    if(a[i] === undefined) {
+      a[i] = b[i];
+    }
+  }
+
+  // Return the merged 'a' object.
+  return a;
+}
 
 
 /**
@@ -185,16 +178,16 @@ var deepPriorityMergeSync = function(obj1, obj2) {
 }
 
 
-
-
 /* ************************************************** *
  * ******************** Public API
  * ************************************************** */
 
+var MergeLibrary = {}
+
 // Expose the public methods available.
-Merge.prototype.priorityMerge = priorityMerge;
-Merge.prototype.deepPriorityMergeSync = deepPriorityMergeSync;
-Merge.prototype.deepPriorityMerge = deepPriorityMerge;
+MergeLibrary.priorityMerge = priorityMerge;
+MergeLibrary.deepPriorityMergeSync = deepPriorityMergeSync;
+MergeLibrary.deepPriorityMerge = deepPriorityMerge;
 
 
 /* ************************************************** *
@@ -202,7 +195,4 @@ Merge.prototype.deepPriorityMerge = deepPriorityMerge;
  * ************************************************** */
 
 // Reveal the method called when required in other files. 
-exports = module.exports = Merge;
-
-// Reveal the public API.
-exports = Merge;
+exports = module.exports = MergeLibrary;

@@ -1,1 +1,2 @@
-require("./date.js")
+require("./date.js");
+require("./merge.js");

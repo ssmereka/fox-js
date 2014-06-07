@@ -10,40 +10,7 @@
  * ******************** Library Variables
  * ************************************************** */
 
-var debug = false,
-    fox,
-    log, 
-    trace = false,
-    _ = require("underscore");
-
-/* ************************************************** *
- * ******************** Constructor & Initalization
- * ************************************************** */
-
-var DateLibrary = function(_fox) {
-  if(_fox) {
-    // Handle parameters
-    fox = _fox;
-
-    // Load internal modules.
-    log = fox.log;
-
-    // Configure date instance.
-    handleConfig(fox["config"]);
-  }
-}
-
-/**
- * Setup the module based on the config object.
- */
-var handleConfig = function(config) {
-  if(config) {
-    if(config["system"]) {
-      debug = (config.system["debug"]) ? config.system["debug"] : debug;
-      trace = (config.system["trace"]) ? config.system["trace"] : trace;
-    }
-  }
-}
+var _ = require("underscore");
 
 
 /* ************************************************** *
@@ -138,13 +105,15 @@ var diffInDays = function(a, b, isDLS) {
  * ******************** Public API
  * ************************************************** */
 
+var DateLibrary = {};
+
 // Expose the public methods available.
-DateLibrary.prototype.diff = diff;
-DateLibrary.prototype.diffInMilliseconds = diffInMilliseconds;
-DateLibrary.prototype.diffInSeconds = diffInSeconds;
-DateLibrary.prototype.diffInMinutes = diffInMinutes;
-DateLibrary.prototype.diffInHours = diffInHours;
-DateLibrary.prototype.diffInDays = diffInDays;
+DateLibrary.diff = diff;
+DateLibrary.diffInMilliseconds = diffInMilliseconds;
+DateLibrary.diffInSeconds = diffInSeconds;
+DateLibrary.diffInMinutes = diffInMinutes;
+DateLibrary.diffInHours = diffInHours;
+DateLibrary.diffInDays = diffInDays;
 
 
 /* ************************************************** *
@@ -152,7 +121,4 @@ DateLibrary.prototype.diffInDays = diffInDays;
  * ************************************************** */
 
 // Reveal the method called when required in other files. 
-exports = module.exports = DateLibrary;
-
-// Reveal the public API.
-exports = DateLibrary;
+module.exports = exports =  DateLibrary;

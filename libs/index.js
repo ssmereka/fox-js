@@ -41,8 +41,8 @@ function Fox() {
 	// Require log and sender first, these are 
 	// commonly required by other modules.
 	this.log 			= new Log(this);
-	this.merge          = new Merge(this);
-	this.send 			= new Send(this);
+	this.merge    = Merge;
+	this.send 		= new Send(this);
 
 	this.configModule.updateFoxInstance(this);
 	
@@ -54,7 +54,7 @@ function Fox() {
 
 	//this.authentication = new Authorization(this);
 	//this.crypto 	    = new Cryptography(this);
-	this.date 			= new DateLibrary(this);
+	this.date 			= DateLibrary;
 	this.message 		= new Message(this);
 
 	this.model 			= new Model(this);
