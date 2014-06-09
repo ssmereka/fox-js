@@ -127,6 +127,68 @@ var deepPriorityMerge = function(obj1, obj2, done, depth, next) {
 }
 
 
+var deepPriorityMergeNew = function(a, b, next) {
+  // If 'a' or 'b' are a function they can't be merged.
+  if(_.isFunction(a) || _.isFunction(b)) {
+    return {};
+  }
+
+  // Check if both 'a' and 'b' are valid objects.
+  if(a === undefined) {
+    if(b === undefined || ! _.isObject(b)) {
+      return {};  // 'a' is undefined and 'b' is not valid
+    } else {
+      return b; // 'a' is undefined, but 'b' is valid.
+    }
+  } else if( ! _.isObject(a)) {
+    if(b === undefined || ! _.isObject(b)) {
+      return {};  // both 'a' and 'b' are not invalid.
+    } else {
+      return b;  // 'a' is not a valid object, but 'b' is.
+    }
+  } else {
+    if( b === undefined || ! _.isObject(b)) {
+      return a;  // 'a' is valid, but 'b' is not.
+    }
+  }
+
+  deepPriorityMergeHelper(a, b, {}, 0, next);
+}
+
+var deepPriorityMergeHelper = function(a, b, c, depth, done, next) {
+  for(var i in a) {
+    if(a.hasOwnProperty(i) && isObject(a[i])) {
+      if(b.hasOwnProperty(i) && isObject(b[i])) {
+        depth++;
+        deepPriorityMergeHelper(a[i], b[i], c, depth, done, function(err, obj){
+          c[i] = obj;
+          depth--;
+        });
+      } else {
+        c[i] = a[i];
+      }
+    } else {
+      c[i] = a[i];
+    }
+  }
+
+  for(i in b) {
+    if( ! (i in c)) {
+      c[i] = b[i];
+    }
+  }
+
+  if(depth > 0 && next) {
+    return next(undefined, c);
+  } else if(done) {
+    return done(undefined, c);
+  }
+}
+
+function isObject(a) {
+  return (a !== undefined && a !== null && _.isObject(a) && _.isArray(a));
+}
+
 
 /**
  * Merge two objects attributes into a single object.
