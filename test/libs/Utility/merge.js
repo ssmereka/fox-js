@@ -163,7 +163,7 @@ describe('Merge Utility Lib', function() {
     });
   });
 
-  describe('deepPriorityMerge(obj1, obj2, done, depth, next)', function(){
+  describe('deepPriorityMerge(obj1, obj2, next)', function(){
     it('strings should merge', function(done) {
       var obj1 = { "a": "a", "b": "b" };
       var obj2 = { "b": "d", "c": "c" };
