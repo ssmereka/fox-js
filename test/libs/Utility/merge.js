@@ -10,10 +10,6 @@ var deepPriorityMerge = function(obj1, obj2, expectedMergeValue, done) {
       return done(err);
     }
 
-    console.log(mergedValue)
-    console.log(expectedMergeValue)
-
-
     assert.deepEqual(mergedValue, expectedMergeValue);
     done();
   });
@@ -441,6 +437,7 @@ describe('Merge Utility Lib', function() {
           //f: NaN
         }
       };
+
       /*var result = {
         a: 5,
         b: 'a',
