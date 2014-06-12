@@ -139,7 +139,7 @@ var loadConfig = function(_config, next) {
 
   var config = systemConfig.createConfigObject(_config);
 
-  //console.log(config);
+  console.log(config);
 
   next(undefined, config);
 }

@@ -78,14 +78,15 @@ var deepPriorityMerge = function(obj1, obj2, done, depth, next) {
 
   // Loop through all the attributes in the first object.
   for(var key in obj1) {
-    
+
     // If an attribute is also an object and not an array.
-    if(obj1.hasOwnProperty(key) && obj1[key] !== null && typeof obj1[key] === 'object' && ! obj1[key] instanceof Array) {     
+    if(obj1.hasOwnProperty(key) && obj1[key] !== null && _.isObject(obj1[key]) && ! _.isArray(obj1[key]) && !_.isFunction(obj1[key])) {     
       
       // And obj2's attribute with the same key is also an object.
-      if(obj2.hasOwnProperty(key) && obj2[key] !== null && typeof obj2[key] === 'object') {
+      if(obj2.hasOwnProperty(key) && obj2[key] !== null && _.isObject(obj2[key]) && ! _.isArray(obj2[key]) && !_.isFunction(obj2[key])) {
         // recurse and merge those objects as well.
         depth++;
+
         deepPriorityMerge(obj1[key], obj2[key], done, depth, function(err, obj){
           result[key] = obj;
           depth--;
@@ -121,67 +122,8 @@ var deepPriorityMerge = function(obj1, obj2, done, depth, next) {
   } else if(done) {
     return done(undefined, result);
   } else {
-    console.log("Hmmm something has gone wrong...");
-    //console.log(result);
-  }
-}
-
-
-var deepPriorityMergeNew = function(a, b, next) {
-  // If 'a' or 'b' are a function they can't be merged.
-  if(_.isFunction(a) || _.isFunction(b)) {
-    return {};
-  }
-
-  // Check if both 'a' and 'b' are valid objects.
-  if(a === undefined) {
-    if(b === undefined || ! _.isObject(b)) {
-      return {};  // 'a' is undefined and 'b' is not valid
-    } else {
-      return b; // 'a' is undefined, but 'b' is valid.
-    }
-  } else if( ! _.isObject(a)) {
-    if(b === undefined || ! _.isObject(b)) {
-      return {};  // both 'a' and 'b' are not invalid.
-    } else {
-      return b;  // 'a' is not a valid object, but 'b' is.
-    }
-  } else {
-    if( b === undefined || ! _.isObject(b)) {
-      return a;  // 'a' is valid, but 'b' is not.
-    }
-  }
-
-  deepPriorityMergeHelper(a, b, {}, 0, next);
-}
-
-var deepPriorityMergeHelper = function(a, b, c, depth, done, next) {
-  for(var i in a) {
-    if(a.hasOwnProperty(i) && isObject(a[i])) {
-      if(b.hasOwnProperty(i) && isObject(b[i])) {
-        depth++;
-        deepPriorityMergeHelper(a[i], b[i], c, depth, done, function(err, obj){
-          c[i] = obj;
-          depth--;
-        });
-      } else {
-        c[i] = a[i];
-      }
-    } else {
-      c[i] = a[i];
-    }
-  }
-
-  for(i in b) {
-    if( ! (i in c)) {
-      c[i] = b[i];
-    }
-  }
-
-  if(depth > 0 && next) {
-    return next(undefined, c);
-  } else if(done) {
-    return done(undefined, c);
+    console.log("hmm...");
+    //return result;  // Hmmm... something has gone wrong here.
   }
 }
 

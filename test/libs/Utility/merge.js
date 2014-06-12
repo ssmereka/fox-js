@@ -10,6 +10,10 @@ var deepPriorityMerge = function(obj1, obj2, expectedMergeValue, done) {
       return done(err);
     }
 
+    console.log(mergedValue)
+    console.log(expectedMergeValue)
+
+
     assert.deepEqual(mergedValue, expectedMergeValue);
     done();
   });
@@ -196,7 +200,7 @@ describe('Merge Utility Lib', function() {
       };
       var result = {
         "a": { 1: 1 },
-        "b": { 21: 21, 22: 22 },
+        "b": { 4: 4, 21: 21, 22: 22 },
         "c": { 3: 3 }
       }
       deepPriorityMerge(obj1, obj2, result, done);
@@ -311,6 +315,147 @@ describe('Merge Utility Lib', function() {
         } 
       };
       deepPriorityMerge(obj1, obj2, result, done);
+    });
+
+    it('merge everything', function(done) {
+      var date = new Date();
+      var now = date.getDate();
+      var later = date.setDate(date.getDate() + 1);
+      var fn = function() { console.log("I'm a function."); };
+      var fn2 = function() { console.log("I'm another function."); }
+      
+      var obj1 = {
+        a: true,
+        b: 1,
+        c: "a.c",
+        e: undefined,
+        f: null,
+        g: now,
+        h: fn,
+        i: {
+          a: true,
+          c: "a.c",
+          d: [ "d1", "d2", "d3", "d4" ],
+          e: undefined,
+          h: fn,
+          i: {
+            b: 1,
+            c: "a.c",
+            f: null,
+            i: { a: "hello" }
+          }
+        }
+      };
+
+      var obj2 = {
+        a: false,
+        b: 2,
+        c: "a.c2",
+        d: [ "d.1", "d.2", "d.3", "d.4" ],
+        e: undefined,
+        f: null,
+        g: later,
+        h: fn2,
+        i: {
+          a: true,
+          b: 1,
+          c: "a.c",
+          d: [ "d.1", "d.2", "d.3", "d.4" ],
+          e: undefined,
+          f: null,
+          g: later,
+          h: fn2,
+          i: {
+            a: true,
+            b: 1,
+            c: "a.c",
+            d: [ "d.1", "d.2", "d.3", "d.4" ],
+            e: undefined,
+            f: null,
+            g: later,
+            h: fn2,
+            i: { a: "goodbye" }
+          }
+        }
+      };
+      
+      var result = {
+        a: true,
+        b: 1,
+        c: "a.c",
+        d: [ "d.1", "d.2", "d.3", "d.4" ],
+        e: undefined,
+        f: null,
+        g: now,
+        h: fn,
+        i: {
+          a: true,
+          b: 1,
+          c: "a.c",
+          d: [ "d1", "d2", "d3", "d4" ],
+          e: undefined,
+          f: null,
+          g: later,
+          h: fn,
+          i: {
+            a: true,
+            b: 1,
+            c: "a.c",
+            d: [ "d.1", "d.2", "d.3", "d.4" ],
+            e: undefined,
+            f: null,
+            g: later,
+            h: fn2,
+            i: { a: "hello" }
+          }
+        }
+      };
+
+      deepPriorityMerge(obj1, obj2, result, done);
+    });
+
+    it('merge incompatible values', function(done) {
+      var obj1 = {
+        a: undefined,
+        b: null,
+        //c: NaN,
+        d: {
+          a: undefined,
+          b: null,
+          //c: NaN,
+          d: undefined,
+          e: null
+          //f: NaN
+        }
+      };
+      var obj2 = {
+        a: 5,
+        b: 'a',
+        //c: [ 'c' ],
+        d: {
+          a: 'a',
+          b: [ 2, 22, 222 ],
+          //c: 3,
+          d: undefined,
+          e: null
+          //f: NaN
+        }
+      };
+      /*var result = {
+        a: 5,
+        b: 'a',
+        c: [ 'c'],
+        d: {
+          a: 'a',
+          b: [ 2, 22, 222 ],
+          c: 3,
+          d: undefined,
+          e: null,
+          f: NaN
+        }
+      }; */
+
+      deepPriorityMerge(obj1, obj2, obj1, done);
     });
 
   });
