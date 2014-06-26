@@ -5,7 +5,7 @@ Light-framework and boilerplate code to quickly build scalable web apps using Ja
 **Current Status:** In Development.
 
 [![Build Status](https://travis-ci.org/ssmereka/foxjs.svg?branch=master)](https://travis-ci.org/ssmereka/foxjs)
-
+[![Dependencies](https://david-dm.org/ssmereka/foxjs.png)](https://david-dm.org/ssmereka/foxjs)
 
 # Getting Started
 
