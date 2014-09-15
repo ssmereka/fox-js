@@ -78,6 +78,12 @@ var enable = function(_db, _passport, _bearerStrategy) {
   }
   passport = _passport;
 
+  try {
+    AccessTokenModel = db.model("AccessToken");
+  } catch(err) {
+    return log.e("Cannot enable access token authentication, AccessToken schema is not defined.");
+  }
+
   if( ! _bearerStrategy) {
     var _bearer = require('passport-http-bearer');
 
@@ -88,7 +94,6 @@ var enable = function(_db, _passport, _bearerStrategy) {
     }
   }
   BearerStrategy = _bearerStrategy;
-  AccessTokenModel = db.model("AccessToken");
   passport.use('bearer', new BearerStrategy(strategy));
   isEnabled = true;
 };
