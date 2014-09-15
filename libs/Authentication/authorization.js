@@ -471,7 +471,15 @@ var denyRolesOrLower = function(roles, ignoreHandledRequests) {
 
 var refreshCachedRoles = function(_db, next) {
   db = _db
-  var UserRole = db.model('UserRole');
+
+  // Load the User Role schema, if available.
+  var UserRole;
+  try {
+    UserRole = db.model('UserRole');
+  } catch(err) {
+    log.d("Cannot refresh cached roles, UserRole schema is not defined.", debug);
+    return next(undefined, []);
+  }
 
   UserRole.find({}).sort({index: 1}).exec(function(err, _allRoles) {
     if(err) {
