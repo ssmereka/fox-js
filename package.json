@@ -14,7 +14,7 @@
     "async": "0.2.x",
     "lodash": "2.4.x",
     "nodemon": "1.0.x",
-    "optimist": "0.6.x",
+    "minimist": "x.x.x",
     "pluralize": "0.x.x",
     "pm2": "x.x.x",
     "request": "2.34.x",

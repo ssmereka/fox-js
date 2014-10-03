@@ -15,8 +15,9 @@ var argv,
     debug = false,
     fox,
     log,
+    parseArgs = require('minimist'),
     trace = false,
-    _;
+    _ = require('lodash');
 
 /* ************************************************** *
  * ******************** Constructor & Initalization
@@ -27,12 +28,12 @@ var argv,
  * Handles initalization of the message library.
  */
 var Cli = function(_fox) {
-  // Load external modules.
-  argv = require('optimist').argv;
-  _ = require('lodash');
+  argv = (argv === undefined) ? parseArgs(process.argv.slice(2), {
+    '--': true
+  }) : argv;
 
   updateFoxReference(_fox);
-}
+};
 
 /**
  * Setup the module based on the config object.
@@ -351,14 +352,14 @@ var handleCli = function(_config, next) {
  */
 var isDebugFlagSet = function() {
   return (argv.v || argv.verbose || argv.debug);
-}
+};
 
 /**
  * Returns true if the help flag is set on the cli.
  */
 var isPrintHelpFlagSet = function() {
   return ( (argv.h || argv.help) || (argv._[0] && (_.contains(['help', 'h'], argv._[0]))) );
-}
+};
 
 /**
  * Returns true if the initalizae flag is set on the cli.
@@ -399,7 +400,7 @@ var isReloadServerCommand = function() {
  * Returns true if the create server command is sent via the cli.
  */
 var isCreateCommand = function() {
-  return (argv._[0] && _.contains(['new'], argv._[0]));
+  return (argv._[0] && require('lodash').contains(['new'], argv._[0]));
 }
 
 /**
