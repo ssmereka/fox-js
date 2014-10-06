@@ -48,12 +48,12 @@ var async;
  */
 var Worker = function(_fox) {
   // Load external modules.
-  argv = require('optimist').argv;
+  parseArgs = require('minimist'),
   request = require('request');
   async = require('async');
 
   updateFoxReference(_fox);
-}
+};
 
 /**
  * Setup the module based on the config object.

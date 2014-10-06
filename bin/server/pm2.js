@@ -87,7 +87,7 @@ var install = function(next) {
  * Start the server using pm2 to daemonize the process.  Also 
  * perform any clustering that is needed.
  */
-var start = function(config, next) {
+var start = function(config, args, next) {
   // Check for a valid server file.
   if(! config || config.serverPath === undefined) {
     return next(new Error("A node.js server file was not found."));

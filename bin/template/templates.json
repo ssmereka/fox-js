@@ -2,12 +2,18 @@
     "fox-mean-template": {
         "name": "fox-mean-template",
         "git": "https://github.com/ssmereka/fox-mean-template.git",
-        "dir": "/home/scott/Documents/projects/fox/sdl_auth_server/server/node_modules/foxjs/templates/fox-mean-template",
+        "dir": "/Users/scott/Documents/ford/sdl_auth_server/server/node_modules/foxjs/templates/fox-mean-template",
         "installed": true
     },
-    "sdl_auth_server": {
+    "sdl_server": {
         "name": "sdl_auth_server",
         "git": "https://bitbucket.org/livio/sdl_auth_server.git",
+        "dir": "/Users/scottsmereka/Documents/Ford/sdl_auth_server/server/node_modules/foxjs/templates/sdl_auth_server",
+        "installed": false
+    },
+    "sdl_auth_server": {
+        "name": "sdl_server",
+        "git": "https://github.com/smartdevicelink/sdl_server",
         "dir": "/Users/scottsmereka/Documents/Ford/sdl_auth_server/server/node_modules/foxjs/templates/sdl_auth_server",
         "installed": false
     }

@@ -48,7 +48,6 @@ var Nodemon = require("./nodemon.js"),
 
 // External modules.
 var async,
-    argv,                 // Optimist argv module.
     request,              // Request module.
     wrench;               // Wrench module.
 
@@ -65,7 +64,6 @@ var async,
 var Server = function(_fox) {
   // Load external modules.
   async = require('async');
-  argv = require('optimist').argv;
   request = require('request');
   wrench = require('wrench');
 
@@ -184,7 +182,7 @@ var install = function(_config, next, showAllLogs) {
  * Start the server using a controller and conditions 
  * defiend in the config object.
  **/
-var start = function(_config, next, showAllLogs) {
+var start = function(_config, args, next, showAllLogs) {
   // Ensure there is a next function.
   next = (next) ? next : function(err) { log.error(err); };
 
@@ -195,15 +193,15 @@ var start = function(_config, next, showAllLogs) {
 
     switch(_config["controller"]) {
       case "node":
-        node.start(_config, next);
+        node.start(_config, args,  next);
         break;
 
       case "nodemon":
-        nodemon.start(_config, next);
+        nodemon.start(_config, args, next);
         break;
 
       case "pm2":
-        pm2.start(_config, next);
+        pm2.start(_config, args, next);
         break;
       
       case "fox":

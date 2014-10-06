@@ -339,7 +339,8 @@ var handleCli = function(_config, next) {
         }
       });
     } else {
-      fox.server.start(_config, next);
+      var args = argv["--"];
+      fox.server.start(_config, args, next);
     }
   } else {
     // If we reached here, the command was not handled.

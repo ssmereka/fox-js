@@ -66,7 +66,7 @@ var updateFoxReference = function(_fox, next) {
  * If next is defined, it will be called once the server
  * has been started.
  */
-var start = function(config, next) {
+var start = function(config, args, next) {
   var onStdOutput,
       isNextCalled = false;
 
@@ -92,9 +92,12 @@ var start = function(config, next) {
   }
 
   // Setup the arguments required to start the node server.
-  var args = [
-    config.serverPath
-  ];
+  args = (args) ? args : [];
+
+  args.unshift(config.serverPath);
+  //var args = [
+  //  config.serverPath
+  //];
 
   // Add our node enviorment.
   var env = process.env;

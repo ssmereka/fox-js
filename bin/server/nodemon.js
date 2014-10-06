@@ -131,7 +131,7 @@ var install = function(next) {
  * Start the server using nodemon.  This will deamonize the 
  * process and perform automatic restarts when files change.
  */
-var start = function(config, next, showAllLogs) {
+var start = function(config, args, next, showAllLogs) {
   var nodemonConfig = defaultNodemonConfig,
       waitForStart = (showAllLogs) ? false : true,
       isNextCalled = false,
@@ -159,6 +159,8 @@ var start = function(config, next, showAllLogs) {
   if(waitForStart) {
     nodemonConfig["stdout"] = false;
   }
+
+  //nodemonConfig["exec"] = "-b";
 
   // Ensure nodemon is installed.
   install(function(err) {
