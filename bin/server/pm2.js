@@ -83,11 +83,154 @@ var install = function(next) {
   });
 }
 
+/*
+var start = function(config, args, next) {
+  // Check for a valid server file.
+  if(! config || config.serverPath === undefined) {
+    return next(new Error("A node.js server file was not found."));
+  }
+
+  install(function(err) {
+    if(err) {
+      return next(err);
+    }
+
+    var pm2 = require('pm2');
+
+    var pm2Args = {
+      "name": config.name,
+      "env": config.environment,
+      "exec_mode": exec_mode
+    };
+
+    pm2.connect(function(err) {
+      if(err) {
+        return next(err);
+      }
+
+      // Start a script on the current folder
+      pm2.start(config.serverPath, pm2Args, function(err, proc) {
+        if (err) throw new Error('err');
+
+        // Get all processes running
+        pm2.list(function(err, process_list) {
+          console.log(process_list);
+
+          // Disconnect to PM2
+          pm2.disconnect(function() { process.exit(0) });
+        });
+      });
+
+
+
+      pm2.jlist(function(err, data) {
+        // data
+      });
+    });
+
+
+
+
+
+
+      // Connect or launch PM2
+        pm2.connect(function(err) {
+
+          // Get all processes running
+          /pm2.list(function(err, process_list) {
+           if(err) {
+           fox.log.error(err.message || err);
+           }
+
+           console.log(process_list);
+           //fox.log.error("Server " + config.name + " is already started.");
+
+
+           }/
+
+
+        })
+    }
+
+
+
+  // Arguments for staring the server using pm2.
+  var args = [
+    "start",
+    config.serverPath,
+    "-i",
+    config.cluster.workers,
+    "--name",
+    config.name,
+    " -- -p test"
+  ];
+
+  // Enable/Disable fork mode
+  if(config.pm2 && config.pm2.fork) {
+    args.splice(1, 0, "-x");
+  }
+
+  // Add the environment mode to the current environment.
+  var env = process.env;
+  env["NODE_ENV"] = config.environment;
+
+  // Create the options used to start the server using pm2.
+  var opts = {
+    cwd: '.',
+    env: env
+  };
+
+  install(function(err) {
+
+    // Check if pm2 server already running, Get list of current pm2 servers.
+    var jlistProcess = fox.worker.execute("pm2", ["jlist"], opts, false, function(err, code, jlist, stderr) {
+      //var jListProcess = fox.worker.executeCmd("pm2 jlist", function(err, jlist, stderr) {
+      if(err) {
+        if(next) {
+          return next(err);
+        }
+        fox.log.error(err);
+        exit();
+      }
+
+      // Convert the list to an array.
+      if(jlist) {
+        try {
+          JSON.parse(jlist);
+        } catch (e) {
+          jlist = undefined
+        };
+      } else {
+        jlist = undefined;
+      }
+
+      // Check if the server is already running.
+      if(jlist !== undefined && jlist instanceof Array && jlist.length > 0) {
+        for(var i = jlist.length-1; i >= 0; --i) {
+          if(jlist[i]["name"] === config.name && jlist[i]["pm2_env"]["status"] === "online") {
+            if(next) {
+              return next(new Error("Server " + config.name + " is already started."));
+            }
+            fox.log.error("Server " + config.name + " is already started.");
+            return;
+          }
+        }
+      }
+
+      // Server is not running, so start it.
+      var startProcess = fox.worker.execute("pm2", args, opts, true, function() {
+        return next();
+      });
+    }, true);
+  });
+}
+*/
+
 /**
  * Start the server using pm2 to daemonize the process.  Also 
  * perform any clustering that is needed.
  */
-var start = function(config, args, next) {
+var start = function(config, nodeArgs, next) {
   // Check for a valid server file.
   if(! config || config.serverPath === undefined) {
     return next(new Error("A node.js server file was not found."));
@@ -109,7 +252,7 @@ var start = function(config, args, next) {
     args.splice(1, 0, "-x");
   }
 
-  // Add the enviorment mode to the current enviorment.
+  // Add the environment mode to the current environment.
   var env = process.env;
   env["NODE_ENV"] = config.environment;
 

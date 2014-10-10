@@ -154,6 +154,11 @@ var start = function(config, args, next, showAllLogs) {
   nodemonConfig["watch"] = [ config["serverPath"], path.resolve(fox.config["serverPath"], "../configs") ];
   nodemonConfig["env"] = {  "NODE_ENV": config.environment  };
 
+  // Pass arguments through to the node application.
+  if(args) {
+    nodemonConfig["args"] = args;
+  }
+
   // If we will have a method predefined for standard output, 
   // then turn off redirection of stdout.
   if(waitForStart) {
