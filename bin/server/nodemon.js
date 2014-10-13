@@ -254,7 +254,7 @@ var installServer = function(_config, next) {
   next = (next) ? next : function(err) { log.error(err); };
 
   // Start the server
-  start(_config, function(err, output) {
+  start(_config, undefined, function(err, output) {
     if(err) {
       return next(err);
     }
