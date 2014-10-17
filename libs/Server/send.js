@@ -147,17 +147,18 @@ var createError = function(errMessage, status) {
 /**
  * Send an error in a response object to the requestor.
  */
-var sendError = function(err, req, res, next) {
+var sendError = function(err, req, res, next, debug) {
   setRequestHandled(req, true);
 
   err = (err) ? err : new Error("Unknown error occurred.");
   err["status"] = (err["status"]) ? err["status"] : 500;
 
   // Create a response object.
-  obj = createResponseObject(err);
+  var obj = createResponseObject(err, undefined, debug);
 
   // If in debug mode, log the error.
   log.e(err, debug);
+  log.e(err["stack"]);
 
   // Send a TEXT response.
   if(sanitize.isText(req)) {
@@ -210,30 +211,39 @@ var sendEmail = function(addresses) {
  * need to be returned to the caller.  This is meant to 
  * take a routes result and format it for a user.
  */
-var createResponseObject = function(err, obj) {
+var createResponseObject = function(err, obj, debug) {
   var resObj = {};
   obj = (obj) ? obj : {};
-  
+
   // If there is an error, set the error properties.
   if(err) {  
     // Set the error type and error message.
     if(Object.prototype.toString.call( err ) === '[object Array]') {
       resObj["errorType"] = "array";
       resObj["error"] = [];
-      for(var i= 0; i < err.length; i++) {
-        resObj["error"].push(err[i]["message"]);
+
+      if( ! debug) {
+        for(var x= 0; x < err.length; x++) {
+          resObj["error"].push(err[x]["message"]);
+        }
+      } else {
+        resObj["trace"] = [];
+        for(var y= 0; y < err.length; y++) {
+          resObj["error"].push(err[y]["message"]);
+          resObj["trace"].push(err[y]["stack"]);
+        }
       }
     } else {
       resObj["errorType"] = "string";
       resObj["error"] = err["message"];
+      if(debug) {
+        resObj["trace"] = err["stack"];
+      }
     }
 
     // Set the response status based on the error status code.
     resObj["status"] = getStatus(err["status"]);
 
-    if(debug) {
-      resObj["trace"] = err["stack"];
-    }
   } else {
     // Set the response status based on the status code of 200.
     resObj["status"] = getStatus(200);

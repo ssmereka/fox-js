@@ -101,29 +101,36 @@ var printHelp = function() {
   log.info("Server Commands:");
   printColumns("clear", "Stop the server and clear all logs and history.");
   printColumns("logs", "Show server logs");
-  printColumns("new <name>", "Create a new server with a specified name.");
+  printColumns("new <name> <options>", "Create a new server with a specified name.");
   printColumns("start", "Start the server.");
   printColumns("stop", "Stop the server.");
   printColumns("restart", "Restart the server.");
   printColumns("reload", "Restart the server with zero downtime.\n");
 
-  log.info("Options:")
+  log.info("Options:");
   printColumns("-d", "Start in development environment mode.");
-  printColumns("-i", "Initalize the server's database.");
   printColumns("-l", "Start in local environment mode.");
   printColumns("-n", "Start server using plain old node.js and local mode.");
   printColumns("-p", "Start in production environment mode.");
   printColumns("-v", "Enable verbose or debug mode.\n");
+
+  log.info("Create new Server Options:  new <name> <options>");
+  printColumns("-a", "Include hidden template files in new server.\n");
+
+  log.info("App Arguments: fox start -- <options>");
+  printColumns("--", "Pass arguments after '--' directly to the node app.");
+  printColumns("-i", "Pass the install flag to initalize the application.");
+  printColumns("-u", "Pass the uninstall flag before removing an application.\n");
 
   log.info("fox template <command> <options>");
   printColumns("add <template>", "Add a new template by name or git repo.");
   printColumns("list", "List all templates");
   printColumns("remove <template>", "Remove a template by name or git repo.\n");
 
-  log.info("Info:")
+  log.info("Info:");
   printColumns("Author", getFoxAuthor());
   printColumns("Version", getFoxVersion());
-}
+};
 
 /**
  * Print two strings in two different columns in a format much
@@ -315,38 +322,36 @@ var handleCli = function(_config, next) {
     return fox.server.clear(_config, next);
   }
 
-  // Create a new server.
-  if(isCreateCommand()) {
-
-    // Optional:  Set the template to install.
-    if(argv._[2] !== undefined) {
-      _config = _config.setTemplate(_config, argv._[2]); 
-    }
-    return fox.server.create(argv._[1], _config, next);
-  }
-
   // Display stream of current server logs.
   if(isShowLogsCommand()) {
     return fox.server.logs(_config, next);
   }
 
+  // Arguments to be passed to the server.
+  var args = argv["--"];
+
+  // Create a new server.
+  if(isCreateCommand()) {
+
+    config["createServer"] = {
+      "includeHiddenFiles": isIncludeHiddenFilesFlagSet()
+    };
+
+    // Optional:  Set the template to install.
+    if(argv._[2] !== undefined) {
+      _config = _config.setTemplate(_config, argv._[2]); 
+    }
+    return fox.server.create(argv._[1], args, _config, next);
+  }
+
   // Start the server.
   if(isStartServerCommand()) {
-    if(isInitalizeFlagSet()) {
-      fox.server.install(_config, function(err) {
-        if(next) {
-          next(err);
-        }
-      });
-    } else {
-      var args = argv["--"];
-      fox.server.start(_config, args, next);
-    }
-  } else {
-    // If we reached here, the command was not handled.
-    log.error("Command contains invalid arguments.");
+    return fox.server.start(_config, args, next);
   }
-}
+
+  // If we reached here, the command was not handled.
+  log.error("Command contains invalid arguments.");
+};
 
 /**
  * Returns true if the debug flag is set on the cli.
@@ -363,11 +368,18 @@ var isPrintHelpFlagSet = function() {
 };
 
 /**
- * Returns true if the initalizae flag is set on the cli.
+ * Returns true if the initalize flag is set on the cli.
  */
 var isInitalizeFlagSet = function() {
   return (argv.i !== undefined) ? argv.i : false;
-}
+};
+
+/**
+ * Returns true if the include hidden files flag is set on the cli.
+ */
+var isIncludeHiddenFilesFlagSet = function() {
+  return (argv.a !== undefined) ? argv.a : false;
+};
 
 /**
  * Returns true if the start server command is sent via the cli.
@@ -402,7 +414,7 @@ var isReloadServerCommand = function() {
  */
 var isCreateCommand = function() {
   return (argv._[0] && require('lodash').contains(['new'], argv._[0]));
-}
+};
 
 /**
  * Returns true if the clear server command is sent via the cli.

@@ -360,7 +360,7 @@ var logs = function(_config, next) {
  * Create a new server, initalize the database, and 
  * start the server.
  */
-var create = function(name, _config, next) {
+var create = function(name, args, _config, next) {
   // Ensure the next function is defined.
   if( ! next) {
     next = function(err) { if(err) {log.error(err);} };
@@ -370,7 +370,7 @@ var create = function(name, _config, next) {
   _config = (_config) ? _config : config;
 
   // Ensure the server has a name.
-  name = (name === undefined) ? "fox" : name;
+  name = (name === undefined) ? "MyServer" : name;
 
   // Find the new server's path.
   var newServerPath = path.normalize(_config.userPath + "/" + name);
@@ -395,7 +395,7 @@ var create = function(name, _config, next) {
     }
   }
 
-  // Ensure the choosen template is already installed.
+  // Ensure the chosen template is already installed.
   fox.template.ensureTemplateIsInstalled(_config, _config.template, function(err, template) {
     if(err) {
       return next(err);
@@ -407,7 +407,7 @@ var create = function(name, _config, next) {
       forceDelete: true, 
       preserveFiles: true, 
       inflateSymlinks: false, 
-      excludeHiddenUnix: true
+      excludeHiddenUnix: (_config["createServer"] && _config.createServer["includeHiddenFiles"]) ? ! _config.createServer.includeHiddenFiles : true
     });
 
     // Update the current config object as well as the global one.
@@ -427,10 +427,14 @@ var create = function(name, _config, next) {
         // Update the config object with the new server's paths.
         //_config = fox.config.updateConfigPaths(_config);
 
-        // Run install on the server, initalizing the database and performing 
+        // Run install on the server, initializing the database and performing
         // any other tasks defined by the server boilerplate.
         // This will also start the server.
-        install(_config, next);
+        //install(_config, next);
+
+        log.info("1. Starting server...");
+        start(_config, args, next);
+
       }, true);
     });
   });

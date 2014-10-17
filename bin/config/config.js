@@ -438,7 +438,7 @@ var development = {
     workerMax: 2
   },
   pm2: {
-    fork: false,
+    fork: false
   },
   debug: true
 };
@@ -454,7 +454,7 @@ var production = {
     workerPerCpu: true
   },
   pm2: {
-    fork: false,
+    fork: false
   },
   debug: false
 };
